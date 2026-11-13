@@ -12,32 +12,95 @@ const rand  = (a,b) => a + Math.random() * (b-a);
 const hexc  = c => '#' + c.toString(16).padStart(6,'0');
 
 // ---------- Species ----------
+// dist = how far out the bobber must be for this fish to bite (deep water)
 const SPECIES = [
-  { name:'Bluegill',        color:0x4a90d9, belly:0xbfe3ff, size:0.55, minW:0.3, maxW:1.4,  pts:10,  rarity:'common',    weight:26, strength:0.22, pattern:'none',     desc:'A scrappy little panfish. Every angler starts here.' },
-  { name:'Yellow Perch',    color:0xf6c945, belly:0xfff3b0, size:0.6,  minW:0.4, maxW:1.8,  pts:15,  rarity:'common',    weight:22, strength:0.28, pattern:'stripes',  desc:'Golden stripes and a feisty fight on light tackle.' },
-  { name:'Largemouth Bass', color:0x3d9970, belly:0xd8f3dc, size:0.85, minW:1.0, maxW:5.5,  pts:30,  rarity:'common',    weight:20, strength:0.45, pattern:'spots',    desc:'The king of the pond. Hits hard and runs deep.' },
-  { name:'Rainbow Trout',   color:0xff8fab, belly:0xffe5ec, size:0.7,  minW:0.8, maxW:4.0,  pts:40,  rarity:'uncommon',  weight:13, strength:0.5,  pattern:'rainbow',  desc:'A rainbow flash beneath the surface. Acrobatic and quick.' },
-  { name:'Channel Catfish', color:0x5d6d7e, belly:0xd6dbdf, size:1.0,  minW:2.0, maxW:9.0,  pts:55,  rarity:'uncommon',  weight:10, strength:0.62, pattern:'whiskers', desc:'A whiskered heavyweight that pulls like a truck.' },
-  { name:'Golden Koi',      color:0xffb703, belly:0xfff3b0, size:0.8,  minW:1.5, maxW:6.0,  pts:120, rarity:'rare',      weight:6,  strength:0.55, pattern:'patches',  desc:'Shimmering gold in the shallows. A true prize catch!' },
-  { name:'Ancient Carp',    color:0x9b5de5, belly:0xe0aaff, size:1.25, minW:5.0, maxW:18.0, pts:250, rarity:'legendary', weight:3,  strength:0.85, pattern:'scales',   desc:'The old giant of the lake. Legends say it has outsmarted a hundred anglers.' },
+  { name:'Bluegill',        color:0x4a90d9, belly:0xbfe3ff, size:0.55, minW:0.3,  maxW:1.4,  pts:10,  rarity:'common',    weight:30, strength:0.18, dist:0,  pattern:'none',     desc:'A scrappy little panfish. Every angler starts here.' },
+  { name:'Pumpkinseed',     color:0xe08a3c, belly:0xffe0a8, size:0.5,  minW:0.2,  maxW:1.0,  pts:12,  rarity:'common',    weight:24, strength:0.16, dist:0,  pattern:'spots',    desc:'A sunset-orange sunfish with a cheeky bite.' },
+  { name:'Rock Bass',       color:0x7a6a52, belly:0xd8c9a8, size:0.6,  minW:0.4,  maxW:2.0,  pts:14,  rarity:'common',    weight:22, strength:0.22, dist:0,  pattern:'spots',    desc:'Grumpy, stubby and always hungry.' },
+  { name:'Yellow Perch',    color:0xf6c945, belly:0xfff3b0, size:0.6,  minW:0.4,  maxW:2.2,  pts:16,  rarity:'common',    weight:26, strength:0.24, dist:2,  pattern:'stripes',  desc:'Golden stripes and a feisty fight on light tackle.' },
+  { name:'Black Crappie',   color:0x4c5a6b, belly:0xdfe6ee, size:0.65, minW:0.5,  maxW:2.4,  pts:18,  rarity:'common',    weight:20, strength:0.24, dist:4,  pattern:'spots',    desc:'Speckled and paper-mouthed — easy to lose at the net.' },
+  { name:'Common Carp',     color:0xc2a15a, belly:0xf0e2b6, size:0.95, minW:3.0,  maxW:16.0, pts:28,  rarity:'common',    weight:16, strength:0.46, dist:7,  pattern:'scales',   desc:'A broad-shouldered mud grubber that fights like a door.' },
+  { name:'Bullhead',        color:0x54503f, belly:0xc9c1a8, size:0.8,  minW:1.5,  maxW:7.0,  pts:34,  rarity:'uncommon',  weight:16, strength:0.36, dist:3,  pattern:'whiskers', desc:'Whiskered, stubborn and utterly unbothered by daylight.' },
+  { name:'Largemouth Bass', color:0x3d9970, belly:0xd8f3dc, size:0.85, minW:1.5,  maxW:11.0, pts:42,  rarity:'uncommon',  weight:18, strength:0.46, dist:5,  pattern:'spots',    desc:'The king of the shallows. Hits hard and jumps harder.' },
+  { name:'Smallmouth Bass', color:0x8a6a3a, belly:0xe8d3a0, size:0.8,  minW:1.2,  maxW:7.0,  pts:44,  rarity:'uncommon',  weight:14, strength:0.5,  dist:8,  pattern:'stripes',  desc:'Bronze muscle. Lives where the bottom turns to rock.' },
+  { name:'Chain Pickerel',  color:0x5f8a3c, belly:0xdff0c2, size:0.9,  minW:2.0,  maxW:8.0,  pts:46,  rarity:'uncommon',  weight:12, strength:0.5,  dist:10, pattern:'stripes',  desc:'A toothy ambusher with chain-link markings.' },
+  { name:'Rainbow Trout',   color:0xe86a92, belly:0xffe5ec, size:0.75, minW:1.5,  maxW:9.0,  pts:50,  rarity:'uncommon',  weight:12, strength:0.52, dist:11, pattern:'rainbow',  desc:'A rainbow flash beneath the surface. Acrobatic and quick.' },
+  { name:'Brown Trout',     color:0xa07a44, belly:0xf3e3bd, size:0.85, minW:2.0,  maxW:14.0, pts:62,  rarity:'rare',      weight:9,  strength:0.54, dist:13, pattern:'spots',    desc:'Buttery gold with red spots. Wary of everything.' },
+  { name:'Walleye',         color:0xb9c47a, belly:0xf5f2c8, size:0.95, minW:3.0,  maxW:15.0, pts:72,  rarity:'rare',      weight:8,  strength:0.56, dist:14, pattern:'scales',   desc:'Glass-eyed night feeder with a walleye chop of a fight.' },
+  { name:'Channel Catfish', color:0x5d6d7e, belly:0xd6dbdf, size:1.0,  minW:6.0,  maxW:28.0, pts:88,  rarity:'rare',      weight:8,  strength:0.64, dist:12, pattern:'whiskers', desc:'A whiskered heavyweight that pulls like a truck.' },
+  { name:'Northern Pike',   color:0x6f8f4a, belly:0xe6efc9, size:1.1,  minW:5.0,  maxW:26.0, pts:98,  rarity:'rare',      weight:7,  strength:0.68, dist:17, pattern:'spots',    desc:'All teeth and attitude. Bring line, not luck.' },
+  { name:'Muskellunge',     color:0x7d8a5a, belly:0xdfe6bb, size:1.3,  minW:10.0, maxW:42.0, pts:118, rarity:'rare',      weight:6,  strength:0.72, dist:20, pattern:'stripes',  desc:'The fish of ten thousand casts. Worth every one.' },
+  { name:'Striped Bass',    color:0x9aa7b5, belly:0xeef2f7, size:1.15, minW:12.0, maxW:46.0, pts:150, rarity:'epic',      weight:5,  strength:0.72, dist:23, pattern:'stripes',  desc:'Ocean-run silver that shoulders upstream like a train.' },
+  { name:'Flathead Catfish',color:0x6b5b3e, belly:0xe0d3ae, size:1.25, minW:15.0, maxW:58.0, pts:165, rarity:'epic',      weight:4,  strength:0.78, dist:22, pattern:'whiskers', desc:'A wide, flat head that owns the bottom of the hole.' },
+  { name:'Lake Sturgeon',   color:0x8e9b8a, belly:0xd7dcc9, size:1.5,  minW:25.0, maxW:110.0,pts:210, rarity:'epic',      weight:3,  strength:0.86, dist:26, pattern:'scales',   desc:'Armoured living fossil. Older than the dock.' },
+  { name:'Golden Koi',      color:0xffb703, belly:0xfff3b0, size:0.85, minW:1.5,  maxW:7.0,  pts:260, rarity:'legendary', weight:2.2,strength:0.6,  dist:18, pattern:'patches',  desc:'Shimmering gold in the shallows. A true prize catch!' },
+  { name:'Mirror Carp',     color:0xd9d2c0, belly:0xfff7e2, size:1.1,  minW:12.0, maxW:40.0, pts:290, rarity:'legendary', weight:1.8,strength:0.74, dist:25, pattern:'scales',   desc:'Scattered mirror scales and the temper of a bull.' },
+  { name:'Wels Catfish',    color:0x4a4a52, belly:0xc3c3cf, size:1.8,  minW:30.0, maxW:120.0,pts:340, rarity:'legendary', weight:1.4,strength:0.92, dist:29, pattern:'whiskers', desc:'A river monster that has eaten things larger than you.' },
+  { name:'Ancient Carp',    color:0x9b5de5, belly:0xe0aaff, size:1.3,  minW:15.0, maxW:70.0, pts:480, rarity:'mythic',    weight:0.9,strength:0.95, dist:31, pattern:'scales',   desc:'The old giant of the lake. It has outsmarted a hundred anglers.' },
+  { name:'Moonfish',        color:0x9fd8ff, belly:0xfdfdff, size:0.9,  minW:2.0,  maxW:9.0,  pts:620, rarity:'mythic',    weight:0.6,strength:1.05, dist:34, pattern:'rainbow',  desc:'Only bites past the last sandbar, under a coin-white moon.' },
 ];
-// ---------- Rods (shop) ----------
+
+const RARITY = {
+  common:    { tier:0, label:'COMMON',    value:1.0 },
+  uncommon:  { tier:1, label:'UNCOMMON',  value:1.15 },
+  rare:      { tier:2, label:'RARE',      value:1.35 },
+  epic:      { tier:3, label:'EPIC',      value:1.6 },
+  legendary: { tier:4, label:'LEGENDARY', value:2.0 },
+  mythic:    { tier:5, label:'MYTHIC',    value:2.6 },
+};
+
+// ---------- Gear ----------
+// rod  -> cast distance (how far out you reach) + forgiveness (how steady the line is)
 const RODS = [
-  { id:'bamboo',     name:'Bamboo Pole',    cost:0,    color:0xc98a4b, cast:15, tension:1.15, reel:0.85, blurb:'Humble and whippy. Every legend starts here.' },
-  { id:'fiberglass', name:'Fiberglass Rod', cost:160,  color:0x69c8db, cast:18, tension:1.00, reel:1.00, blurb:'Balanced all-rounder for the everyday angler.' },
-  { id:'carbon',     name:'Carbon Rod',     cost:480,  color:0x3a424e, cast:21, tension:0.88, reel:1.15, blurb:'Light, stiff and quick to tame a stubborn fish.' },
-  { id:'pro',        name:'Pro Carbon',     cost:1200, color:0xffb703, cast:24, tension:0.78, reel:1.32, blurb:'Tournament grade. Holds tension like a dream.' },
-  { id:'mythril',    name:'Mythril Rod',    cost:3000, color:0x9b5de5, cast:27, tension:0.68, reel:1.50, blurb:'Lake legend. The old carp knows this rod by name.' },
+  { id:'bamboo',     name:'Bamboo Pole',    cost:0,    color:0xc98a4b, cast:16, tension:1.30, reel:0.85, blurb:'Humble and whippy. Every legend starts here.' },
+  { id:'fiberglass', name:'Fiberglass Rod', cost:250,  color:0x69c8db, cast:20, tension:1.08, reel:1.00, blurb:'Balanced all-rounder for the everyday angler.' },
+  { id:'carbon',     name:'Carbon Rod',     cost:1000, color:0x3a424e, cast:25, tension:0.92, reel:1.15, blurb:'Light, stiff and quick to tame a stubborn fish.' },
+  { id:'pro',        name:'Pro Carbon',     cost:3000, color:0xffb703, cast:30, tension:0.78, reel:1.32, blurb:'Tournament grade. Holds tension like a dream.' },
+  { id:'mythril',    name:'Mythril Rod',    cost:7000, color:0x9b5de5, cast:36, tension:0.64, reel:1.50, blurb:'Lake legend. The old carp knows this rod by name.' },
 ];
+// line -> maximum fish weight it is rated for, and how much it strains under load
+const LINES = [
+  { id:'twine',  name:'Cotton Twine',   cost:0,    color:0xe8dcc0, rating:3,  strain:1.35, blurb:'Holds a panfish. Anything bigger is a coin flip.' },
+  { id:'mono6',  name:'6lb Mono',       cost:200,  color:0xd8f0ff, rating:7,  strain:1.05, blurb:'Cheap, stretchy, honest. A solid second step.' },
+  { id:'mono12', name:'12lb Mono',      cost:750,  color:0x9fe3d8, rating:14, strain:0.86, blurb:'Enough backbone for bass, pike and a small carp.' },
+  { id:'braid',  name:'26lb Braid',     cost:2200, color:0xffd166, rating:26, strain:0.68, blurb:'No stretch, no mercy. Handles the big cats.' },
+  { id:'fluoro', name:'55lb Fluoro',    cost:5000, color:0xe0d0ff, rating:55, strain:0.52, blurb:'Invisible in water, immovable under load.' },
+];
+// bait -> luck (rarer fish bite, sooner, and heavier)
+const BAITS = [
+  { id:'worm',   name:'Garden Worm',  cost:0,    color:0xd98b7a, luck:0.00, blurb:'Free from the garden. It works. Barely.' },
+  { id:'corn',   name:'Sweet Corn',   cost:180,  color:0xffd94a, luck:0.14, blurb:'Sends the panfish into a frenzy.' },
+  { id:'minnow', name:'Live Minnow',  cost:600,  color:0xa9d6e8, luck:0.28, blurb:'Predators cannot resist a wriggling snack.' },
+  { id:'shrimp', name:'River Shrimp', cost:1800, color:0xff9a76, luck:0.42, blurb:'The scent carries. Deep fish come up to look.' },
+  { id:'glow',   name:'Glow Grub',    cost:4200, color:0x9ef7c8, luck:0.60, blurb:'Glows faintly. Attracts things that should stay down there.' },
+];
+
+// ---------- Progression ----------
+// No levels: coins are the only gate, and the price ladder is spread so the
+// last rod/line/bait is a serious long-haul goal, not a first-session purchase.
 function fishValue(sp, weight){
-  return Math.max(6, Math.round(sp.pts * (0.75 + weight / sp.maxW) * 2.4));
+  const r = RARITY[sp.rarity].value;
+  return Math.max(6, Math.round((sp.pts * 0.9 + weight * 4.2) * r));
 }
 
-function pickSpecies(){
-  const total = SPECIES.reduce((s,x)=>s+x.weight,0);
-  let r = Math.random()*total;
-  for(const s of SPECIES){ r -= s.weight; if(r <= 0) return s; }
-  return SPECIES[0];
+// Luck lifts the odds of rarer tiers (1 + luck)^tier and calms the bite timer.
+function pickSpecies(dist){
+  const luck = BAITS[G.gear.bait].luck;
+  const pool = SPECIES.filter(s => (s.dist || 0) <= dist + 0.5);
+  const list = pool.length ? pool : [SPECIES[0]];
+  let total = 0;
+  const w = list.map(s => {
+    const v = s.weight * Math.pow(1 + luck, RARITY[s.rarity].tier * 1.15);
+    total += v; return v;
+  });
+  let r = Math.random() * total;
+  for(let i = 0; i < list.length; i++){ r -= w[i]; if(r <= 0) return list[i]; }
+  return list[0];
+}
+function rollWeight(sp){
+  const luck = BAITS[G.gear.bait].luck;
+  const t = Math.pow(Math.random(), 1 / (1 + luck * 1.8));   // biased heavier with better bait
+  return sp.minW + (sp.maxW - sp.minW) * t;
 }
 
 // ---------- Pixel-art fish (UI icons) ----------
@@ -346,55 +409,119 @@ scene.add(dock);
   scene.add(bucket, handle, cooler, lid, tackle, crate, rope);
 }
 
-// ---------- Shop stall on the shore ----------
-const SHOP_POS = { x:5.8, z:16.0 };
-{
-  const g = new THREE.Group();
-  const wood = mat(0x8e5f31), woodDark = mat(0x6b4a29);
-  const clothA = mat(0xef4056), clothB = mat(0xfdf3dd);
-  g.add(box(3.8, 1.0, 1.4, woodDark, 0, 0.5, 0));            // counter body
-  g.add(box(4.0, 0.18, 1.6, wood, 0, 1.05, 0));               // counter top
-  for(const sx of [-1.8, 1.8]) for(const sz of [-0.6, 0.6])
-    g.add(box(0.18, 2.6, 0.18, woodDark, sx, 2.25, sz));      // posts
-  for(let i=0;i<7;i++)
-    g.add(box(0.62, 0.16, 2.4, i % 2 ? clothA : clothB, -1.86 + i*0.62, 3.5, 0)); // awning
-  g.add(box(2.9, 0.8, 0.8, mat(0xc9a06a), -3.0, 0.4, 0.9));   // crate
-  g.add(box(0.5, 0.5, 0.5, mat(0x3b82a0), 2.9, 0.25, 1.0));   // bucket
-  // rods for sale, leaning on the counter
-  [[-0.9, 0.05], [0.15, -0.04], [1.15, 0.03]].forEach(([ox, tilt], i) => {
-    const c = [0x69c8db, 0xffb703, 0x9b5de5][i];
-    const rod = box(0.09, 3.0, 0.09, mat(c), ox, 1.5, 0.42);
-    rod.rotation.z = tilt;
-    g.add(rod);
-    g.add(box(0.16, 0.16, 0.16, mat(0xef4056), ox - tilt * 1.4, 2.9, 0.42));
-  });
-  g.position.set(SHOP_POS.x, 0.65, SHOP_POS.z);
-  g.rotation.y = -0.42;
-  scene.add(g);
+// ---------- Structures: tackle shop + fish market ----------
+const SHOP_POS = { x:8.0, z:18.0 };
+const MARKET_POS = { x:-9.5, z:21.0 };
 
-  // "TACKLE SHOP" banner across the counter front
+// Merge a pile of boxes into one mesh (one draw call per stall).
+function mergedBoxes(specs){
+  const geos = [];
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3();
+  const one = new THREE.Vector3(1, 1, 1);
+  for(const sp of specs){
+    const g = new THREE.BoxGeometry(sp.w, sp.h, sp.d);
+    e.set(sp.rx || 0, sp.ry || 0, sp.rz || 0);
+    q.setFromEuler(e);
+    v.set(sp.x, sp.y, sp.z);
+    m.compose(v, q, one);
+    g.applyMatrix4(m);
+    const c = new THREE.Color(sp.c);
+    const n = g.attributes.position.count;
+    const arr = new Float32Array(n * 3);
+    for(let i = 0; i < n; i++){ arr[i*3] = c.r; arr[i*3+1] = c.g; arr[i*3+2] = c.b; }
+    g.setAttribute('color', new THREE.BufferAttribute(arr, 3));
+    geos.push(g);
+  }
+  let vCount = 0, iCount = 0;
+  for(const g of geos){ vCount += g.attributes.position.count; iCount += g.index.count; }
+  const pos = new Float32Array(vCount * 3), nor = new Float32Array(vCount * 3), col = new Float32Array(vCount * 3);
+  const idx = vCount > 65535 ? new Uint32Array(iCount) : new Uint16Array(iCount);
+  let vo = 0, io = 0;
+  for(const g of geos){
+    pos.set(g.attributes.position.array, vo * 3);
+    nor.set(g.attributes.normal.array, vo * 3);
+    col.set(g.attributes.color.array, vo * 3);
+    const gi = g.index.array;
+    for(let k = 0; k < gi.length; k++) idx[io + k] = gi[k] + vo;
+    vo += g.attributes.position.count;
+    io += gi.length;
+    g.dispose();
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  geo.setIndex(new THREE.BufferAttribute(idx, 1));
+  geo.computeBoundingSphere();
+  return new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+}
+
+function stallSpecs(w, a, b, accent){
+  const S = [], hw = w / 2;
+  S.push({ w:w,     h:1.02, d:1.4,  x:0, y:0.51, z:0, c:0x6b4a29 });        // counter body
+  S.push({ w:w+0.2, h:0.18, d:1.6,  x:0, y:1.06, z:0, c:0x8e5f31 });        // counter top
+  S.push({ w:w+0.3, h:0.1,  d:1.75, x:0, y:0.92, z:0, c:accent });          // painted rim
+  for(const sx of [-hw+0.16, hw-0.16]) for(const sz of [-0.66, 0.66])
+    S.push({ w:0.18, h:2.5, d:0.18, x:sx, y:2.2, z:sz, c:0x5c3f22 });       // posts
+  S.push({ w:w+0.7, h:0.16, d:2.9, x:0, y:3.35, z:0, c:0x4a3018 });         // solid roof
+  const n = 7, cw = (w + 0.7) / n;                                          // awning stripes
+  for(let i = 0; i < n; i++)
+    S.push({ w:cw, h:0.16, d:2.9, x:-(w+0.7)/2 + cw/2 + i*cw, y:3.5, z:0, c: i % 2 ? a : b });
+  S.push({ w:w, h:2.0, d:0.12, x:0, y:1.7, z:1.25, c:0x7a5230 });           // back panel
+  return S;
+}
+function signTexture(text, bg, fg){
   const cv = document.createElement('canvas');
   cv.width = 512; cv.height = 96;
   const cx = cv.getContext('2d');
-  cx.fillStyle = '#12222b'; cx.fillRect(0, 0, 512, 96);
-  cx.fillStyle = '#ffd166'; cx.fillRect(0, 0, 512, 6); cx.fillRect(0, 90, 512, 6);
-  cx.fillStyle = '#ffd166';
+  cx.fillStyle = bg; cx.fillRect(0, 0, 512, 96);
+  cx.fillStyle = fg; cx.fillRect(0, 0, 512, 6); cx.fillRect(0, 90, 512, 6);
   cx.font = 'bold 52px monospace';
   cx.textAlign = 'center'; cx.textBaseline = 'middle';
-  cx.fillText('TACKLE SHOP', 256, 52);
+  cx.fillText(text, 256, 52);
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.magFilter = THREE.NearestFilter;
-  const bannerMat = new THREE.MeshBasicMaterial({ map: tex });
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(3.5, 0.66), bannerMat);
-  sign.position.set(0, 0.72, -0.715);
-  sign.rotation.y = Math.PI;
-  g.add(sign);
-  const fascia = new THREE.Mesh(new THREE.PlaneGeometry(3.7, 0.6), bannerMat);
-  fascia.position.set(0, 3.36, -1.21);
+  return tex;
+}
+function placeStall(pos, rot, specs, banner, bg, fg){
+  const g = new THREE.Group();
+  g.add(mergedBoxes(specs));
+  const mat = new THREE.MeshBasicMaterial({ map: signTexture(banner, bg, fg) });
+  const fascia = new THREE.Mesh(new THREE.PlaneGeometry(3.9, 0.6), mat);
+  fascia.position.set(0, 3.0, -1.52);
   fascia.rotation.y = Math.PI;
   g.add(fascia);
+  const counter = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 0.66), mat);
+  counter.position.set(0, 0.66, -0.78);
+  counter.rotation.y = Math.PI;
+  g.add(counter);
+  g.position.set(pos.x, 0.65, pos.z);
+  g.rotation.y = rot;
+  scene.add(g);
+  return g;
 }
+
+// tackle shop — blue/cream awning, rods for sale
+placeStall(SHOP_POS, -0.42,
+  stallSpecs(4.4, 0x2f7fbf, 0xfdf3dd, 0x2f7fbf).concat([
+    { w:2.9, h:0.8, d:0.8, x:-3.1, y:0.4, z:0.9, c:0xc9a06a },             // crate
+    { w:0.5, h:0.5, d:0.5, x:3.0, y:0.25, z:1.0, c:0x3b82a0 },             // bucket
+    { w:0.09, h:3.0, d:0.09, x:-0.95, y:1.5, z:0.42, c:0x69c8db, rz:0.05 },
+    { w:0.09, h:3.0, d:0.09, x:0.15, y:1.5, z:0.42, c:0xffb703, rz:-0.04 },
+    { w:0.09, h:3.0, d:0.09, x:1.2, y:1.5, z:0.42, c:0x9b5de5, rz:0.03 },
+  ]), 'TACKLE SHOP', '#12222b', '#ffd166');
+
+// fish market — green/gold awning, crates of catch
+placeStall(MARKET_POS, 0.38,
+  stallSpecs(5.0, 0x3f8f4a, 0xffd166, 0x3f8f4a).concat([
+    { w:1.0, h:0.9, d:0.9, x:-3.4, y:0.45, z:0.7, c:0xb08050 },
+    { w:1.0, h:0.9, d:0.9, x:-3.4, y:1.35, z:0.7, c:0xa87648 },
+    { w:1.1, h:0.2, d:1.0, x:-3.4, y:1.9, z:0.7, c:0x6f8fa8 },             // fish on ice
+    { w:0.9, h:0.7, d:0.9, x:3.3, y:0.35, z:0.8, c:0xb08050 },
+    { w:0.7, h:0.18, d:0.7, x:3.3, y:0.79, z:0.8, c:0xd9e6ef },
+    { w:1.6, h:0.12, d:0.9, x:0, y:1.18, z:-0.15, c:0xf2e6cf },            // cutting board
+  ]), 'FISH MARKET', '#12222b', '#8bd17c');
 
 // ---------- Islands ----------
 function island(x,z,r){
@@ -463,24 +590,90 @@ scene.add(box(300, 1, 70, mat(0x4e9e57), 0, 0.2, -128));
   scene.add(trunks, leaves);
 }
 
-// ---------- Dirty path from the dock to the shop ----------
+// ---------- Dirt paths from the dock out to both stalls ----------
 {
-  const n = 14;
-  const path = new THREE.InstancedMesh(UNIT, mat(0xc2a878), n);
-  for(let i=0;i<n;i++){
-    const t = i / (n - 1);
-    const x = lerp(-1.0, SHOP_POS.x - 1.2, t) + Math.sin(t * 7) * 0.45;
-    const z = lerp(12.4, SHOP_POS.z - 2.4, t);
-    D.rotation.set(0, rand(-0.3, 0.3), 0);
-    D.position.set(x, 0.67, z);
-    D.scale.set(1.7, 0.09, 1.6);
-    D.updateMatrix(); path.setMatrixAt(i, D.matrix);
+  const runs = [
+    [-1.0, 12.4, SHOP_POS.x - 1.6, SHOP_POS.z - 2.8, 11],
+    [-1.6, 12.6, MARKET_POS.x + 1.6, MARKET_POS.z - 2.6, 11],
+    [0, 12.6, 0, 9.4, 3],
+  ];
+  const total = runs.reduce((a, r) => a + r[4], 0);
+  const path = new THREE.InstancedMesh(UNIT, mat(0xc2a878), total);
+  let k = 0;
+  for(const [x0, z0, x1, z1, n] of runs){
+    for(let i = 0; i < n; i++){
+      const t = i / (n - 1);
+      D.rotation.set(0, rand(-0.3, 0.3), 0);
+      D.position.set(lerp(x0, x1, t) + Math.sin(t * 7) * 0.4, 0.67, lerp(z0, z1, t));
+      D.scale.set(1.7, 0.09, 1.6);
+      D.updateMatrix(); path.setMatrixAt(k++, D.matrix);
+    }
   }
   path.instanceMatrix.needsUpdate = true;
   scene.add(path);
 }
 
-// ---------- Distant hills behind the shore (closes the horizon) ----------
+// ---------- Fence around the clearing ----------
+{
+  const posts = [], rails = [];
+  const edge = [];
+  for(let x = -30; x <= 30; x += 4) edge.push([x, 42, 0]);
+  for(let z = 14; z <= 42; z += 4){ edge.push([-32, z, 1]); edge.push([32, z, 1]); }
+  const postMesh = new THREE.InstancedMesh(UNIT, mat(0x6b4a29), edge.length);
+  const railMesh = new THREE.InstancedMesh(UNIT, mat(0x8e5f31), edge.length * 2);
+  edge.forEach(([x, z, side], i) => {
+    D.rotation.set(0, 0, 0);
+    D.position.set(x, 1.15, z); D.scale.set(0.22, 1.0, 0.22);
+    D.updateMatrix(); postMesh.setMatrixAt(i, D.matrix);
+    for(let k = 0; k < 2; k++){
+      D.position.set(x, 0.95 + k * 0.42, z);
+      D.scale.set(side ? 0.12 : 4.0, 0.14, side ? 4.0 : 0.12);
+      D.updateMatrix(); railMesh.setMatrixAt(i * 2 + k, D.matrix);
+    }
+  });
+  postMesh.instanceMatrix.needsUpdate = true;
+  railMesh.instanceMatrix.needsUpdate = true;
+  scene.add(postMesh, railMesh);
+}
+
+// ---------- Bushes + trees behind the clearing ----------
+{
+  const spots = [
+    [-27, 38, 0.9], [-20, 33, 0.7], [-14, 41, 0.95], [-5, 36, 0.75], [3, 40, 0.8],
+    [12, 35, 0.9], [19, 41, 0.75], [26, 36, 0.95], [30, 29, 0.7], [-30, 27, 0.75],
+    [23, 27, 0.65], [-22, 46, 0.85], [9, 46, 0.8], [17, 31, 0.6], [-9, 29, 0.6],
+  ];
+  const n = spots.length;
+  const trunks = new THREE.InstancedMesh(UNIT, mat(0x6b4423), n);
+  const leaves = new THREE.InstancedMesh(UNIT, mat(0x2f9159), n * 3);
+  spots.forEach(([x, z, s], i) => {
+    D.position.set(x, 0.65 + 0.9 * s, z); D.rotation.set(0, rand(0, 3), 0); D.scale.set(0.55 * s, 1.8 * s, 0.55 * s);
+    D.updateMatrix(); trunks.setMatrixAt(i, D.matrix);
+    for(let k = 0; k < 3; k++){
+      D.position.set(x, 0.65 + (1.9 + k * 0.95) * s, z);
+      D.scale.set((2.9 - k * 0.7) * s, 1.1 * s, (2.9 - k * 0.7) * s);
+      D.updateMatrix(); leaves.setMatrixAt(i * 3 + k, D.matrix);
+    }
+  });
+  trunks.instanceMatrix.needsUpdate = true;
+  leaves.instanceMatrix.needsUpdate = true;
+  scene.add(trunks, leaves);
+
+  // low bushes
+  const bushes = new THREE.InstancedMesh(UNIT, mat(0x3fa36b), 22);
+  for(let i = 0; i < 22; i++){
+    const side = i % 2 ? 1 : -1;
+    const bs = rand(0.6, 1.3);
+    D.rotation.set(0, rand(0, 3), 0);
+    D.position.set(rand(-30, 30), 0.65 + bs * 0.35, rand(23, 41) + side * 0.5);
+    D.scale.set(bs * 1.6, bs * 0.9, bs * 1.4);
+    D.updateMatrix(); bushes.setMatrixAt(i, D.matrix);
+  }
+  bushes.instanceMatrix.needsUpdate = true;
+  scene.add(bushes);
+}
+
+// ---------- Distant hills behind the shore (closes the horizon) ----------// ---------- Distant hills behind the shore (closes the horizon) ----------
 {
   const n = 16;
   const hills = new THREE.InstancedMesh(UNIT, mat(0x2f7a52), n*2);
@@ -616,7 +809,8 @@ const LINE_POINTS = 20;
 const lineGeo = new THREE.BufferGeometry();
 const linePos = new Float32Array(LINE_POINTS * 3);
 lineGeo.setAttribute('position', new THREE.BufferAttribute(linePos, 3));
-const line = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color:0xffffff, transparent:true, opacity:0.8 }));
+const lineMat = new THREE.LineBasicMaterial({ color:0xffffff, transparent:true, opacity:0.8 });
+const line = new THREE.Line(lineGeo, lineMat);
 line.frustumCulled = false;
 line.visible = false;
 scene.add(line);
@@ -711,11 +905,15 @@ const G = {
   castT:0, castDur:1, biteWindow:0, waitTimer:4,
   caughtAnim:0,
   // player + economy
-  px:0, pz:5.0, camY:2.77, bob:0, walked:0, nearShop:false,
-  coins:0, bag:[], owned:['bamboo'], rodIndex:0
+  px:0, pz:5.0, camY:2.77, bob:0, walked:0, nearShop:false, nearMarket:false,
+  coins:0, bag:[], xp:0,
+  owned:{ rod:[0], line:[0], bait:[0] },
+  gear:{ rod:0, line:0, bait:0 },
+  // current fight tuning (set on hook)
+  bandLo:22, bandHi:70, demand:0.4, supply:1, over:0, fishWeight:1, castDist:10, rateMul:1
 };
 const EYE = 1.62;
-let shopOpen = false, shopTab = 'rods';
+let shopOpen = false, shopTab = 'rods', marketOpen = false;
 const bag = G.bag;
 const bobberPos = new THREE.Vector3(0, 0.1, -6);
 const rodTipWorld = new THREE.Vector3();
@@ -724,7 +922,7 @@ const castTo = new THREE.Vector3();
 const tmpV = new THREE.Vector3();
 const camFwd = new THREE.Vector3();
 
-let hookedFish = null, hookedSpecies = null;
+let hookedFish = null, hookedSpecies = null, hookedWeight = 0;
 const log = [];
 
 // ---------- DOM ----------
@@ -734,6 +932,7 @@ const reelUI = $('reelUI'), tensionNeedle = $('tensionNeedle'), progressFill = $
 const reelFishName = $('reelFishName'), reelPct = $('reelPct'), catchModal = $('catchModal');
 const toastEl = $('toast'), logDrawer = $('logDrawer'), logList = $('logList'), logSummary = $('logSummary');
 const lockHint = $('lockHint'), shopBtnEl = $('shopBtn'), shopOverlay = $('shopOverlay'), shopBody = $('shopBody');
+const marketBtnEl = $('marketBtn'), marketOverlayEl = $('marketOverlay'), marketBody = $('marketBody');
 const reelWarn = $('reelWarn'), stickEl = $('stick'), stickKnob = document.querySelector('.stick-knob');
 let drawerOpen = false;
 const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
@@ -750,10 +949,11 @@ function showToast(msg, bad=false){
   showToast._t = setTimeout(()=>toastEl.className = 'toast hidden', 2000);
 }
 function updateStats(){
-  $('score').textContent = G.score;
   $('caughtCount').textContent = G.caught;
   $('coinCount').textContent = G.coins;
+  $('bestNum').textContent = G.best ? G.best.weight + ' lb' : '—';
   const sc = $('shopCoins'); if(sc) sc.textContent = G.coins;
+  const mc = $('marketCoins'); if(mc) mc.textContent = G.coins;
 }
 function renderLog(){
   if(!log.length){ logList.innerHTML = '<p class="empty">No fish yet. Cast your line!</p>'; logSummary.textContent = ''; return; }
@@ -761,14 +961,15 @@ function renderLog(){
     `<div class="log-item"><span class="e">${fishSVG(e.sp)}</span><div><b>${e.sp.name}</b><small>${e.weight} lbs • ${e.sp.rarity.toUpperCase()}</small></div><span class="pts">+${e.sp.pts}</span></div>`
   ).join('');
   const total = log.reduce((s,e)=>s + e.sp.pts, 0);
-  logSummary.textContent = `${log.length} caught • ${total} pts • Best ${Math.max(...log.map(e=>e.weight))} lbs`;
+  logSummary.textContent =
+    `${log.length} caught • ${total} pts • Best ${Math.max(...log.map(e=>e.weight))} lbs`;
 }
-const SAVE_KEY = 'reel-life-3d-save-v4';
+const SAVE_KEY = 'reel-life-3d-save-v5';
 function saveGame(){
   try{
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       score:G.score, caught:G.caught, best:G.best, coins:G.coins,
-      owned:G.owned, rod:G.rodIndex,
+      owned:G.owned, gear:G.gear,
       bag:bag.map(e=>({ n:e.sp.name, w:e.weight })),
       log:log.map(e=>({ n:e.sp.name, w:e.weight }))
     }));
@@ -782,10 +983,19 @@ function loadGame(){
     if(!d) return;
     G.score = d.score || 0; G.caught = d.caught || 0; G.best = d.best || null;
     G.coins = d.coins || 0;
-    if(Array.isArray(d.owned) && d.owned.length) G.owned = d.owned.filter(id => RODS.some(r => r.id === id));
-    if(!G.owned.length) G.owned = ['bamboo'];
-    G.rodIndex = clamp(d.rod || 0, 0, RODS.length - 1);
-    if(!G.owned.includes(RODS[G.rodIndex].id)) G.rodIndex = 0;
+    if(d.owned && !Array.isArray(d.owned)){
+      ['rod','line','bait'].forEach(k => {
+        const max = k === 'rod' ? RODS.length : k === 'line' ? LINES.length : BAITS.length;
+        if(Array.isArray(d.owned[k]) && d.owned[k].length)
+          G.owned[k] = d.owned[k].filter(i => Number.isInteger(i) && i >= 0 && i < max);
+        if(!G.owned[k].length) G.owned[k] = [0];
+      });
+      ['rod','line','bait'].forEach(k => {
+        const max = k === 'rod' ? RODS.length : k === 'line' ? LINES.length : BAITS.length;
+        const want = clamp((d.gear && d.gear[k]) || 0, 0, max - 1);
+        G.gear[k] = G.owned[k].includes(want) ? want : 0;
+      });
+    }
     (d.log || []).forEach(e => {
       const sp = SPECIES.find(x => x.name === e.n);
       if(sp) log.push({ sp, weight:e.w });
@@ -832,10 +1042,11 @@ function groundAt(x, z){
     }
     return 1.15;
   }
-  // keep clear of the shop stall
-  if((x - SHOP_POS.x) * (x - SHOP_POS.x) + (z - SHOP_POS.z) * (z - SHOP_POS.z) < 8.4) return null;
-  // shore: wet sand strip, then grass
-  if(z >= 8.20 && z <= 25.0 && Math.abs(x) <= 20) return z < 10.10 ? 0.40 : 0.65;
+  // keep clear of both stalls (and their crates)
+  if((x - SHOP_POS.x) * (x - SHOP_POS.x) + (z - SHOP_POS.z) * (z - SHOP_POS.z) < 9.0) return null;
+  if((x - MARKET_POS.x) * (x - MARKET_POS.x) + (z - MARKET_POS.z) * (z - MARKET_POS.z) < 10.2) return null;
+  // clearing: wet sand strip, then grass all the way back to the fence
+  if(z >= 8.20 && z <= 41.2 && Math.abs(x) <= 31.0) return z < 10.10 ? 0.40 : 0.65;
   return null;
 }
 const walkable = (x,z) => groundAt(x,z) !== null;
@@ -895,7 +1106,9 @@ function landBobber(){
   spawnSplash(bobberPos, 14, 0.9);
   spawnRipple(bobberPos);
   sfx.splash();
-  G.waitTimer = rand(2.5, 6);
+  G.castDist = Math.hypot(bobberPos.x - camera.position.x, bobberPos.z - camera.position.z);
+  const luck = BAITS[G.gear.bait].luck;
+  G.waitTimer = rand(2.4, 5.8) * (1 - luck * 0.45);
   setState('waiting');
 }
 function triggerBite(){
@@ -918,25 +1131,56 @@ function makeFish3D(sp, scale){
   g.scale.setScalar(scale * sp.size);
   return g;
 }
+// The whole difficulty model lives here: how nasty the fish is (demand)
+// versus how much your rod + line help (supply). The ratio sets both how
+// fast the needle moves and how narrow the safe band is.
+function fightSetup(sp, weight){
+  const rod = RODS[G.gear.rod], ln = LINES[G.gear.line];
+  const wr = clamp(weight / sp.maxW, 0, 1);
+  const tier = RARITY[sp.rarity].tier;
+  // demand: raw strength, fattened by how big this specimen is, plus rarity
+  const demand = sp.strength * (0.75 + 0.45 * wr) * (1 + tier * 0.05);
+  // supply: better rod steadies the line, better line strains less.
+  // Compressed so top gear is strong but never makes the lake trivial.
+  const supply = Math.pow((1 / rod.tension) * (1 / ln.strain), 0.75) * 0.62;
+  // line over its rating: the fish is heavier than the line was built for
+  const over = Math.max(0, weight / ln.rating - 1);
+  const R = (demand / supply) * (1 + Math.min(over, 2) * 0.25);
+  // the safe band shrinks with the mismatch — a monster on a twig is a sliver
+  const width = clamp(58 * Math.pow(1.55, -1.6 * R), 8, 56);
+  const center = 45;
+  G.bandLo = clamp(center - width / 2, 4, 92);
+  G.bandHi = clamp(center + width / 2, G.bandLo + 5, 96);
+  const strainMul = 1 + Math.min(over, 2) * 0.5;
+  G.rateMul = Math.min(2.2, clamp(0.55 + 0.5 * R, 0.62, 1.9) * strainMul);
+  G.demand = demand; G.supply = supply; G.ratio = R; G.over = over;
+  return R;
+}
 function hookFish(){
-  hookedSpecies = pickSpecies();
+  hookedSpecies = pickSpecies(G.castDist || 10);
+  const w = rollWeight(hookedSpecies);
+  hookedWeight = +w.toFixed(1);
   if(hookedFish){ scene.remove(hookedFish); }
   hookedFish = makeFish3D(hookedSpecies, 1.25);
   hookedFish.position.copy(bobberPos); hookedFish.position.y = -0.7;
   scene.add(hookedFish);
   G.tension = 26; G.progress = 6; G.slack = 0;
   G.fishStrength = hookedSpecies.strength;
+  G.fishWeight = hookedWeight;
+  fightSetup(hookedSpecies, hookedWeight);
   G.surgeTimer = rand(0.6, 1.4); G.surgeDur = 0; G.snapTimer = 0; G.reelHeld = true;
   reelFishName.innerHTML = `<span class="reel-fish">${fishSVG(hookedSpecies)}</span>${hookedSpecies.name}`;
+  paintTensionBand();
   setState('reeling');
   sfx.hook();
   spawnSplash(bobberPos, 12, 0.8);
 }
 function catchFish(){
   const sp = hookedSpecies;
-  const weight = (rand(sp.minW, sp.maxW)).toFixed(1);
+  const weight = (hookedWeight || rollWeight(sp)).toFixed(1);
   const value = fishValue(sp, parseFloat(weight));
   G.score += sp.pts; G.caught++;
+  const isBest = !G.best || parseFloat(weight) > parseFloat(G.best.weight);
   if(!G.best || parseFloat(weight) > parseFloat(G.best.weight)) G.best = { name:sp.name, weight };
   log.unshift({ sp, weight });
   bag.push({ sp, weight, value });
@@ -947,15 +1191,16 @@ function catchFish(){
   $('catchIcon').innerHTML = fishSVG(sp);
   $('catchName').textContent = sp.name;
   $('catchWeight').textContent = weight + ' lbs';
-  $('catchPoints').innerHTML = '+' + sp.pts + ' pts <span class="catch-value">WORTH ' + value + 'c AT THE SHOP</span>';
+  $('catchPoints').innerHTML = '+' + sp.pts + ' pts <span class="catch-value">WORTH ' + value + 'c AT THE MARKET</span>';
   $('catchDesc').textContent = sp.desc;
   catchModal.querySelector('.modal-card').className = 'modal-card ' + sp.rarity;
   catchModal.classList.remove('hidden');
   lockHint.classList.add('hidden');
   setState('caught');
   releasePointer();
-  if(sp.rarity === 'legendary') sfx.legendary(); else sfx.caught();
+  if(RARITY[sp.rarity].tier >= 4) sfx.legendary(); else sfx.caught();
   spawnSplash(bobberPos, 18, 1.1);
+  if(isBest && G.caught > 1) showToast('New best — ' + weight + ' lb ' + sp.name + '!');
 }
 function escapeFish(reason){
   if(hookedFish){ scene.remove(hookedFish); hookedFish = null; }
@@ -1054,50 +1299,71 @@ function setKey(code, down){
 }
 function clearKeys(){ keys.f = keys.b = keys.l = keys.r = keys.sprint = false; }
 
+// ---------- Reel band ----------
+function paintTensionBand(){
+  const lo = G.bandLo, hi = G.bandHi;
+  const safe = $('tensionSafe');
+  safe.style.left = lo + '%';
+  safe.style.width = (hi - lo) + '%';
+}
+
 // ---------- Shop ----------
-const rodCard = (r, i) => {
-  const owned = G.owned.includes(r.id);
-  const equipped = G.rodIndex === i;
-  const afford = G.coins >= r.cost;
-  const hex = '#' + r.color.toString(16).padStart(6, '0');
-  const state = equipped
-    ? '<button class="buy-btn equip" disabled>EQUIPPED</button>'
+const GEAR = {
+  rod:  { list:RODS,  label:'rod',  tab:'rods' },
+  line: { list:LINES, label:'line', tab:'lines' },
+  bait: { list:BAITS, label:'bait', tab:'bait' },
+};
+const gearStat = (kind, g) => {
+  if(kind === 'rod')  return `CAST ${g.cast}m · REEL ${g.reel.toFixed(2)}x · FORGIVE ${Math.round((2 - g.tension) * 100)}`;
+  if(kind === 'line') return `MAX FISH ${g.rating} lb · STRAIN ${Math.round((2 - g.strain) * 100)}`;
+  return `LUCK +${Math.round(g.luck * 100)}% · rarer, heavier, faster bites`;
+};
+const swatchStyle = (kind, g) => {
+  const hex = '#' + g.color.toString(16).padStart(6, '0');
+  if(kind === 'line') return `background:${hex}`;
+  if(kind === 'bait') return `background:${hex}`;
+  return `background:${hex}`;
+};
+
+function gearRow(kind, g, i){
+  const owned = G.owned[kind].includes(i);
+  const equipped = G.gear[kind] === i;
+  const prev = i > 0 ? GEAR[kind].list[i - 1] : null;
+  const locked = !owned && !!prev && !G.owned[kind].includes(i - 1);
+  const afford = G.coins >= g.cost;
+  const tag = equipped ? '<span class="gear-tag on">ON</span>' : owned ? '' : '';
+  const btn = equipped
+    ? '<button class="buy-btn equip" disabled>IN USE</button>'
     : owned
       ? `<button class="buy-btn equip" data-buy="${i}">EQUIP</button>`
-      : `<button class="buy-btn" data-buy="${i}" ${afford ? '' : 'disabled'}>${r.cost}c</button>`;
-  return `<div class="rod-card${equipped ? ' equipped' : ''}">
-    <div class="rod-swatch" style="background:${hex}"></div>
+      : locked
+        ? `<button class="buy-btn" disabled>LOCKED</button>`
+        : `<button class="buy-btn" data-buy="${i}" ${afford ? '' : 'disabled'}>${g.cost}c</button>`;
+  const cls = kind === 'bait' ? 'gear-swatch bait' : kind === 'line' ? 'gear-swatch spool' : 'gear-swatch';
+  const sub = locked ? `Needs the ${prev.name} first` : g.blurb;
+  return `<div class="rod-card${equipped ? ' equipped' : ''}${locked ? ' lockedrow' : ''}">
+    <div class="${cls}" style="${swatchStyle(kind, g)}"></div>
     <div class="rod-info">
-      <b>${r.name}</b>
-      <small>CAST ${r.cast}m · REEL ${r.reel.toFixed(2)}x · LINE ${r.tension >= 1.05 ? 'HARD' : r.tension >= 0.95 ? 'NORMAL' : r.tension >= 0.8 ? 'EASY' : 'FORGIVING'}</small>
-      <small class="${owned ? '' : 'locked'}">${owned ? r.blurb : 'LOCKED · ' + r.cost + ' coins'}</small>
+      <b>${g.name}${tag}</b>
+      <small>${gearStat(kind, g)}</small>
+      <small class="${owned ? '' : 'locked'}">${sub}</small>
     </div>
-    ${state}
+    ${btn}
   </div>`;
-};
+}
+
 const bagTotal = () => bag.reduce((a, e) => a + (e.value || fishValue(e.sp, parseFloat(e.weight))), 0);
 
 function renderShop(){
   if(!shopOpen) return;
   $('shopCoins').textContent = G.coins;
-  $('sellCount').textContent = bag.length;
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === shopTab));
-  if(shopTab === 'rods'){
-    shopBody.innerHTML = RODS.map(rodCard).join('');
-  } else if(!bag.length){
-    shopBody.innerHTML = '<p class="shop-empty">Your catch bag is empty.<br>Catch something first, then sell it here.</p>';
-  } else {
-    shopBody.innerHTML = bag.map((e, i) => `<div class="sell-row">
-        <div class="e">${fishSVG(e.sp)}</div>
-        <div><b>${e.sp.name}</b><small>${e.weight} lbs</small></div>
-        <div class="val">${e.value || fishValue(e.sp, parseFloat(e.weight))}c</div>
-        <button class="buy-btn" data-sell="${i}">Sell</button>
-      </div>`).join('')
-      + `<button class="sell-all" id="sellAll">SELL ALL · ${bagTotal()}c</button>`;
-  }
+  document.querySelectorAll('#shopOverlay .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === shopTab));
+  const kind = shopTab === 'lines' ? 'line' : shopTab === 'bait' ? 'bait' : 'rod';
+  shopBody.innerHTML = GEAR[kind].list.map((g, i) => gearRow(kind, g, i)).join('');
 }
+
 function openShop(){
-  if(shopOpen || G.state !== 'aim') return;
+  if(shopOpen || marketOpen || G.state !== 'aim') return;
   if(!G.nearShop){ showToast('Walk over to the tackle shop first.', true); return; }
   shopOpen = true;
   releasePointer();
@@ -1114,25 +1380,71 @@ function closeShop(){
   clearKeys();
   updateLockHint();
 }
-function buyRod(i){
-  const r = RODS[i];
-  if(!r) return;
-  if(G.owned.includes(r.id)){
-    if(G.rodIndex === i) return;
-    G.rodIndex = i; applyRod(); sfx.buy(); showToast('Equipped the ' + r.name + '.'); saveGame(); renderShop();
+
+function buyGear(kind, i){
+  const g = GEAR[kind].list[i];
+  if(!g) return;
+  if(G.owned[kind].includes(i)){
+    if(G.gear[kind] === i) return;
+    G.gear[kind] = i;
+    applyGear(); sfx.buy(); showToast('Equipped the ' + g.name + '.');
+    saveGame(); updateStats(); renderShop();
     return;
   }
-  if(G.coins < r.cost){ sfx.deny(); showToast('Not enough coins — sell some fish!', true); return; }
-  G.coins -= r.cost;
-  G.owned.push(r.id);
-  G.rodIndex = i;
-  applyRod(); updateStats(); saveGame(); sfx.buy(); renderShop();
-  showToast('Bought the ' + r.name + '!');
+  if(i > 0 && !G.owned[kind].includes(i - 1)){
+    sfx.deny(); showToast('Upgrade to the ' + GEAR[kind].list[i - 1].name + ' first.', true); return;
+  }
+  if(G.coins < g.cost){ sfx.deny(); showToast('Not enough coins — sell some fish!', true); return; }
+  G.coins -= g.cost;
+  G.owned[kind].push(i);
+  G.gear[kind] = i;
+  applyGear(); updateStats(); saveGame(); sfx.buy(); renderShop();
+  showToast('Bought the ' + g.name + '!');
 }
-function applyRod(){
-  const r = RODS[G.rodIndex] || RODS[0];
+function applyGear(){
+  const r = RODS[G.gear.rod] || RODS[0];
   rodMat.color.setHex(r.color);
+  const l = LINES[G.gear.line] || LINES[0];
+  lineMat.color.setHex(l.id === 'twine' ? 0xe8dcc0 : l.color);
   updateStats();
+}
+
+// ---------- Fish market ----------
+function renderMarket(){
+  if(!marketOpen) return;
+  $('marketCoins').textContent = G.coins;
+  const body = $('marketBody');
+  if(!bag.length){
+    body.innerHTML = '<p class="shop-empty">Your catch bag is empty.<br>Catch something, then bring it here.</p>';
+    return;
+  }
+  body.innerHTML =
+    `<div class="bag-total"><span>${bag.length} fish in the bag</span><span>${bagTotal()}c</span></div>` +
+    bag.map((e, i) => `<div class="sell-row">
+      <div class="e">${fishSVG(e.sp)}</div>
+      <div><b>${e.sp.name}</b><small>${e.weight} lbs · ${RARITY[e.sp.rarity].label}</small></div>
+      <div class="val">${e.value || fishValue(e.sp, parseFloat(e.weight))}c</div>
+      <button class="buy-btn" data-sell="${i}">Sell</button>
+    </div>`).join('') +
+    `<button class="sell-all" id="sellAll">SELL ALL · ${bagTotal()}c</button>`;
+}
+function openMarket(){
+  if(marketOpen || shopOpen || G.state !== 'aim') return;
+  if(!G.nearMarket){ showToast('Walk over to the fish market first.', true); return; }
+  marketOpen = true;
+  releasePointer();
+  hidePrompt();
+  $('marketOverlay').classList.remove('hidden');
+  marketBtnEl.classList.add('hidden');
+  renderMarket();
+  ensureAudio();
+}
+function closeMarket(){
+  if(!marketOpen) return;
+  marketOpen = false;
+  $('marketOverlay').classList.add('hidden');
+  clearKeys();
+  updateLockHint();
 }
 function sellFish(i){
   const e = bag[i];
@@ -1140,7 +1452,7 @@ function sellFish(i){
   const v = e.value || fishValue(e.sp, parseFloat(e.weight));
   bag.splice(i, 1);
   G.coins += v;
-  sfx.coin(); updateStats(); saveGame(); renderShop();
+  sfx.coin(); updateStats(); saveGame(); renderMarket();
   showToast('+' + v + ' coins');
 }
 function sellAll(){
@@ -1148,7 +1460,7 @@ function sellAll(){
   const total = bagTotal();
   G.coins += total;
   bag.length = 0;
-  sfx.coin(); updateStats(); saveGame(); renderShop();
+  sfx.coin(); updateStats(); saveGame(); renderMarket();
   showToast('Sold the lot for ' + total + ' coins!');
 }
 
@@ -1162,7 +1474,7 @@ function requestLock(){
 }
 function updateLockHint(){
   const show = !pointerLocked && supportsLock && !lockFallback && G.state !== 'menu'
-    && !shopOpen && catchModal.classList.contains('hidden') && logDrawer.classList.contains('hidden');
+    && !shopOpen && !marketOpen && catchModal.classList.contains('hidden') && logDrawer.classList.contains('hidden');
   lockHint.classList.toggle('hidden', !show);
 }
 function releasePointer(){
@@ -1212,7 +1524,7 @@ canvas.addEventListener('pointermove', e => {
 }, { passive:true });
 
 canvas.addEventListener('pointerdown', e => {
-  if(shopOpen) return;
+  if(shopOpen || marketOpen) return;
   ensureAudio();
   lastButtonT = performance.now();
   if(e.pointerType === 'mouse'){
@@ -1244,28 +1556,35 @@ addEventListener('pointerup', (e) => {
 });
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 
+const distShop  = () => Math.hypot(G.px - SHOP_POS.x, G.pz - SHOP_POS.z);
+const distMarket = () => Math.hypot(G.px - MARKET_POS.x, G.pz - MARKET_POS.z);
 function handlePress(){
-  if(shopOpen) return;
+  if(shopOpen || marketOpen) return;
   if(G.state === 'aim') startCharge();
   else if(G.state === 'bite') hookFish();
   else if(G.state === 'waiting') reelInEarly();
   else if(G.state === 'reeling') G.reelHeld = true;
 }
 function handleRelease(){
-  if(shopOpen) return;
+  if(shopOpen || marketOpen) return;
   if(G.state === 'charging') releaseCast();
   else if(G.state === 'reeling') G.reelHeld = false;
 }
 addEventListener('keydown', e => {
   if(e.code === 'Escape'){
     if(shopOpen){ closeShop(); return; }
+    if(marketOpen){ closeMarket(); return; }
     if(!logDrawer.classList.contains('hidden')){ logDrawer.classList.add('hidden'); drawerOpen = false; updateLockHint(); return; }
   }
   if(e.code === 'KeyE' && !e.repeat && G.state === 'aim'){
-    if(shopOpen) closeShop(); else openShop();
+    if(shopOpen) closeShop();
+    else if(marketOpen) closeMarket();
+    else if(G.nearShop && (!G.nearMarket || distShop() < distMarket())) openShop();
+    else if(G.nearMarket) openMarket();
+    else showToast('No stall nearby — follow the path.', true);
     return;
   }
-  if(shopOpen) return;
+  if(shopOpen || marketOpen) return;
   if(setKey(e.code, true)) e.preventDefault();
   if(e.code === 'Space'){
     e.preventDefault();
@@ -1295,7 +1614,7 @@ $('startBtn').addEventListener('click', () => {
   ensureAudio();
   $('startOverlay').classList.add('hidden');
   G.yaw = 0; G.pitch = -0.15;
-  applyRod();
+  applyGear();
   setState('aim');
   requestLock();
   showToast('Good luck, angler!');
@@ -1318,13 +1637,20 @@ $('closeLog').addEventListener('click', () => { logDrawer.classList.add('hidden'
 shopBtnEl.addEventListener('click', openShop);
 $('shopClose').addEventListener('click', closeShop);
 shopOverlay.addEventListener('click', e => { if(e.target === shopOverlay) closeShop(); });
-document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+document.querySelectorAll('#shopOverlay .tab').forEach(t => t.addEventListener('click', () => {
   shopTab = t.dataset.tab;
   renderShop();
 }));
 shopBody.addEventListener('click', e => {
   const buy = e.target.closest('[data-buy]');
-  if(buy){ buyRod(+buy.dataset.buy); return; }
+  if(!buy) return;
+  const kind = shopTab === 'lines' ? 'line' : shopTab === 'bait' ? 'bait' : 'rod';
+  buyGear(kind, +buy.dataset.buy);
+});
+marketBtnEl.addEventListener('click', openMarket);
+$('marketClose').addEventListener('click', closeMarket);
+marketOverlayEl.addEventListener('click', e => { if(e.target === marketOverlayEl) closeMarket(); });
+marketBody.addEventListener('click', e => {
   const one = e.target.closest('[data-sell]');
   if(one){ sellFish(+one.dataset.sell); return; }
   if(e.target.closest('#sellAll')) sellAll();
@@ -1361,9 +1687,12 @@ stickEl.addEventListener('pointerup', endStick);
 stickEl.addEventListener('pointercancel', endStick);
 $('resetBtn').addEventListener('click', () => {
   G.score = 0; G.caught = 0; G.best = null; log.length = 0;
-  G.coins = 0; bag.length = 0; G.owned = ['bamboo']; G.rodIndex = 0;
-  applyRod(); updateStats(); renderLog(); saveGame();
+  G.coins = 0; bag.length = 0;
+  G.owned = { rod:[0], line:[0], bait:[0] };
+  G.gear  = { rod:0, line:0, bait:0 };
+  applyGear(); updateStats(); renderLog(); saveGame();
   if(shopOpen) renderShop();
+  if(marketOpen) renderMarket();
   showToast('Session reset — tight lines!');
 });
 $('soundBtn').addEventListener('click', function(){
@@ -1417,7 +1746,7 @@ function animate(){
 
   // ---- walking ----
   let mf = 0, ms = 0;
-  if(G.state === 'aim' && !shopOpen && !drawerOpen){
+  if(G.state === 'aim' && !shopOpen && !marketOpen && !drawerOpen){
     if(keys.f) mf += 1;
     if(keys.b) mf -= 1;
     if(keys.r) ms += 1;
@@ -1451,13 +1780,15 @@ function animate(){
     G.pz
   );
 
-  // shop proximity
-  const dShop = Math.hypot(G.px - SHOP_POS.x, G.pz - SHOP_POS.z);
-  G.nearShop = dShop < 5.6;
-  const shopBtnEl = $('shopBtn');
-  const showShopBtn = G.nearShop && G.state === 'aim' && !shopOpen;
-  shopBtnEl.classList.toggle('hidden', !showShopBtn);
-  stickEl.classList.toggle('hidden', !(isTouch && G.state === 'aim' && !shopOpen));
+  // stall proximity
+  G.nearShop = Math.hypot(G.px - SHOP_POS.x, G.pz - SHOP_POS.z) < 6.2;
+  G.nearMarket = Math.hypot(G.px - MARKET_POS.x, G.pz - MARKET_POS.z) < 6.4;
+  const idle = G.state === 'aim' && !shopOpen && !marketOpen;
+  const showShop = G.nearShop && idle;
+  const showMarket = G.nearMarket && idle;
+  shopBtnEl.classList.toggle('hidden', !showShop);
+  marketBtnEl.classList.toggle('hidden', !showMarket);
+  stickEl.classList.toggle('hidden', !(isTouch && idle));
 
   // world ambience (cheap: only a handful of updates)
   waterUniforms.uTime.value = G.time;
@@ -1539,33 +1870,42 @@ function animate(){
     bobber.position.copy(bobberPos);
   }
 
-  // ---- reeling minigame (harder: rod stats + surges + slack) ----
+  // ---- reeling minigame ----
+  // safe band (G.bandLo..G.bandHi) and needle speed (G.rateMul) both come
+  // from fightSetup(): rarer/heavier fish narrow the band and speed the needle,
+  // better rod/line widen and calm it.
   if(G.state === 'reeling'){
-    const rod = RODS[G.rodIndex];
+    const r2 = RODS[G.gear.rod], l2 = LINES[G.gear.line];
     // surge windows: the fish bolts and the line screams
     G.surgeTimer -= dt;
     if(G.surgeTimer <= 0){ G.surgeTimer = rand(0.9, 2.0); G.surgeDur = rand(0.5, 1.1); }
     if(G.surgeDur > 0) G.surgeDur -= dt;
     const surging = G.surgeDur > 0;
 
-    let rate = -24;                                     // line relaxes fast when you let go
-    if(G.reelHeld) rate = (12 + G.fishStrength * 18) * rod.tension * (surging ? 1.9 : 1);
+    const base = 12 + G.fishStrength * 18;              // 15..31 per second
+    const rise = base * G.rateMul * (surging ? 1.9 : 1);
+    const fall = 24 * (0.7 + 0.3 * G.rateMul);
+    const rate = G.reelHeld ? rise : -fall;
     G.tension = clamp(G.tension + rate * dt, 0, 100);
 
-    if(G.reelHeld) G.progress += dt * (G.tension > 78 ? 6 : 20) * rod.reel;
+    const inSafe = G.tension >= G.bandLo && G.tension <= G.bandHi;
+    if(G.reelHeld) G.progress += dt * (inSafe ? 20 : (G.tension > G.bandHi ? 5 : 9)) * r2.reel;
     else G.progress -= dt * 1.0;
     G.progress = clamp(G.progress, 0, 100);
 
     if(G.reelHeld && Math.random() < dt * 9) sfx.reelTick();
 
     // slack line: fish spits the hook
-    if(G.tension < 14){ G.slack += dt; } else { G.slack = Math.max(0, G.slack - dt * 1.8); }
+    if(G.tension < G.bandLo - 8){ G.slack += dt; } else { G.slack = Math.max(0, G.slack - dt * 1.8); }
     if(G.slack > 2.0){ escapeFish('Slack line — it spat the hook!'); }
 
     // over-tension: snap
     if(G.tension >= 96){
       G.snapTimer += dt;
-      if(G.snapTimer > 0.3){ sfx.snap(); escapeFish('Snap! The line couldn\'t take it.'); }
+      if(G.snapTimer > 0.3){
+        sfx.snap();
+        escapeFish(G.over > 0.25 ? 'SNAP! That fish was over your line rating.' : 'Snap! The line couldn\'t take it.');
+      }
     } else G.snapTimer = 0;
 
     if(G.state === 'reeling' && G.progress >= 100) catchFish();
@@ -1574,13 +1914,15 @@ function animate(){
     progressFill.style.width = G.progress + '%';
     reelPct.textContent = Math.floor(G.progress) + '%';
 
-    const track = document.querySelector('.tension-track');
-    track.classList.toggle('danger', G.tension > 82);
-    track.classList.toggle('slack', G.tension < 22);
+    const track = $('tensionTrack');
+    track.classList.toggle('danger', G.tension > G.bandHi + 6);
+    track.classList.toggle('slack', G.tension < G.bandLo - 6);
     reelWarn.textContent =
-      G.slack > 0.6 ? 'SLACK LINE — REEL!' :
-      G.tension > 82 ? 'TOO TIGHT — LET GO!' :
-      surging ? 'IT\'S SURGING — EASE OFF!' : '';
+      G.over > 0.25 ? 'LINE OVERLOADED — ' + Math.round(G.fishWeight) + 'lb ON ' + l2.rating + 'lb LINE' :
+      G.slack > 0.5 ? 'SLACK LINE — REEL!' :
+      G.tension > G.bandHi + 4 ? 'TOO TIGHT — LET GO!' :
+      G.tension < G.bandLo - 4 ? 'SLACK LINE — REEL!' :
+      surging ? "IT'S SURGING — EASE OFF!" : '';
     reelWarn.classList.toggle('warn', !!reelWarn.textContent);
 
     if(hookedFish){
@@ -1661,7 +2003,7 @@ function animate(){
 
 // ---------- boot ----------
 loadGame();
-applyRod();
+applyGear();
 updateStats();
 renderLog();
 setRodDir(DIR_IDLE);
@@ -1673,6 +2015,8 @@ animate();
 window.__reelLife = {
   G, SPECIES, RODS, renderer, scene, camera, bobber, bobberPos, water, rodRig, aimMarker,
   get shopOpen(){ return shopOpen; },
-  openShop, closeShop, buyRod, sellAll, renderShop,
-  walkable, groundAt, landBobber, triggerBite, hookFish, catchFish, SHOP_POS
+  openShop, closeShop, openMarket, closeMarket, buyGear, sellAll, sellFish,
+  renderShop, renderMarket, fightSetup, pickSpecies, paintTensionBand, RARITY, LINES, BAITS,
+  walkable, groundAt, landBobber, triggerBite, hookFish, catchFish, SHOP_POS, MARKET_POS,
+  openMarket, sellFish, bag
 };

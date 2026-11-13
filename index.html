@@ -4,16 +4,16 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>Reel Life 3D — Fishing Game</title>
-<meta name="description" content="Reel Life 3D — a blocky first-person browser fishing game. Cast, hook and reel in seven species from Bluegill to the legendary Ancient Carp." />
+<meta name="description" content="Reel Life 3D — a blocky first-person browser fishing game. Walk the lake, cast, fight the fish, and spend your coins on rods, line and bait." />
 <meta name="theme-color" content="#0ea5b7" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230ea5b7'/%3E%3Crect x='14' y='24' width='28' height='16' fill='%23fff'/%3E%3Crect x='42' y='16' width='8' height='10' fill='%23fff'/%3E%3Crect x='42' y='38' width='8' height='10' fill='%23fff'/%3E%3Crect x='48' y='26' width='6' height='12' fill='%23fff'/%3E%3Crect x='20' y='28' width='4' height='4' fill='%230ea5b7'/%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=6" />
+<link rel="stylesheet" href="style.css?v=11" />
 <script type="importmap">
 {
   "imports": {
-    "three": "./vendor/three.module.js?v=6"
+    "three": "./vendor/three.module.js?v=11"
   }
 }
 </script>
@@ -40,7 +40,7 @@
         </div>
       </div>
       <div class="stats">
-        <div class="stat"><label>SCORE</label><strong id="score">0</strong></div>
+        <div class="stat best"><label>BEST</label><strong id="bestNum">—</strong></div>
         <div class="stat"><label>CAUGHT</label><strong id="caughtCount">0</strong></div>
         <div class="stat coins"><label>COINS</label><strong id="coinCount">0</strong></div>
         <button id="logBtn" class="icon-btn" title="Catch log">
@@ -81,7 +81,8 @@
       <div class="reel-bars">
         <div class="bar-wrap">
           <label>LINE TENSION</label>
-          <div class="tension-track">
+          <div class="tension-track" id="tensionTrack">
+            <div id="tensionSafe" class="tension-safe"></div>
             <div id="tensionNeedle"></div>
           </div>
         </div>
@@ -95,27 +96,41 @@
     </div>
 
     <button id="shopBtn" class="shop-btn hidden">Tackle Shop <b>E</b></button>
+    <button id="marketBtn" class="shop-btn market hidden">Fish Market <b>E</b></button>
     <div id="lockHint" class="lock-hint hidden">Click to look around</div>
     <div id="stick" class="stick hidden"><div class="stick-knob"></div></div>
 
     <div class="controls-hint">
-      <span>WASD: walk</span><span>Mouse: look</span><span>Hold click: cast</span><span>Space: hook &amp; reel</span><span>E: shop</span>
+      <span>WASD: walk</span><span>Mouse: look</span><span>Hold click: cast</span><span>Space: hook &amp; reel</span><span>E: shop / market</span>
     </div>
   </div>
 
-  <!-- Shop -->
+  <!-- Tackle shop -->
   <div id="shopOverlay" class="modal hidden">
     <div class="shop-card">
       <div class="shop-head">
-        <h2>Dock Shop</h2>
+        <h2>Tackle Shop</h2>
         <div class="shop-coins">COINS <span id="shopCoins">0</span></div>
         <button id="shopClose" class="shop-close">✕</button>
       </div>
       <div class="shop-tabs">
         <button class="tab active" data-tab="rods">Rods</button>
-        <button class="tab" data-tab="sell">Sell Fish <span id="sellCount" class="pill">0</span></button>
+        <button class="tab" data-tab="lines">Line</button>
+        <button class="tab" data-tab="bait">Bait</button>
       </div>
       <div id="shopBody" class="shop-body"></div>
+    </div>
+  </div>
+
+  <!-- Fish market -->
+  <div id="marketOverlay" class="modal hidden">
+    <div class="shop-card">
+      <div class="shop-head market-head">
+        <h2>Fish Market</h2>
+        <div class="shop-coins">COINS <span id="marketCoins">0</span></div>
+        <button id="marketClose" class="shop-close">✕</button>
+      </div>
+      <div id="marketBody" class="shop-body"></div>
     </div>
   </div>
 
@@ -132,7 +147,7 @@
     </div>
   </div>
 
-  <!-- Escape toast -->
+  <!-- Toast -->
   <div id="toast" class="toast hidden"></div>
 
   <!-- Log drawer -->
@@ -152,14 +167,15 @@
         <li><b>WASD</b> to walk · mouse to look</li>
         <li><b>Hold &amp; release</b> to cast</li>
         <li><b>Strike</b> when the bobber dips</li>
-        <li><b>Reel</b> — tantalise the tension</li>
-        <li><b>Shop</b> on the shore to sell &amp; upgrade</li>
+        <li><b>Reel</b> — keep the needle in the green</li>
+        <li><b>Shop</b> for rod, line &amp; bait</li>
+        <li><b>Market</b> to sell your catch</li>
       </ul>
       <button id="startBtn" class="primary-btn big">Start Fishing</button>
-      <p class="tiny">7 species • best with sound on</p>
+      <p class="tiny">24 species • earn coins, upgrade your kit</p>
     </div>
   </div>
 </div>
-<script type="module" src="main.js?v=6"></script>
+<script type="module" src="main.js?v=11"></script>
 </body>
 </html>
