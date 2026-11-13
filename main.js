@@ -1057,7 +1057,7 @@ function landingPoint(power, out){
   camFwd.y = 0;
   if(camFwd.lengthSq() < 0.0001) camFwd.set(0,0,-1);
   camFwd.normalize();
-  const rod = RODS[G.rodIndex];
+  const rod = RODS[G.gear.rod] || RODS[0];
   let dist = lerp(5.0, rod.cast, power);
   out.copy(camera.position).addScaledVector(camFwd, dist);
   out.y = 0.1;
@@ -1735,6 +1735,13 @@ let bobPhase = 0;
 
 function animate(){
   requestAnimationFrame(animate);
+  try { tick(); }
+  catch(err){
+    // never let one bad frame freeze the canvas
+    if(!animate.reported){ animate.reported = true; console.error('[reel-life] frame error:', err); }
+  }
+}
+function tick(){
   const rawDt = clock.getDelta();
   const dt = Math.min(rawDt, 0.05);
   G.time += dt;
