@@ -290,3 +290,12 @@ html,body{height:100%;overflow:hidden;background:#7fc4e0;color:var(--ink);
 /* best-catch chip (HUD) */
 .stat.best strong { font-size:15px; letter-spacing:0; }
 .stat.best strong:not(:empty) { color:var(--cream); }
+
+/* ---------- 24-tier gear rows ---------- */
+.rod-card.unowned { opacity:.92 }
+.tier-no { font-size:8.5px; font-weight:900; letter-spacing:.5px; margin-left:6px; vertical-align:1px;
+  background:#e6d9bd; border:1.5px solid var(--ink); padding:0 4px; color:var(--ink-soft) }
+.rod-card.equipped .tier-no { background:var(--teal); color:#fff }
+.gear-delta { color:var(--ink-soft) }
+.gear-tag.on { display:inline-block }
+.shop-body { max-height:none }

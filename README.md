@@ -60,17 +60,18 @@ The reel minigame is all about **line tension**, and it does not forgive:
 The shore behind the pier has two separate structures — walk up to either one and its
 button appears (or press **E**).
 
-**Tackle Shop** — three tabs, five tiers each, bought with coins and unlocked in order:
+**Tackle Shop** — three tabs with **24 tiers each**, bought with coins:
 
-| | Tier 1 | Tier 2 | Tier 3 | Tier 4 | Tier 5 |
-| --- | --- | --- | --- | --- | --- |
-| **Rod** (cast range) | Bamboo `free` 16m | Fiberglass `250c` 20m | Carbon `1000c` 25m | Pro Carbon `3000c` 30m | Mythril `7000c` 36m |
-| **Line** (max fish) | Twine `free` 3lb | 6lb Mono `200c` | 12lb Mono `750c` | 26lb Braid `2200c` | 55lb Fluoro `5000c` |
-| **Bait** (luck) | Worm `free` | Sweet Corn `180c` | Live Minnow `600c` | River Shrimp `1800c` | Glow Grub `4200c` |
+| | First | Then | Last |
+| --- | --- | --- | --- |
+| **Rod** — cast range | Bamboo Pole `free`, 14m | Willow Rod `145c` 17m · Fiberglass `150c` 21m · … | Mythril Rod `28,300c`, 92m |
+| **Line** — max fish | Cotton Twine `free`, 3lb | 4lb Mono `80c` · 6lb `85c` · … | 800lb Mythril `15,600c` |
+| **Bait** — luck | Garden Worm `free` | Bread Ball `60c` · Sweet Corn `60c` · … | Moonbait `11,300c` |
 
 Rod = **distance + forgiveness**, line = **maximum weight you can land**, bait = **luck**
-(rarer, heavier fish, and quicker bites). You can own several of each and re-equip any of
-them for free; you just have to buy them in order.
+(rarer, heavier fish, and quicker bites). Every tier is a straight upgrade over the last —
+the row shows `+3m cast · +0.03x reel` so you can see what you are buying. Any tier you can
+afford is fair game; nothing is level-locked.
 
 **Fish Market** — everything you catch goes into your bag instead of vanishing. Sell fish
 one at a time or all at once. Heavier and rarer fish are worth far more, and deep water
@@ -78,36 +79,49 @@ one at a time or all at once. Heavier and rarer fish are worth far more, and dee
 
 ### Pacing
 
-There are no levels — coins are the only gate, and the ladder is deliberately spread out:
+There are no levels — coins are the only gate. Prices are placed so that **each tier costs
+roughly eight good catches at the depth that tier opens up**: you always feel one or two
+sessions away from the next toy, and the top of the ladder stays far away.
 
-| Goal | Coins | Roughly |
+| Milestone | Coins | Roughly |
 | --- | --- | --- |
-| Fiberglass rod | 250 | first few minutes |
-| Carbon rod | 1000 | one good session |
-| Pro Carbon | 3000 | a few sessions |
-| Mythril rod | 7000 | the long haul |
+| Tier 2–4 rod | 145–260 | your first few minutes |
+| Tier 8 rod (41m) | 820 | one good session |
+| Tier 14 rod (62m) | 2,550 | several sessions |
+| Tier 20 rod (82m) | 15,200 | the long haul |
+| Tier 24 rod (92m) | 28,300 | the thing you will not stop thinking about |
 
-Everything else (lines, baits) competes for the same coins, so a full kit is a genuine
-project rather than a first-sitting purchase.
+Lines and baits compete for the same coins but are cheaper (about 55% and 40% of the rod
+at the same tier), so a full kit is a genuine project rather than a first-sitting purchase.
 
 ## What's in the lake
 
-**24 species** across six rarities, each with its own size range, strength, value and the
-**depth it lives at** — you can only hook a fish if your cast reaches its water. That is
-the real progression: better rods reach deeper water, which holds bigger, rarer, richer
-fish. The catch log (top-right book icon) tracks everything you land; the HUD keeps your
-heaviest catch. Coins, gear, your bag and the log are saved to `localStorage`
-(key `reel-life-3d-save-v5`) — use **Reset** in the log drawer to wipe progress.
+**120 species** across six rarities, in twelve depth bands of ten. Every fish has its own
+size range, strength, value and the **depth it lives at** — you can only hook a fish if
+your cast reaches its water, and the deeper you cast the more the pool fills with that
+band's residents. That is the real progression: better rods reach deeper water, which holds
+bigger, rarer, richer fish. The catch log (top-right book icon) tracks everything you land;
+the HUD keeps your heaviest catch. Coins, gear, your bag and the log are saved to
+`localStorage` (key `reel-life-3d-save-v6`) — use **Reset** in the log drawer to wipe
+progress.
 
-| Depth | Species |
+| Depth | Who lives there |
 | --- | --- |
-| Shore (0–6m) | Bluegill, Pumpkinseed, Rock Bass, Yellow Perch, Black Crappie, Bullhead, Largemouth Bass |
-| Off the dock (7–16m) | Common Carp, Smallmouth Bass, Chain Pickerel, Rainbow Trout, Brown Trout, Walleye, Channel Catfish |
-| Deep (17–25m) | Northern Pike, Golden Koi, Muskellunge, Flathead Catfish, Striped Bass, Mirror Carp |
-| Beyond the sandbar (26m+) | Lake Sturgeon, Wels Catfish, Ancient Carp, Moonfish |
+| 0m | Bluegill, Pumpkinseed, Rock Bass, Yellow Perch, Black Crappie, Green Sunfish, Warmouth, White Perch, Redear Sunfish, Brown Bullhead |
+| 8m | Largemouth / Smallmouth / Spotted / Yellow / White Bass, River & Grass Carp, Longear Sunfish, Saugeye, Creek Chub |
+| 16m | Rainbow / Brown / Brook Trout, Walleye, Sauger, Channel & Blue Catfish, Tiger Muskie, Northern Pike, Burbot |
+| 24m | Muskellunge, Striped Bass, Lake Trout, Chinook & Coho Salmon, Steelhead, Flathead Catfish, Bighead & Silver Carp, Golden Koi |
+| 32m | Mirror & Leather Carp, Atlantic Salmon, Alligator Gar, Paddlefish, Bowfin, American Eel, Lake Sturgeon, Giant Snakehead, Golden Dorado |
+| 40m | Wels Catfish, Goonch, Arapaima, Giant Gourami, Mekong Giant Catfish, Giant Stingray, Black Pacu, Tambaqui, Bull Shark, Golden Mahseer |
+| 48m | Goliath Tigerfish, Giant Trevally, Napoleon Wrasse, Ocean Sunfish, Coelacanth, Giant Oarfish, Giant Manta, Whale Shark, Blue Marlin, Great White |
+| 56m | Leviathan Sturgeon, Moonfish, Ancient Carp, Abyssal Wyrm, Star-Eater, Lunar Coelacanth, Deep One, Trench Serpent, Hollow Gar, Pale Leviathan |
+| 64m | Titan Sturgeon, Void Angler, Elder Leviathan, Sunken God, Marrow Eel, Ghost Sturgeon, Colossal Squid, Megamouth, River Kraken, Golden Leviathan |
+| 72m | World-Eater, Timefish, Bone Sail, Deep Choir, The Warden, Salt Ghost, Hollow King, Trench Widow, Old Growth, Pale Crown |
+| 80m | The Drowned, Star Whale, Ironjaw, Sunken Spire, Lunar Leviathan, Hollow Moon, Deep Root, The Listener, Bone Tide, Crown of Salt |
+| 88m | The Hollow God, World Serpent, Moon-Eater, The First Fish, Leviathan Prime, Sunken Crown, The Deep Itself, Pale Sun, Elder Tide, **Reel Life** |
 
 Rarity runs common → uncommon → rare → epic → legendary → mythic, and rarer fish are worth
-far more per pound.
+far more per pound. Everything past 48m is legendary or better — that is where the coins are.
 
 ## Built to run light
 
@@ -137,8 +151,9 @@ vendor/      three.js r160 module
 
 ## Tweaking
 
-- Species table (points, size, strength, `dist` depth): `SPECIES` at the top of `main.js`.
-- Gear tiers and prices: the `RODS`, `LINES` and `BAITS` arrays.
+- Species table: `FISH_TABLE` at the top of `main.js` — one row per fish, with the numbers
+  derived in the builder right below it (`BAND_PTS` / `BAND_W`).
+- Gear tiers and prices: `ROD_NAMES` / `LINE_NAMES` / `BAIT_NAMES` plus the `*_COST` arrays.
 - Fight difficulty: `fightSetup()` — `demand` vs `supply` sets both the band width and the
   needle speed in one ratio.
 - Tension/reel feel: the `reeling` block inside `animate()`.

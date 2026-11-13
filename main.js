@@ -13,84 +13,251 @@ const hexc  = c => '#' + c.toString(16).padStart(6,'0');
 
 // ---------- Species ----------
 // dist = how far out the bobber must be for this fish to bite (deep water)
-const SPECIES = [
-  { name:'Bluegill',        color:0x4a90d9, belly:0xbfe3ff, size:0.55, minW:0.3,  maxW:1.4,  pts:10,  rarity:'common',    weight:30, strength:0.18, dist:0,  pattern:'none',     desc:'A scrappy little panfish. Every angler starts here.' },
-  { name:'Pumpkinseed',     color:0xe08a3c, belly:0xffe0a8, size:0.5,  minW:0.2,  maxW:1.0,  pts:12,  rarity:'common',    weight:24, strength:0.16, dist:0,  pattern:'spots',    desc:'A sunset-orange sunfish with a cheeky bite.' },
-  { name:'Rock Bass',       color:0x7a6a52, belly:0xd8c9a8, size:0.6,  minW:0.4,  maxW:2.0,  pts:14,  rarity:'common',    weight:22, strength:0.22, dist:0,  pattern:'spots',    desc:'Grumpy, stubby and always hungry.' },
-  { name:'Yellow Perch',    color:0xf6c945, belly:0xfff3b0, size:0.6,  minW:0.4,  maxW:2.2,  pts:16,  rarity:'common',    weight:26, strength:0.24, dist:2,  pattern:'stripes',  desc:'Golden stripes and a feisty fight on light tackle.' },
-  { name:'Black Crappie',   color:0x4c5a6b, belly:0xdfe6ee, size:0.65, minW:0.5,  maxW:2.4,  pts:18,  rarity:'common',    weight:20, strength:0.24, dist:4,  pattern:'spots',    desc:'Speckled and paper-mouthed — easy to lose at the net.' },
-  { name:'Common Carp',     color:0xc2a15a, belly:0xf0e2b6, size:0.95, minW:3.0,  maxW:16.0, pts:28,  rarity:'common',    weight:16, strength:0.46, dist:7,  pattern:'scales',   desc:'A broad-shouldered mud grubber that fights like a door.' },
-  { name:'Bullhead',        color:0x54503f, belly:0xc9c1a8, size:0.8,  minW:1.5,  maxW:7.0,  pts:34,  rarity:'uncommon',  weight:16, strength:0.36, dist:3,  pattern:'whiskers', desc:'Whiskered, stubborn and utterly unbothered by daylight.' },
-  { name:'Largemouth Bass', color:0x3d9970, belly:0xd8f3dc, size:0.85, minW:1.5,  maxW:11.0, pts:42,  rarity:'uncommon',  weight:18, strength:0.46, dist:5,  pattern:'spots',    desc:'The king of the shallows. Hits hard and jumps harder.' },
-  { name:'Smallmouth Bass', color:0x8a6a3a, belly:0xe8d3a0, size:0.8,  minW:1.2,  maxW:7.0,  pts:44,  rarity:'uncommon',  weight:14, strength:0.5,  dist:8,  pattern:'stripes',  desc:'Bronze muscle. Lives where the bottom turns to rock.' },
-  { name:'Chain Pickerel',  color:0x5f8a3c, belly:0xdff0c2, size:0.9,  minW:2.0,  maxW:8.0,  pts:46,  rarity:'uncommon',  weight:12, strength:0.5,  dist:10, pattern:'stripes',  desc:'A toothy ambusher with chain-link markings.' },
-  { name:'Rainbow Trout',   color:0xe86a92, belly:0xffe5ec, size:0.75, minW:1.5,  maxW:9.0,  pts:50,  rarity:'uncommon',  weight:12, strength:0.52, dist:11, pattern:'rainbow',  desc:'A rainbow flash beneath the surface. Acrobatic and quick.' },
-  { name:'Brown Trout',     color:0xa07a44, belly:0xf3e3bd, size:0.85, minW:2.0,  maxW:14.0, pts:62,  rarity:'rare',      weight:9,  strength:0.54, dist:13, pattern:'spots',    desc:'Buttery gold with red spots. Wary of everything.' },
-  { name:'Walleye',         color:0xb9c47a, belly:0xf5f2c8, size:0.95, minW:3.0,  maxW:15.0, pts:72,  rarity:'rare',      weight:8,  strength:0.56, dist:14, pattern:'scales',   desc:'Glass-eyed night feeder with a walleye chop of a fight.' },
-  { name:'Channel Catfish', color:0x5d6d7e, belly:0xd6dbdf, size:1.0,  minW:6.0,  maxW:28.0, pts:88,  rarity:'rare',      weight:8,  strength:0.64, dist:12, pattern:'whiskers', desc:'A whiskered heavyweight that pulls like a truck.' },
-  { name:'Northern Pike',   color:0x6f8f4a, belly:0xe6efc9, size:1.1,  minW:5.0,  maxW:26.0, pts:98,  rarity:'rare',      weight:7,  strength:0.68, dist:17, pattern:'spots',    desc:'All teeth and attitude. Bring line, not luck.' },
-  { name:'Muskellunge',     color:0x7d8a5a, belly:0xdfe6bb, size:1.3,  minW:10.0, maxW:42.0, pts:118, rarity:'rare',      weight:6,  strength:0.72, dist:20, pattern:'stripes',  desc:'The fish of ten thousand casts. Worth every one.' },
-  { name:'Striped Bass',    color:0x9aa7b5, belly:0xeef2f7, size:1.15, minW:12.0, maxW:46.0, pts:150, rarity:'epic',      weight:5,  strength:0.72, dist:23, pattern:'stripes',  desc:'Ocean-run silver that shoulders upstream like a train.' },
-  { name:'Flathead Catfish',color:0x6b5b3e, belly:0xe0d3ae, size:1.25, minW:15.0, maxW:58.0, pts:165, rarity:'epic',      weight:4,  strength:0.78, dist:22, pattern:'whiskers', desc:'A wide, flat head that owns the bottom of the hole.' },
-  { name:'Lake Sturgeon',   color:0x8e9b8a, belly:0xd7dcc9, size:1.5,  minW:25.0, maxW:110.0,pts:210, rarity:'epic',      weight:3,  strength:0.86, dist:26, pattern:'scales',   desc:'Armoured living fossil. Older than the dock.' },
-  { name:'Golden Koi',      color:0xffb703, belly:0xfff3b0, size:0.85, minW:1.5,  maxW:7.0,  pts:260, rarity:'legendary', weight:2.2,strength:0.6,  dist:18, pattern:'patches',  desc:'Shimmering gold in the shallows. A true prize catch!' },
-  { name:'Mirror Carp',     color:0xd9d2c0, belly:0xfff7e2, size:1.1,  minW:12.0, maxW:40.0, pts:290, rarity:'legendary', weight:1.8,strength:0.74, dist:25, pattern:'scales',   desc:'Scattered mirror scales and the temper of a bull.' },
-  { name:'Wels Catfish',    color:0x4a4a52, belly:0xc3c3cf, size:1.8,  minW:30.0, maxW:120.0,pts:340, rarity:'legendary', weight:1.4,strength:0.92, dist:29, pattern:'whiskers', desc:'A river monster that has eaten things larger than you.' },
-  { name:'Ancient Carp',    color:0x9b5de5, belly:0xe0aaff, size:1.3,  minW:15.0, maxW:70.0, pts:480, rarity:'mythic',    weight:0.9,strength:0.95, dist:31, pattern:'scales',   desc:'The old giant of the lake. It has outsmarted a hundred anglers.' },
-  { name:'Moonfish',        color:0x9fd8ff, belly:0xfdfdff, size:0.9,  minW:2.0,  maxW:9.0,  pts:620, rarity:'mythic',    weight:0.6,strength:1.05, dist:34, pattern:'rainbow',  desc:'Only bites past the last sandbar, under a coin-white moon.' },
+// ---------- Species ----------
+// Compact table, one row per fish:
+//   [name, colour, rarity, depth, sizeFactor, pattern, blurb]
+// depth     = how far out the bobber has to be before it will bite
+// sizeFactor= how big this fish runs for its depth band (0.6 = runt, 6 = leviathan)
+// pattern   = 0 none, 1 stripes, 2 spots, 3 rainbow, 4 patches, 5 scales, 6 whiskers
+// Weight, points, strength and body size are derived in buildSpecies().
+const FISH_TABLE = [
+  /* ---- 0m · right off the dock ---- */
+  ['Bluegill', 0x4a90d9, 'common', 0, 0.85, 1, 'A scrappy little panfish. Every angler starts here.'],
+  ['Pumpkinseed', 0xe08a3c, 'common', 0, 0.70, 2, 'Sunset orange with a cheeky bite.'],
+  ['Rock Bass', 0x7a6a52, 'common', 0, 0.95, 2, 'Grumpy, stubby and always hungry.'],
+  ['Yellow Perch', 0xf6c945, 'common', 0, 1.05, 1, 'Golden stripes and a feisty scrap on light tackle.'],
+  ['Black Crappie', 0x4c5a6b, 'common', 0, 1.15, 2, 'Paper-mouthed. Easy to lose at the net.'],
+  ['Green Sunfish', 0x4f9a5a, 'common', 0, 0.80, 0, 'Big mouth, bigger attitude, tiny body.'],
+  ['Warmouth', 0x8a6a3a, 'common', 0, 0.75, 2, 'Sits in the weeds and sulks.'],
+  ['White Perch', 0xd8dde3, 'common', 0, 0.90, 5, 'Silver, plentiful, never says no.'],
+  ['Redear Sunfish', 0xd0743f, 'common', 0, 0.95, 2, 'A shell-cracker with a red ear flap.'],
+  ['Brown Bullhead', 0x54503f, 'uncommon', 0, 1.35, 6, 'Whiskered, stubborn, unbothered by daylight.'],
+  /* ---- 8m · just past the pilings ---- */
+  ['Largemouth Bass', 0x3d9970, 'uncommon', 8, 1.50, 2, 'King of the shallows. Hits hard, jumps harder.'],
+  ['Smallmouth Bass', 0x8a6a3a, 'uncommon', 8, 1.30, 1, 'Bronze muscle from the rocky bottom.'],
+  ['Spotted Bass', 0x6b7a4a, 'uncommon', 8, 1.15, 2, 'Small, mean and covered in spots.'],
+  ['Yellow Bass', 0xd8c25a, 'common', 8, 0.85, 1, 'A gold-barred scrapper that runs in schools.'],
+  ['White Bass', 0xc9d3dc, 'uncommon', 8, 1.10, 0, 'Slashes at anything shiny.'],
+  ['River Carp', 0xc2a15a, 'common', 8, 1.75, 5, 'A mud-grubbing, broad-shouldered lump.'],
+  ['Grass Carp', 0x8f9b6a, 'common', 8, 2.05, 5, 'A vegetarian torpedo with no sense of humour.'],
+  ['Longear Sunfish', 0xd88a3c, 'common', 8, 0.65, 3, 'Flashy fins, tiny frame.'],
+  ['Saugeye', 0xb9c47a, 'rare', 8, 1.20, 5, 'A walleye hybrid with a bad temper.'],
+  ['Creek Chub', 0x9a8a6a, 'common', 8, 0.60, 0, 'Bold, greedy, and always first to the bait.'],
+  /* ---- 16m · the drop-off ---- */
+  ['Rainbow Trout', 0xe86a92, 'uncommon', 16, 1.20, 3, 'A rainbow flash beneath the surface.'],
+  ['Brown Trout', 0xa07a44, 'rare', 16, 1.40, 2, 'Buttery gold with red spots. Wary of everything.'],
+  ['Brook Trout', 0x6f8f5a, 'uncommon', 16, 1.00, 3, 'Speckled and cold-water fussy.'],
+  ['Walleye', 0xb9c47a, 'rare', 16, 1.35, 5, 'A glass-eyed night feeder.'],
+  ['Sauger', 0x9aa06a, 'uncommon', 16, 1.05, 5, 'The smaller, sandier cousin of the walleye.'],
+  ['Channel Catfish', 0x5d6d7e, 'rare', 16, 1.85, 6, 'A whiskered heavyweight that pulls like a truck.'],
+  ['Tiger Muskie', 0x7f8f4a, 'rare', 16, 1.90, 1, 'All the teeth, none of the patience.'],
+  ['Northern Pike', 0x6f8f4a, 'rare', 16, 2.10, 2, 'All teeth and attitude. Bring line, not luck.'],
+  ['Burbot', 0x6b5f45, 'uncommon', 16, 1.15, 6, 'A freshwater cod that sulks in the dark.'],
+  ['Blue Catfish', 0x4a6a8a, 'epic', 16, 2.20, 6, 'Blue-grey and built like a submarine.'],
+  /* ---- 24m · deep water ---- */
+  ['Muskellunge', 0x7d8a5a, 'rare', 24, 2.20, 1, 'The fish of ten thousand casts.'],
+  ['Striped Bass', 0x9aa7b5, 'epic', 24, 2.30, 1, 'Silver that shoulders upstream like a train.'],
+  ['Lake Trout', 0x6a7f7a, 'rare', 24, 1.90, 2, 'Cold, deep and slow to give up.'],
+  ['Chinook Salmon', 0x8a9099, 'epic', 24, 2.40, 2, 'A chrome slab with a one-track mind.'],
+  ['Coho Salmon', 0xb05a4a, 'rare', 24, 1.70, 3, 'Silver and red, and all fight.'],
+  ['Steelhead', 0xc8ccd4, 'epic', 24, 2.00, 3, 'A trout that went to sea and came back angry.'],
+  ['Flathead Catfish', 0x6b5b3e, 'epic', 24, 2.50, 6, 'A wide flat head that owns the bottom of the hole.'],
+  ['Bighead Carp', 0xa8a89a, 'rare', 24, 2.60, 5, 'A wall of a fish with a tiny face.'],
+  ['Silver Carp', 0xc9cfd4, 'uncommon', 24, 2.20, 0, 'Jumps at loud noises. Terrifying.'],
+  ['Golden Koi', 0xffb703, 'legendary', 24, 1.50, 4, 'Shimmering gold. A true prize catch.'],
+  /* ---- 32m · the old channel ---- */
+  ['Mirror Carp', 0xd9d2c0, 'legendary', 32, 2.60, 5, 'Scattered mirror scales and the temper of a bull.'],
+  ['Leather Carp', 0xb8ae98, 'epic', 32, 2.80, 0, 'Smooth-skinned and impossible to net.'],
+  ['Atlantic Salmon', 0xb8c0c9, 'epic', 32, 2.10, 2, 'A leaper with a grudge.'],
+  ['Alligator Gar', 0x6b7a4a, 'epic', 32, 3.00, 5, 'Armoured scales and rows of needle teeth.'],
+  ['Paddlefish', 0x5a6a72, 'legendary', 32, 2.90, 0, 'A living fossil with a paddle for a nose.'],
+  ['Bowfin', 0x6a6a48, 'rare', 32, 1.90, 2, 'Prehistoric, ugly, and never quits.'],
+  ['American Eel', 0x4a5a4a, 'uncommon', 32, 1.30, 0, 'A rope of muscle that ties itself in knots.'],
+  ['Lake Sturgeon', 0x8e9b8a, 'epic', 32, 3.10, 5, 'Armoured living fossil. Older than the dock.'],
+  ['Giant Snakehead', 0x5a4a3a, 'epic', 32, 2.40, 2, 'Breathes air and hunts the shallows.'],
+  ['Golden Dorado', 0xe0a020, 'legendary', 32, 1.80, 4, 'A gold torpedo that eats anything.'],
+  /* ---- 40m · the drowned river ---- */
+  ['Wels Catfish', 0x4a4a52, 'legendary', 40, 3.20, 6, 'A river monster that eats things larger than you.'],
+  ['Goonch', 0x6a5a52, 'epic', 40, 3.00, 6, 'A devil cat with a taste for flesh.'],
+  ['Arapaima', 0x7a5a5a, 'legendary', 40, 3.40, 4, 'Air-breathing giant with armour-plate scales.'],
+  ['Giant Gourami', 0x9a8a7a, 'rare', 40, 2.20, 0, 'A lump of a fish with a huge appetite.'],
+  ['Mekong Giant Catfish', 0x6f7a82, 'legendary', 40, 3.60, 6, 'Pale, whiskered and enormous.'],
+  ['Giant Stingray', 0x5a5a4a, 'epic', 40, 3.30, 2, 'A wing of muscle that drags along the sand.'],
+  ['Black Pacu', 0x3a3a3a, 'rare', 40, 2.00, 0, 'A river fish with a human-looking smile.'],
+  ['Tambaqui', 0x4a4a3a, 'rare', 40, 2.30, 5, 'Armoured and seed-crunching.'],
+  ['Bull Shark', 0x8a929a, 'legendary', 40, 3.50, 0, 'It should not be in a lake. It is.'],
+  ['Golden Mahseer', 0xd8a850, 'epic', 40, 2.40, 4, 'A golden river tank with a black mood.'],
+  /* ---- 48m · past the shelf ---- */
+  ['Goliath Tigerfish', 0x9a9a8a, 'legendary', 48, 2.60, 5, 'Teeth like a saw and a straight-line temper.'],
+  ['Giant Trevally', 0x8a9aa8, 'legendary', 48, 2.70, 0, 'A silver fist that hunts in packs.'],
+  ['Napoleon Wrasse', 0x5a8a9a, 'epic', 48, 3.00, 4, 'Huge, proud and slow to spook.'],
+  ['Ocean Sunfish', 0xa8a8a0, 'legendary', 48, 3.60, 0, 'A floating boulder with fins.'],
+  ['Coelacanth', 0x4a5a7a, 'legendary', 48, 2.80, 5, 'It has been doing this for four hundred million years.'],
+  ['Giant Oarfish', 0xc0c8d0, 'legendary', 48, 3.40, 1, 'A silver ribbon with a red mane.'],
+  ['Giant Manta', 0x4a4a5a, 'legendary', 48, 3.80, 0, 'A flying carpet of muscle.'],
+  ['Whale Shark', 0x5a6a82, 'mythic', 48, 4.40, 2, 'Spotted, gentle and staggeringly heavy.'],
+  ['Blue Marlin', 0x2a4a8a, 'legendary', 48, 3.20, 1, 'A spear that runs hot.'],
+  ['Great White', 0x8a9298, 'mythic', 48, 3.70, 0, 'The lake does not deserve this.'],
+  /* ---- 56m · the black water ---- */
+  ['Leviathan Sturgeon', 0x6a7a6a, 'legendary', 56, 3.40, 5, 'Old as the lake and twice as heavy.'],
+  ['Moonfish', 0x9fd8ff, 'mythic', 56, 2.20, 3, 'Bites only under a coin-white moon.'],
+  ['Ancient Carp', 0x9b5de5, 'mythic', 56, 2.40, 5, 'The old giant. It has outsmarted a hundred anglers.'],
+  ['Abyssal Wyrm', 0x2a3a5a, 'mythic', 56, 3.00, 1, 'Something long. Something patient.'],
+  ['Star-Eater', 0x3a2a5a, 'mythic', 56, 2.80, 4, 'It swallows the light and comes back for the hook.'],
+  ['Lunar Coelacanth', 0x7a8ac0, 'legendary', 56, 2.60, 5, 'Pale as bone and twice as stubborn.'],
+  ['Deep One', 0x3a4a4a, 'mythic', 56, 3.20, 0, 'It was here before the shore was.'],
+  ['Trench Serpent', 0x2a2a4a, 'mythic', 56, 3.60, 1, 'Coils that could wrap the whole pier.'],
+  ['Hollow Gar', 0x5a6a5a, 'legendary', 56, 2.90, 5, 'Hollow-boned, hollow-eyed, all teeth.'],
+  ['Pale Leviathan', 0xa8b0b8, 'legendary', 56, 3.80, 0, 'Whiter than the foam and far less friendly.'],
+  /* ---- 64m · the trench lip ---- */
+  ['Titan Sturgeon', 0x7a8a7a, 'mythic', 64, 3.50, 5, 'A barge with fins. Older than the hills.'],
+  ['Void Angler', 0x1a1a2a, 'mythic', 64, 2.40, 6, 'A lure on its own head, and worse teeth than yours.'],
+  ['Elder Leviathan', 0x4a5a6a, 'mythic', 64, 4.00, 0, 'It remembers the lake as a puddle.'],
+  ['Sunken God', 0x6a5a3a, 'mythic', 64, 4.20, 4, 'They sank it here on purpose.'],
+  ['Marrow Eel', 0x8a8a7a, 'legendary', 64, 2.60, 1, 'Long, pale and entirely without mercy.'],
+  ['Ghost Sturgeon', 0xb8c4c8, 'legendary', 64, 3.20, 5, 'You will see it twice: once on the line, once in dreams.'],
+  ['Colossal Squid', 0x7a3a4a, 'mythic', 64, 3.00, 0, 'Not a fish. Nobody told it.'],
+  ['Megamouth', 0x3a3a4a, 'legendary', 64, 3.80, 6, 'A mouth the size of a rowboat.'],
+  ['River Kraken', 0x2a3a4a, 'mythic', 64, 3.40, 2, 'Eight reasons to bring a bigger line.'],
+  ['Golden Leviathan', 0xd8b040, 'mythic', 64, 3.60, 4, 'Gilded, ancient and very tired of hooks.'],
+  /* ---- 72m · the drop ---- */
+  ['World-Eater', 0x2a1a3a, 'mythic', 72, 4.40, 0, 'Its mouth is a cave, and the cave is open.'],
+  ['Timefish', 0x5a7a8a, 'mythic', 72, 2.80, 3, 'It bites before you cast.'],
+  ['Bone Sail', 0xc8c0a8, 'mythic', 72, 3.60, 1, 'A sail of bone and a hull of muscle.'],
+  ['Deep Choir', 0x3a2a5a, 'mythic', 72, 3.20, 5, 'It sings at a frequency that unhooks men.'],
+  ['The Warden', 0x4a4a3a, 'mythic', 72, 4.00, 2, 'It guards the last sandbar. It is not friendly.'],
+  ['Salt Ghost', 0x9aa8b0, 'legendary', 72, 3.00, 0, 'Silver, silent, and always already behind you.'],
+  ['Hollow King', 0x6a5a6a, 'mythic', 72, 3.80, 4, 'Crowned in barnacles. Utterly empty.'],
+  ['Trench Widow', 0x2a2a3a, 'mythic', 72, 3.40, 1, 'It has eaten three of your rods.'],
+  ['Old Growth', 0x4a6a3a, 'legendary', 72, 3.60, 5, 'Bark-scaled and rooted to the trench floor.'],
+  ['Pale Crown', 0xd0d8e0, 'mythic', 72, 3.90, 3, 'A bone-white arc under the last of the light.'],
+  /* ---- 80m · the deep ---- */
+  ['The Drowned', 0x3a4a5a, 'mythic', 80, 3.60, 0, 'Waiting at the end of the line all along.'],
+  ['Star Whale', 0x2a3a6a, 'mythic', 80, 5.00, 3, 'Constellations move under its skin.'],
+  ['Ironjaw', 0x5a5a5a, 'mythic', 80, 4.20, 6, 'Scarred by every hook ever made.'],
+  ['Sunken Spire', 0x4a6a7a, 'mythic', 80, 4.60, 1, 'A tower with fins, and it is coming up.'],
+  ['Lunar Leviathan', 0xb8c8e0, 'mythic', 80, 4.00, 2, 'It rises only when the moon is full and low.'],
+  ['Hollow Moon', 0xd8d8e8, 'mythic', 80, 3.80, 4, 'A circle of pale scale, spinning slowly.'],
+  ['Deep Root', 0x3a5a3a, 'legendary', 80, 4.40, 5, 'It grew here before the water came.'],
+  ['The Listener', 0x4a3a5a, 'mythic', 80, 3.90, 0, 'Every cast. It heard every one.'],
+  ['Bone Tide', 0xc0b8a0, 'mythic', 80, 4.30, 1, 'The whole trench moves when it does.'],
+  ['Crown of Salt', 0xa8b8c0, 'mythic', 80, 4.10, 2, 'Wear it and the lake bows.'],
+  /* ---- 88m · the far edge ---- */
+  ['The Hollow God', 0x2a2a3a, 'mythic', 88, 5.20, 4, 'Nothing this big should take a hook.'],
+  ['World Serpent', 0x3a5a4a, 'mythic', 88, 5.40, 1, 'It circles the lake. The lake is its bed.'],
+  ['Moon-Eater', 0xbfd8ff, 'mythic', 88, 4.80, 3, 'It took a bite out of the sky and came back for more.'],
+  ['The First Fish', 0x6a7a9a, 'mythic', 88, 5.00, 5, 'Every scale on your line came from this.'],
+  ['Leviathan Prime', 0x3a4a6a, 'mythic', 88, 5.60, 2, 'The one the rest of them answer to.'],
+  ['Sunken Crown', 0xd8c070, 'mythic', 88, 4.90, 4, 'Gold under the silt. It was left there for a reason.'],
+  ['The Deep Itself', 0x1a2a3a, 'mythic', 88, 6.00, 0, 'You are not reeling a fish. You are reeling the lake.'],
+  ['Pale Sun', 0xf0f0e0, 'mythic', 88, 5.00, 3, 'Light from somewhere that has no right to light.'],
+  ['Elder Tide', 0x4a6a8a, 'mythic', 88, 5.30, 1, 'Older than water. Angrier than water.'],
+  ['Reel Life', 0xd8d0c0, 'mythic', 88, 5.50, 5, 'The one at the end of the line.'],
 ];
 
 const RARITY = {
-  common:    { tier:0, label:'COMMON',    value:1.0 },
-  uncommon:  { tier:1, label:'UNCOMMON',  value:1.15 },
-  rare:      { tier:2, label:'RARE',      value:1.35 },
-  epic:      { tier:3, label:'EPIC',      value:1.6 },
-  legendary: { tier:4, label:'LEGENDARY', value:2.0 },
-  mythic:    { tier:5, label:'MYTHIC',    value:2.6 },
+  common:    { tier:0, label:'COMMON',    value:1.00, spawn:26 },
+  uncommon:  { tier:1, label:'UNCOMMON',  value:1.15, spawn:15 },
+  rare:      { tier:2, label:'RARE',      value:1.35, spawn:7.5 },
+  epic:      { tier:3, label:'EPIC',      value:1.60, spawn:3.6 },
+  legendary: { tier:4, label:'LEGENDARY', value:2.00, spawn:1.5 },
+  mythic:    { tier:5, label:'MYTHIC',    value:2.60, spawn:0.55 },
 };
 
+// derive the numbers: deeper water and bigger specimens are worth more and fight harder
+const BAND_PTS = b => 8 * Math.pow(1.5, b);
+const BAND_W   = b => 2.2 * Math.pow(1.55, b);
+const SPECIES = FISH_TABLE.map(([name, color, rarity, dist, sf, pattern, desc]) => {
+  const b = clamp(Math.round(dist / 8), 0, 11);
+  const rar = RARITY[rarity];
+  const maxW = +(BAND_W(b) * sf).toFixed(1);
+  const minW = Math.max(0.2, +(maxW * 0.16).toFixed(1));
+  return {
+    name, color, rarity, dist, pattern, desc,
+    belly: lighten(color, 0.66),
+    minW, maxW,
+    pts: Math.round(BAND_PTS(b) * (0.8 + rar.tier * 0.12) * (0.7 + sf * 0.28)),
+    strength: +Math.min(1.75, 0.13 + b * 0.11 + sf * 0.055 + rar.tier * 0.03).toFixed(2),
+    size: +Math.min(1.9, 0.45 + Math.cbrt(maxW) * 0.28).toFixed(2),
+    weight: rar.spawn,
+  };
+});
+
 // ---------- Gear ----------
-// rod  -> cast distance (how far out you reach) + forgiveness (how steady the line is)
-const RODS = [
-  { id:'bamboo',     name:'Bamboo Pole',    cost:0,    color:0xc98a4b, cast:16, tension:1.30, reel:0.85, blurb:'Humble and whippy. Every legend starts here.' },
-  { id:'fiberglass', name:'Fiberglass Rod', cost:250,  color:0x69c8db, cast:20, tension:1.08, reel:1.00, blurb:'Balanced all-rounder for the everyday angler.' },
-  { id:'carbon',     name:'Carbon Rod',     cost:1000, color:0x3a424e, cast:25, tension:0.92, reel:1.15, blurb:'Light, stiff and quick to tame a stubborn fish.' },
-  { id:'pro',        name:'Pro Carbon',     cost:3000, color:0xffb703, cast:30, tension:0.78, reel:1.32, blurb:'Tournament grade. Holds tension like a dream.' },
-  { id:'mythril',    name:'Mythril Rod',    cost:7000, color:0x9b5de5, cast:36, tension:0.64, reel:1.50, blurb:'Lake legend. The old carp knows this rod by name.' },
+// Three ladders of 24 tiers each. Stats follow smooth curves; only the names,
+// colours, line ratings and prices are authored (ROD_COST / LINE_COST / BAIT_COST).
+const ROD_NAMES = [
+  ['Bamboo Pole', 0xc98a4b], ['Willow Rod', 0xb99a5a], ['Fiberglass Rod', 0x69c8db],
+  ['Graphite Rod', 0x6a6a72], ['Carbon Rod', 0x3a424e], ['Carbon Pro', 0x2f3640],
+  ['Toray Carbon', 0x2a3038], ['Tournament Rod', 0x1f6f8b], ['Tour Pro', 0x2f7fbf],
+  ['Signature Rod', 0xc0392b], ['Champion Rod', 0xe0a020], ['Masterwork Rod', 0x8e44ad],
+  ['Titanium Rod', 0x95a5a6], ['Quicksilver Rod', 0xbdc3c7], ['Moonsilver Rod', 0xc8d6e5],
+  ['Starmetal Rod', 0x5b6ee1], ['Runewood Rod', 0x6b4a29], ['Deepwater Rod', 0x1f4e79],
+  ['Abyssal Rod', 0x1b2a3a], ['Leviathan Rod', 0x2c3e50], ['Ancient Rod', 0xb8860b],
+  ['Celestial Rod', 0x7ec8e3], ['Elderwood Rod', 0x3f6b3f], ['Mythril Rod', 0x9b5de5],
 ];
-// line -> maximum fish weight it is rated for, and how much it strains under load
-const LINES = [
-  { id:'twine',  name:'Cotton Twine',   cost:0,    color:0xe8dcc0, rating:3,  strain:1.35, blurb:'Holds a panfish. Anything bigger is a coin flip.' },
-  { id:'mono6',  name:'6lb Mono',       cost:200,  color:0xd8f0ff, rating:7,  strain:1.05, blurb:'Cheap, stretchy, honest. A solid second step.' },
-  { id:'mono12', name:'12lb Mono',      cost:750,  color:0x9fe3d8, rating:14, strain:0.86, blurb:'Enough backbone for bass, pike and a small carp.' },
-  { id:'braid',  name:'26lb Braid',     cost:2200, color:0xffd166, rating:26, strain:0.68, blurb:'No stretch, no mercy. Handles the big cats.' },
-  { id:'fluoro', name:'55lb Fluoro',    cost:5000, color:0xe0d0ff, rating:55, strain:0.52, blurb:'Invisible in water, immovable under load.' },
+const LINE_NAMES = [
+  ['Cotton Twine', 0xe8dcc0, 3], ['4lb Mono', 0xdfe9f0, 4], ['6lb Mono', 0xd8f0ff, 6],
+  ['8lb Mono', 0xcfe6f5, 8], ['10lb Mono', 0xbfe0f2, 10], ['12lb Mono', 0x9fe3d8, 12],
+  ['15lb Mono', 0x8fd6cf, 15], ['20lb Mono', 0x7fc9c6, 20], ['25lb Fluoro', 0xa9e5d0, 25],
+  ['30lb Braid', 0xd8f0a0, 30], ['40lb Braid', 0xc8e88a, 40], ['50lb Braid', 0xffd166, 50],
+  ['65lb Braid', 0xf6c445, 65], ['80lb Braid', 0xe8b03a, 80], ['100lb Braid', 0xd99b2b, 100],
+  ['130lb Braid', 0xe07a4a, 130], ['160lb Spectra', 0xd06a3a, 160], ['200lb Spectra', 0xc25a2a, 200],
+  ['250lb Spectra', 0xb84a20, 250], ['300lb Kevlar', 0xc0392b, 300], ['400lb Kevlar', 0xd0402f, 400],
+  ['500lb Aramid', 0xe0503f, 500], ['650lb Dragonline', 0x9ef7c8, 650], ['800lb Mythril', 0xe0d0ff, 800],
 ];
-// bait -> luck (rarer fish bite, sooner, and heavier)
-const BAITS = [
-  { id:'worm',   name:'Garden Worm',  cost:0,    color:0xd98b7a, luck:0.00, blurb:'Free from the garden. It works. Barely.' },
-  { id:'corn',   name:'Sweet Corn',   cost:180,  color:0xffd94a, luck:0.14, blurb:'Sends the panfish into a frenzy.' },
-  { id:'minnow', name:'Live Minnow',  cost:600,  color:0xa9d6e8, luck:0.28, blurb:'Predators cannot resist a wriggling snack.' },
-  { id:'shrimp', name:'River Shrimp', cost:1800, color:0xff9a76, luck:0.42, blurb:'The scent carries. Deep fish come up to look.' },
-  { id:'glow',   name:'Glow Grub',    cost:4200, color:0x9ef7c8, luck:0.60, blurb:'Glows faintly. Attracts things that should stay down there.' },
+const BAIT_NAMES = [
+  ['Garden Worm', 0xd98b7a], ['Bread Ball', 0xe8d9b0], ['Sweet Corn', 0xffd94a],
+  ['Red Wiggler', 0xc0503a], ['Mealworm', 0xd8b070], ['Maggot', 0xeee6c8],
+  ['Sweet Pea', 0x8fd05a], ['Salmon Egg', 0xff7f50], ['Dough Ball', 0xf0dfa8],
+  ['Cheese Cube', 0xffd166], ['Powerbait', 0xff9a3c], ['Live Minnow', 0xa9d6e8],
+  ['Nightcrawler', 0xb07a6a], ['Cricket', 0x6a8a3a], ['River Shrimp', 0xff9a76],
+  ['Bloodworm', 0xb02030], ['Cut Bait', 0xc98080], ['Glow Grub', 0x9ef7c8],
+  ['Scent Bomb', 0xd07ae0], ['Chum Cloud', 0xb090c0], ['Firefly Sac', 0xe8f07a],
+  ['Silver Minnow', 0xd8e8f0], ['Dragonfly Nymph', 0x6fd0b0], ['Moonbait', 0xc0d8ff],
 ];
+// Prices are hand-placed so each tier costs roughly a dozen good catches at the
+// depth that tier opens up. Tier 1 is a first-session treat; the last rod is a
+// genuine long-haul goal. Line and bait ladders are deliberately cheaper.
+const ROD_COST  = [0, 145, 150, 250, 260, 260, 440, 420, 820, 780, 1450, 1400, 1450, 2550, 2550, 4350, 5150, 8700, 8450, 9000, 15200, 15700, 27700, 28300];
+const LINE_COST = [0, 80, 85, 135, 140, 145, 240, 230, 450, 430, 810, 770, 810, 1400, 1400, 2400, 2800, 4800, 4650, 4950, 8350, 8600, 15200, 15600];
+const BAIT_COST = [0, 60, 60, 100, 100, 105, 175, 170, 330, 310, 590, 560, 590, 1000, 1000, 1750, 2050, 3500, 3400, 3600, 6050, 6250, 11100, 11300];
+
+const RODS = ROD_NAMES.map(([name, color], i) => ({
+  id:'rod' + i, name, color, cost: ROD_COST[i],
+  cast: Math.round(14 + 3.4 * i),
+  tension: +(1.32 * Math.pow(0.968, i)).toFixed(2),
+  reel: +(0.85 * Math.pow(1.03, i)).toFixed(2),
+}));
+const LINES = LINE_NAMES.map(([name, color, rating], i) => ({
+  id:'line' + i, name, color, rating, cost: LINE_COST[i],
+  strain: +(1.35 * Math.pow(0.965, i)).toFixed(2),
+}));
+const BAITS = BAIT_NAMES.map(([name, color], i) => ({
+  id:'bait' + i, name, color, cost: BAIT_COST[i],
+  luck: +(1.05 * Math.pow(i / (BAIT_NAMES.length - 1), 1.35)).toFixed(2),
+}));
 
 // ---------- Progression ----------
 // No levels: coins are the only gate, and the price ladder is spread so the
 // last rod/line/bait is a serious long-haul goal, not a first-session purchase.
 function fishValue(sp, weight){
-  const r = RARITY[sp.rarity].value;
-  return Math.max(6, Math.round((sp.pts * 0.9 + weight * 4.2) * r));
+  // big fish are worth more, but the curve flattens so late-game monsters
+  // don't trivialise the price ladder
+  const bulk = 2.4 * Math.pow(Math.max(1, weight), 0.78);
+  return Math.max(6, Math.round((sp.pts * 0.9 + bulk) * RARITY[sp.rarity].value));
 }
 
 // Luck lifts the odds of rarer tiers (1 + luck)^tier and calms the bite timer.
+// Distance matters too: a deep cast rarely drags up a bluegill.
 function pickSpecies(dist){
   const luck = BAITS[G.gear.bait].luck;
   const pool = SPECIES.filter(s => (s.dist || 0) <= dist + 0.5);
   const list = pool.length ? pool : [SPECIES[0]];
   let total = 0;
   const w = list.map(s => {
-    const v = s.weight * Math.pow(1 + luck, RARITY[s.rarity].tier * 1.15);
+    const near = Math.pow(0.55, Math.abs((s.dist || 0) - dist) / 8);
+    const v = s.weight * near * Math.pow(1 + luck, RARITY[s.rarity].tier * 0.9);
     total += v; return v;
   });
   let r = Math.random() * total;
@@ -116,6 +283,11 @@ const FISH_BASE = [
   '...oooooooo..XXX',
   '.....oooo....XXX'
 ];
+function lighten(hex, t){
+  const r = (hex >> 16) & 255, g = (hex >> 8) & 255, b = hex & 255;
+  const m = v => Math.round(v + (255 - v) * t);
+  return (m(r) << 16) | (m(g) << 8) | m(b);
+}
 function shade(hex, f){
   const r = Math.round(((hex >> 16) & 255) * f);
   const g = Math.round(((hex >> 8) & 255) * f);
@@ -964,7 +1136,7 @@ function renderLog(){
   logSummary.textContent =
     `${log.length} caught • ${total} pts • Best ${Math.max(...log.map(e=>e.weight))} lbs`;
 }
-const SAVE_KEY = 'reel-life-3d-save-v5';
+const SAVE_KEY = 'reel-life-3d-save-v6';
 function saveGame(){
   try{
     localStorage.setItem(SAVE_KEY, JSON.stringify({
@@ -1316,37 +1488,41 @@ const GEAR = {
 const gearStat = (kind, g) => {
   if(kind === 'rod')  return `CAST ${g.cast}m · REEL ${g.reel.toFixed(2)}x · FORGIVE ${Math.round((2 - g.tension) * 100)}`;
   if(kind === 'line') return `MAX FISH ${g.rating} lb · STRAIN ${Math.round((2 - g.strain) * 100)}`;
-  return `LUCK +${Math.round(g.luck * 100)}% · rarer, heavier, faster bites`;
+  return `LUCK +${Math.round(g.luck * 100)}%`;
 };
-const swatchStyle = (kind, g) => {
-  const hex = '#' + g.color.toString(16).padStart(6, '0');
-  if(kind === 'line') return `background:${hex}`;
-  if(kind === 'bait') return `background:${hex}`;
-  return `background:${hex}`;
-};
+const swatchStyle = (kind, g) => `background:#${g.color.toString(16).padStart(6, '0')}`;
+// how this tier compares to what you have on
+function gearDelta(kind, g){
+  const cur = GEAR[kind].list[G.gear[kind]];
+  if(!cur || cur === g) return '<small class="gear-tag on">EQUIPPED</small>';
+  if(kind === 'rod'){
+    const c = g.cast - cur.cast, r = g.reel - cur.reel;
+    return `<small class="gear-delta">${c >= 0 ? '+' : ''}${c}m cast · ${r >= 0 ? '+' : ''}${r.toFixed(2)}x reel</small>`;
+  }
+  if(kind === 'line'){
+    const d = g.rating - cur.rating;
+    return `<small class="gear-delta">${d >= 0 ? '+' : ''}${d} lb rating</small>`;
+  }
+  const d = Math.round((g.luck - cur.luck) * 100);
+  return `<small class="gear-delta">${d >= 0 ? '+' : ''}${d}% luck</small>`;
+}
 
 function gearRow(kind, g, i){
   const owned = G.owned[kind].includes(i);
   const equipped = G.gear[kind] === i;
-  const prev = i > 0 ? GEAR[kind].list[i - 1] : null;
-  const locked = !owned && !!prev && !G.owned[kind].includes(i - 1);
   const afford = G.coins >= g.cost;
-  const tag = equipped ? '<span class="gear-tag on">ON</span>' : owned ? '' : '';
   const btn = equipped
     ? '<button class="buy-btn equip" disabled>IN USE</button>'
     : owned
       ? `<button class="buy-btn equip" data-buy="${i}">EQUIP</button>`
-      : locked
-        ? `<button class="buy-btn" disabled>LOCKED</button>`
-        : `<button class="buy-btn" data-buy="${i}" ${afford ? '' : 'disabled'}>${g.cost}c</button>`;
+      : `<button class="buy-btn" data-buy="${i}" ${afford ? '' : 'disabled'}>${g.cost}c</button>`;
   const cls = kind === 'bait' ? 'gear-swatch bait' : kind === 'line' ? 'gear-swatch spool' : 'gear-swatch';
-  const sub = locked ? `Needs the ${prev.name} first` : g.blurb;
-  return `<div class="rod-card${equipped ? ' equipped' : ''}${locked ? ' lockedrow' : ''}">
+  return `<div class="rod-card${equipped ? ' equipped' : ''}${owned ? '' : ' unowned'}" data-tier="${i}">
     <div class="${cls}" style="${swatchStyle(kind, g)}"></div>
     <div class="rod-info">
-      <b>${g.name}${tag}</b>
+      <b>${g.name}<span class="tier-no">${i + 1}</span></b>
       <small>${gearStat(kind, g)}</small>
-      <small class="${owned ? '' : 'locked'}">${sub}</small>
+      ${gearDelta(kind, g)}
     </div>
     ${btn}
   </div>`;
@@ -1360,6 +1536,8 @@ function renderShop(){
   document.querySelectorAll('#shopOverlay .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === shopTab));
   const kind = shopTab === 'lines' ? 'line' : shopTab === 'bait' ? 'bait' : 'rod';
   shopBody.innerHTML = GEAR[kind].list.map((g, i) => gearRow(kind, g, i)).join('');
+  const cur = shopBody.querySelector('.rod-card.equipped');
+  if(cur) cur.scrollIntoView({ block:'center' });
 }
 
 function openShop(){
@@ -1390,9 +1568,6 @@ function buyGear(kind, i){
     applyGear(); sfx.buy(); showToast('Equipped the ' + g.name + '.');
     saveGame(); updateStats(); renderShop();
     return;
-  }
-  if(i > 0 && !G.owned[kind].includes(i - 1)){
-    sfx.deny(); showToast('Upgrade to the ' + GEAR[kind].list[i - 1].name + ' first.', true); return;
   }
   if(G.coins < g.cost){ sfx.deny(); showToast('Not enough coins — sell some fish!', true); return; }
   G.coins -= g.cost;
