@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Reel Life 3D — Fishing Game</title>
+<meta name="description" content="Reel Life 3D — a cozy browser fishing game. Cast, hook and reel in seven species from Bluegill to the legendary Ancient Carp." />
+<meta name="theme-color" content="#0ea5b7" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230ea5b7'/%3E%3Cpath d='M10 33c6-9 20-12 28-9l10-8v26l-10-8c-8 3-22 0-28-9z' transform='translate(3 1)' fill='%23fff'/%3E%3Ccircle cx='24' cy='30' r='3' fill='%230ea5b7'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three.module.js"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app">
+  <canvas id="scene"></canvas>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-top">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round">
+            <path d="M20.5 3.2C13.5 5.8 7.6 11 5.2 20.4"/>
+            <circle cx="19" cy="7.4" r="2.6"/>
+            <path d="M5.2 20.4c-.2-2.6 1.3-4.4 3.9-4.6"/>
+          </svg>
+        </div>
+        <div>
+          <h1>REEL LIFE <span>3D</span></h1>
+          <p>Cast • Wait • Hook • Reel</p>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat"><label>SCORE</label><strong id="score">0</strong></div>
+        <div class="stat"><label>CAUGHT</label><strong id="caughtCount">0</strong></div>
+        <div class="stat"><label>BEST</label><strong id="bestCatch">—</strong></div>
+        <button id="logBtn" class="icon-btn" title="Catch log">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round">
+            <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/>
+            <path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5A2.5 2.5 0 0 1 4 20.5z"/>
+          </svg>
+        </button>
+        <button id="soundBtn" class="icon-btn" title="Sound on/off">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 9.5h3l5-4v13l-5-4H4z"/>
+            <path d="M16.5 9a4.6 4.6 0 0 1 0 6"/>
+            <path d="M19 6.5a8 8 0 0 1 0 11"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="biteIndicator">!</div>
+
+    <div id="prompt" class="prompt">Move mouse to aim — <b>hold CLICK</b> to charge, release to cast!</div>
+
+    <div id="castMeter" class="cast-meter hidden">
+      <div class="cast-label">CAST POWER</div>
+      <div class="cast-track"><div id="castFill"></div></div>
+    </div>
+
+    <!-- Reel minigame -->
+    <div id="reelUI" class="reel-ui hidden">
+      <div class="reel-head">
+        <span id="reelFishName">Fish on!</span>
+        <span id="reelPct">0%</span>
+      </div>
+      <div class="reel-bars">
+        <div class="bar-wrap">
+          <label>LINE TENSION</label>
+          <div class="tension-track">
+            <div class="zone zone-safe"></div>
+            <div class="zone zone-danger"></div>
+            <div id="tensionNeedle"></div>
+          </div>
+        </div>
+        <div class="bar-wrap">
+          <label>REEL PROGRESS</label>
+          <div class="progress-track"><div id="progressFill"></div></div>
+        </div>
+      </div>
+      <p class="reel-hint">HOLD <b>SPACE</b> / <b>CLICK</b> to reel — keep tension in the <span class="green">green</span>, don't snap!</p>
+    </div>
+
+    <div class="controls-hint">
+      <span>Aim: mouse</span><span>Hold Click: cast</span><span>Space / Click: hook &amp; reel</span><span>Right-drag: camera</span>
+    </div>
+  </div>
+
+  <!-- Catch modal -->
+  <div id="catchModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-eyebrow" id="catchRarity">COMMON CATCH</div>
+      <div id="catchIcon" class="catch-icon"></div>
+      <h2 id="catchName">Bluegill</h2>
+      <p id="catchWeight" class="catch-weight">1.2 lbs</p>
+      <p id="catchPoints" class="catch-points">+25 pts</p>
+      <p id="catchDesc" class="catch-desc"></p>
+      <button id="continueBtn" class="primary-btn">Keep Fishing →</button>
+    </div>
+  </div>
+
+  <!-- Escape toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Log drawer -->
+  <aside id="logDrawer" class="drawer hidden">
+    <div class="drawer-head"><h3>Catch Log</h3><div class="drawer-actions"><button id="resetBtn" class="ghost-btn">Reset</button><button id="closeLog">✕</button></div></div>
+    <div id="logList"><p class="empty">No fish yet. Cast your line!</p></div>
+    <div class="drawer-foot" id="logSummary"></div>
+  </aside>
+
+  <!-- Start overlay -->
+  <div id="startOverlay" class="start-overlay">
+    <div class="start-card">
+      <div class="start-art" id="startArt"></div>
+      <h2>REEL LIFE <span>3D</span></h2>
+      <p>A sunny day on the dock. Something golden lurks in the deep…</p>
+      <ul>
+        <li><b>Aim</b> with your mouse</li>
+        <li><b>Hold &amp; release</b> to cast</li>
+        <li><b>Strike</b> when the bobber dips</li>
+        <li><b>Hold to reel</b> — mind the tension</li>
+      </ul>
+      <button id="startBtn" class="primary-btn big">Start Fishing</button>
+      <p class="tiny">7 species to catch • best with sound on</p>
+    </div>
+  </div>
+</div>
+<script type="module" src="main.js"></script>
+</body>
+</html>
