@@ -9,11 +9,11 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230ea5b7'/%3E%3Crect x='14' y='24' width='28' height='16' fill='%23fff'/%3E%3Crect x='42' y='16' width='8' height='10' fill='%23fff'/%3E%3Crect x='42' y='38' width='8' height='10' fill='%23fff'/%3E%3Crect x='48' y='26' width='6' height='12' fill='%23fff'/%3E%3Crect x='20' y='28' width='4' height='4' fill='%230ea5b7'/%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4" />
+<link rel="stylesheet" href="style.css?v=6" />
 <script type="importmap">
 {
   "imports": {
-    "three": "./vendor/three.module.js?v=4"
+    "three": "./vendor/three.module.js?v=6"
   }
 }
 </script>
@@ -42,7 +42,7 @@
       <div class="stats">
         <div class="stat"><label>SCORE</label><strong id="score">0</strong></div>
         <div class="stat"><label>CAUGHT</label><strong id="caughtCount">0</strong></div>
-        <div class="stat"><label>BEST</label><strong id="bestCatch">—</strong></div>
+        <div class="stat coins"><label>COINS</label><strong id="coinCount">0</strong></div>
         <button id="logBtn" class="icon-btn" title="Catch log">
           <svg viewBox="0 0 24 24" shape-rendering="crispEdges">
             <rect x="5" y="3" width="14" height="18" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -90,13 +90,32 @@
           <div class="progress-track"><div id="progressFill"></div></div>
         </div>
       </div>
-      <p class="reel-hint">HOLD <b>SPACE</b> / <b>CLICK</b> to reel — keep the needle in the green!</p>
+      <div id="reelWarn" class="reel-warn"></div>
+      <p class="reel-hint">HOLD to wind · RELEASE before the red · never let it go slack</p>
     </div>
 
+    <button id="shopBtn" class="shop-btn hidden">Tackle Shop <b>E</b></button>
     <div id="lockHint" class="lock-hint hidden">Click to look around</div>
+    <div id="stick" class="stick hidden"><div class="stick-knob"></div></div>
 
     <div class="controls-hint">
-      <span>Mouse: look</span><span>Hold click: cast</span><span>Space / click: hook &amp; reel</span><span>Esc: cursor</span>
+      <span>WASD: walk</span><span>Mouse: look</span><span>Hold click: cast</span><span>Space: hook &amp; reel</span><span>E: shop</span>
+    </div>
+  </div>
+
+  <!-- Shop -->
+  <div id="shopOverlay" class="modal hidden">
+    <div class="shop-card">
+      <div class="shop-head">
+        <h2>Dock Shop</h2>
+        <div class="shop-coins">COINS <span id="shopCoins">0</span></div>
+        <button id="shopClose" class="shop-close">✕</button>
+      </div>
+      <div class="shop-tabs">
+        <button class="tab active" data-tab="rods">Rods</button>
+        <button class="tab" data-tab="sell">Sell Fish <span id="sellCount" class="pill">0</span></button>
+      </div>
+      <div id="shopBody" class="shop-body"></div>
     </div>
   </div>
 
@@ -130,16 +149,17 @@
       <h2>REEL LIFE <span>3D</span></h2>
       <p>A quiet blocky lake. Something golden lurks in the deep…</p>
       <ul>
-        <li><b>Look</b> with the mouse</li>
+        <li><b>WASD</b> to walk · mouse to look</li>
         <li><b>Hold &amp; release</b> to cast</li>
         <li><b>Strike</b> when the bobber dips</li>
-        <li><b>Hold to reel</b> — mind the tension</li>
+        <li><b>Reel</b> — tantalise the tension</li>
+        <li><b>Shop</b> on the shore to sell &amp; upgrade</li>
       </ul>
       <button id="startBtn" class="primary-btn big">Start Fishing</button>
       <p class="tiny">7 species • best with sound on</p>
     </div>
   </div>
 </div>
-<script type="module" src="main.js?v=4"></script>
+<script type="module" src="main.js?v=6"></script>
 </body>
 </html>

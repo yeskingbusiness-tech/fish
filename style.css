@@ -78,7 +78,7 @@ html,body{height:100%;overflow:hidden;background:#7fc4e0;color:var(--ink);
 .reel-bars{display:grid;gap:8px}
 .bar-wrap label{font-size:8px;font-weight:900;letter-spacing:1.5px;color:var(--ink-soft)}
 .tension-track{position:relative;height:16px;border:2px solid var(--ink);margin-top:3px;overflow:hidden;
-  background:linear-gradient(90deg,var(--green) 0 55%,var(--amber) 55% 80%,var(--red) 80% 100%)}
+  background:linear-gradient(90deg,var(--amber) 0 14%,var(--green) 14% 78%,var(--amber) 78% 88%,var(--red) 88% 100%)}
 #tensionNeedle{position:absolute;top:-2px;bottom:-2px;width:6px;background:var(--ink);left:10%;box-shadow:0 0 0 2px #fff;z-index:2}
 .progress-track{height:12px;background:#e2d7c2;border:2px solid var(--ink);margin-top:3px;overflow:hidden}
 #progressFill{height:100%;width:0;background:var(--teal);transition:width .1s linear}
@@ -170,7 +170,86 @@ html,body{height:100%;overflow:hidden;background:#7fc4e0;color:var(--ink);
   #crosshair{width:12px;height:12px}
 }
 @media(max-width:430px){
-  .stats .stat:nth-of-type(3){display:none}
-  .brand h1{font-size:11px}
-  .brand-icon{width:30px;height:30px}
+  .brand{max-width:96px}
+  .brand h1{font-size:10px}
+  .brand p{display:none}
+  .brand-icon{width:26px;height:26px}
+  .stat{padding:5px 6px}
+  .stat strong{font-size:12px}
+  .stat label{font-size:6.5px;letter-spacing:.5px}
+  .icon-btn{width:28px;height:28px}
 }
+
+/* ---------- coins ---------- */
+.stat.coins strong{ color:#a86f0d; }
+
+/* ---------- walk stick (touch) ---------- */
+.stick{position:absolute;left:18px;bottom:96px;width:112px;height:112px;border-radius:50%;
+  border:3px solid rgba(18,34,43,.55);background:rgba(253,243,221,.28);pointer-events:auto;touch-action:none;z-index:6}
+.stick-knob{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;
+  border-radius:50%;background:rgba(253,243,221,.92);border:3px solid var(--ink)}
+
+/* ---------- shop button ---------- */
+.shop-btn{position:absolute;left:50%;bottom:140px;transform:translateX(-50%);pointer-events:auto;
+  background:#ffd166;border:3px solid var(--ink);color:var(--ink);font-family:'Silkscreen','Courier New',monospace;
+  font-size:13px;padding:10px 16px;cursor:pointer;box-shadow:var(--hard-sm);animation:pulse2 1.4s infinite}
+.shop-btn b{background:var(--ink);color:#ffd166;padding:1px 6px;margin-left:6px;font-size:11px}
+.shop-btn:hover{background:#ffdf8a}
+
+/* ---------- shop ---------- */
+.shop-card{background:var(--panel);border:4px solid var(--ink);width:min(560px,94vw);max-height:86vh;
+  display:flex;flex-direction:column;box-shadow:10px 10px 0 rgba(10,25,32,.55)}
+.shop-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:3px solid var(--ink);background:var(--cream)}
+.shop-head h2{font-family:'Silkscreen','Courier New',monospace;font-size:18px;flex:1}
+.shop-coins{font-family:'Silkscreen','Courier New',monospace;font-size:12px;background:#ffe9a8;border:2px solid var(--ink);padding:5px 9px}
+.shop-coins span{color:#a86f0d}
+.shop-close{width:32px;height:32px;background:var(--cream);border:2px solid var(--ink);cursor:pointer;font-weight:900}
+.shop-tabs{display:flex;border-bottom:3px solid var(--ink)}
+.tab{flex:1;padding:10px;background:#efe2c6;border:none;border-right:2px solid var(--ink);
+  font-family:'Silkscreen','Courier New',monospace;font-size:12px;cursor:pointer;color:var(--ink-soft)}
+.tab:last-child{border-right:none}
+.tab.active{background:var(--teal);color:#fff}
+.pill{background:var(--ink);color:#ffd166;padding:1px 6px;font-size:10px;margin-left:4px}
+.shop-body{overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+
+.rod-card{display:flex;align-items:center;gap:10px;border:2px solid var(--ink);background:var(--cream);padding:10px 12px}
+.rod-card.equipped{background:#e7f8f0;border-color:var(--teal-dark)}
+.rod-swatch{width:14px;height:46px;border:2px solid var(--ink);flex:0 0 14px}
+.rod-info{flex:1;min-width:0}
+.rod-info b{font-family:'Silkscreen','Courier New',monospace;font-size:12px;display:block}
+.rod-info small{display:block;font-size:10.5px;color:var(--ink-soft);font-weight:800;margin-top:2px}
+.rod-info .locked{color:#b0563f}
+.buy-btn{background:var(--teal);color:#fff;border:2px solid var(--ink);padding:8px 12px;cursor:pointer;
+  font-family:'Silkscreen','Courier New',monospace;font-size:11px;box-shadow:2px 2px 0 var(--ink);white-space:nowrap}
+.buy-btn:disabled{background:#cfd8db;color:#7c9099;cursor:not-allowed;box-shadow:none}
+.buy-btn.equip{background:#ffd166;color:var(--ink)}
+.buy-btn:hover:enabled{filter:brightness(1.06)}
+
+.sell-row{display:flex;align-items:center;gap:9px;border:2px solid var(--ink);background:var(--cream);padding:8px 10px}
+.sell-row .e{width:34px;flex:0 0 34px;image-rendering:pixelated}
+.sell-row .e svg{width:34px;height:auto;display:block}
+.sell-row b{font-size:12px;display:block}
+.sell-row small{font-size:10px;color:var(--ink-soft);font-weight:800}
+.sell-row .val{margin-left:auto;font-family:'Silkscreen','Courier New',monospace;color:#a86f0d;font-size:12px}
+.sell-all{position:sticky;bottom:0;margin-top:4px;background:var(--ink);color:var(--cream);border:3px solid #04141a;
+  padding:12px;font-family:'Silkscreen','Courier New',monospace;font-size:13px;cursor:pointer;box-shadow:var(--hard-sm)}
+.sell-all:disabled{opacity:.5;cursor:not-allowed}
+.shop-empty{text-align:center;color:var(--ink-soft);font-weight:800;padding:22px 10px;font-size:12px}
+
+/* ---------- reel warning ---------- */
+.reel-warn{height:18px;font-family:'Silkscreen','Courier New',monospace;font-size:10px;text-align:center;
+  color:#b3261e;letter-spacing:.5px;margin-top:2px}
+.reel-warn.warn{animation:pulse2 .5s infinite}
+.tension-track.danger{border-color:#b3261e;box-shadow:0 0 0 2px rgba(179,38,30,.35)}
+.tension-track.slack{border-color:#c98a0d;box-shadow:0 0 0 2px rgba(201,138,13,.35)}
+
+@media(max-width:760px){
+  .shop-btn{bottom:118px;font-size:11px;padding:8px 12px}
+  .shop-card{max-height:90vh}
+  .shop-head h2{font-size:14px}
+  .shop-coins{font-size:10px}
+  .rod-info b{font-size:11px}
+  .rod-info small{font-size:9.5px}
+  .buy-btn{font-size:10px;padding:7px 9px}
+}
+.catch-value{font-size:10px;color:var(--ink-soft);display:block;margin-top:2px}
