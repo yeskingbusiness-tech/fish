@@ -192,7 +192,7 @@ const sky = new THREE.Mesh(
         float h = clamp(vP.y/280.0, -1.0, 1.0);
         vec3 c = h > 0.0 ? mix(mid, top, pow(h, 0.5)) : mix(mid, bot, pow(-h, 0.5));
         // posterise into bands for a blocky sky
-        c = floor(c * 9.0) / 9.0;
+        c = floor(c * 5.0) / 5.0;
         gl_FragColor = vec4(c, 1.0);
       }`
   })
@@ -216,34 +216,50 @@ const waterMat = new THREE.ShaderMaterial({
   transparent: true,
   vertexShader: `
     uniform float uTime;
-    varying vec2 vUv; varying float vWave; varying float vFog;
+    varying vec2 vUv; varying vec2 vCell; varying vec2 vGrid;
+    varying float vWave; varying float vFog;
     void main(){
       vUv = uv;
       vec3 p = position;
+      // stepped waves: the surface is a set of flat slabs
       float w = sin(p.x*0.5 + uTime*1.3)*0.07 + cos(p.y*0.62 + uTime*1.0)*0.07 + sin((p.x+p.y)*0.3 + uTime*0.6)*0.04;
-      p.z += w;
+      p.z += floor(w * 14.0) / 14.0;
       vWave = w;
+      vCell = floor(position.xy / 4.0);
+      vGrid = position.xy / 4.0;
       vec4 mv = modelViewMatrix * vec4(p,1.0);
       vFog = -mv.z;
       gl_Position = projectionMatrix * mv;
     }`,
   fragmentShader: `
     uniform vec3 uFog; uniform float uNear; uniform float uFar; uniform float uTime;
-    varying vec2 vUv; varying float vWave; varying float vFog;
+    varying vec2 vUv; varying vec2 vCell; varying vec2 vGrid;
+    varying float vWave; varying float vFog;
     void main(){
-      vec3 deep = vec3(0.07,0.45,0.55);
-      vec3 mid  = vec3(0.12,0.53,0.62);
-      vec3 shal = vec3(0.21,0.63,0.70);
-      float m = clamp(vWave*4.5 + 0.5, 0.0, 1.0);
-      vec3 col = m < 0.38 ? deep : (m < 0.72 ? mid : shal);   // 3 flat bands
-      float spark = step(0.985, fract(sin(dot(floor(vUv*160.0), vec2(12.9898,78.233)) + floor(uTime*2.0))*43758.5453));
-      col += spark * 0.12 * smoothstep(90.0, 15.0, vFog);
+      vec3 deep  = vec3(0.06,0.40,0.52);
+      vec3 mid   = vec3(0.10,0.50,0.60);
+      vec3 mid2  = vec3(0.15,0.58,0.66);
+      vec3 shal  = vec3(0.24,0.68,0.73);
+      // hard quantised height bands
+      float h = clamp(vWave * 4.0 + 0.5, 0.0, 1.0);
+      float q = floor(h * 3.999) / 3.0;
+      vec3 col = q < 0.34 ? deep : (q < 0.67 ? mid : (h < 0.9 ? mid2 : shal));
+      // per-tile brightness so every slab reads as its own cube
+      float rnd = fract(sin(dot(vCell, vec2(12.9898,78.233))) * 43758.5453);
+      col *= 0.95 + rnd * 0.1;
+      // tile seams
+      vec2 g = abs(fract(vGrid) - 0.5);
+      float edge = smoothstep(0.44, 0.5, max(g.x, g.y));
+      col *= 1.0 - edge * 0.16 * smoothstep(70.0, 12.0, vFog);
+      // sparkle
+      float spark = step(0.988, fract(sin(dot(vCell, vec2(4.898,7.23)) + floor(uTime*2.0)) * 43758.5453));
+      col += spark * 0.16 * smoothstep(80.0, 12.0, vFog);
       float fogF = smoothstep(uNear, uFar, vFog);
       col = mix(col, uFog, fogF);
-      gl_FragColor = vec4(col, mix(0.9, 1.0, fogF));
+      gl_FragColor = vec4(col, mix(0.93, 1.0, fogF));
     }`
 });
-const water = new THREE.Mesh(new THREE.PlaneGeometry(200, 200, 60, 60), waterMat);
+const water = new THREE.Mesh(new THREE.PlaneGeometry(200, 200, 100, 100), waterMat);
 water.rotation.x = -Math.PI/2;
 scene.add(water);
 
@@ -324,15 +340,18 @@ island(-25,-18,7); island(28,-26,8); island(0,-54,12); island(-13,-36,4); island
 
 // ---------- Distant hills (instanced boxes) ----------
 {
-  const n = 12;
+  const peaks = [[-110,-126],[-40,-128],[30,-124],[100,-128]];
+  const n = peaks.length * 3;
   const hills = new THREE.InstancedMesh(UNIT, mat(0x6f9f8b), n);
-  for(let i=0;i<n;i++){
-    const layer = i % 3;
-    const w = 26 + layer*10, h = 5 + layer*4;
-    D.position.set(-120 + (i/3|0)*70 + rand(-14,14), h/2 - 2.5, -124 + rand(-6,6));
-    D.rotation.set(0, 0, 0);
-    D.scale.set(w, h, 14);
-    D.updateMatrix(); hills.setMatrixAt(i, D.matrix);
+  let idx = 0;
+  for(const [hx,hz] of peaks){
+    for(let layer=0; layer<3; layer++){
+      const w = 52 - layer*15, h = 6, d = 22 - layer*6;
+      D.position.set(hx, h/2 - 3 + layer*5.2, hz);
+      D.rotation.set(0,0,0);
+      D.scale.set(w, h, d);
+      D.updateMatrix(); hills.setMatrixAt(idx++, D.matrix);
+    }
   }
   hills.instanceMatrix.needsUpdate = true;
   scene.add(hills);
@@ -441,7 +460,7 @@ const clouds = new THREE.InstancedMesh(UNIT, new THREE.MeshBasicMaterial({ color
     for(let k=0;k<3;k++){
       D.position.set(cx + (k-1)*3.4, cy + (k===1?0.7:0), cz + rand(-1,1));
       D.rotation.set(0,0,0);
-      D.scale.set(7 - Math.abs(k-1)*1.6, 1.8, 5);
+      D.scale.set(7 - Math.abs(k-1)*1.6, k===1 ? 3.4 : 1.8, 5);
       D.updateMatrix(); clouds.setMatrixAt(c*3 + k, D.matrix);
     }
   }
