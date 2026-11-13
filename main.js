@@ -1488,7 +1488,7 @@ const GEAR = {
 const gearStat = (kind, g) => {
   if(kind === 'rod')  return `CAST ${g.cast}m · REEL ${g.reel.toFixed(2)}x · FORGIVE ${Math.round((2 - g.tension) * 100)}`;
   if(kind === 'line') return `MAX FISH ${g.rating} lb · STRAIN ${Math.round((2 - g.strain) * 100)}`;
-  return `LUCK +${Math.round(g.luck * 100)}%`;
+  return `LUCK +${Math.round(g.luck * 100)}% · BITES ${Math.round(g.luck * 45)}% FASTER`;
 };
 const swatchStyle = (kind, g) => `background:#${g.color.toString(16).padStart(6, '0')}`;
 // how this tier compares to what you have on
