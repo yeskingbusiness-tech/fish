@@ -1072,7 +1072,7 @@ const G = {
   yaw:0, pitch:-0.12,
   power:0, powerDir:1,
   tension:15, progress:0, fishStrength:0.3,
-  surgeTimer:0, surgeDur:0, snapTimer:0, slack:0, reelHeld:false,
+  surgeTimer:0, surgeDur:0, yankTimer:0, yank:0, yankDur:0, reelHeld:false,
   time:0, rodSwing:0, bobDip:0,
   castT:0, castDur:1, biteWindow:0, waitTimer:4,
   caughtAnim:0,
@@ -1136,6 +1136,8 @@ function renderLog(){
   logSummary.textContent =
     `${log.length} caught • ${total} pts • Best ${Math.max(...log.map(e=>e.weight))} lbs`;
 }
+const RED_LO = 8, RED_HI = 92;      // hit either end of the bar and the fish is gone
+
 const SAVE_KEY = 'reel-life-3d-save-v6';
 function saveGame(){
   try{
@@ -1336,11 +1338,13 @@ function hookFish(){
   hookedFish = makeFish3D(hookedSpecies, 1.25);
   hookedFish.position.copy(bobberPos); hookedFish.position.y = -0.7;
   scene.add(hookedFish);
-  G.tension = 26; G.progress = 6; G.slack = 0;
+  G.tension = 26; G.progress = 6;
   G.fishStrength = hookedSpecies.strength;
   G.fishWeight = hookedWeight;
   fightSetup(hookedSpecies, hookedWeight);
-  G.surgeTimer = rand(0.6, 1.4); G.surgeDur = 0; G.snapTimer = 0; G.reelHeld = true;
+  G.surgeTimer = rand(0.6, 1.4); G.surgeDur = 0;
+  G.yankTimer = 0.4; G.yank = 0; G.yankDur = 0;
+  G.reelHeld = false;
   reelFishName.innerHTML = `<span class="reel-fish">${fishSVG(hookedSpecies)}</span>${hookedSpecies.name}`;
   paintTensionBand();
   setState('reeling');
@@ -1474,9 +1478,12 @@ function clearKeys(){ keys.f = keys.b = keys.l = keys.r = keys.sprint = false; }
 // ---------- Reel band ----------
 function paintTensionBand(){
   const lo = G.bandLo, hi = G.bandHi;
-  const safe = $('tensionSafe');
+  const safe = $('tensionSafe'), track = $('tensionTrack');
   safe.style.left = lo + '%';
   safe.style.width = (hi - lo) + '%';
+  track.style.background =
+    `linear-gradient(90deg, var(--red) 0 ${RED_LO}%, var(--amber) ${RED_LO}% ${lo}%,` +
+    ` var(--green) ${lo}% ${hi}%, var(--amber) ${hi}% ${RED_HI}%, var(--red) ${RED_HI}% 100%)`;
 }
 
 // ---------- Shop ----------
@@ -2053,42 +2060,52 @@ function tick(){
   }
 
   // ---- reeling minigame ----
-  // safe band (G.bandLo..G.bandHi) and needle speed (G.rateMul) both come
-  // from fightSetup(): rarer/heavier fish narrow the band and speed the needle,
-  // better rod/line widen and calm it.
+  // Green band = the line does the work, it winds in by itself. Yellow on either
+  // side = nothing happens, the fish just sits there. Red at the far ends = gone.
+  // The needle is deliberately twitchy: surges, random yanks and constant wobble.
   if(G.state === 'reeling'){
     const r2 = RODS[G.gear.rod], l2 = LINES[G.gear.line];
-    // surge windows: the fish bolts and the line screams
+
+    // surges: the fish bolts
     G.surgeTimer -= dt;
-    if(G.surgeTimer <= 0){ G.surgeTimer = rand(0.9, 2.0); G.surgeDur = rand(0.5, 1.1); }
+    if(G.surgeTimer <= 0){ G.surgeTimer = rand(0.6, 1.5); G.surgeDur = rand(0.35, 1.0); }
     if(G.surgeDur > 0) G.surgeDur -= dt;
     const surging = G.surgeDur > 0;
 
-    const base = 12 + G.fishStrength * 18;              // 15..31 per second
-    const rise = base * G.rateMul * (surging ? 1.9 : 1);
-    const fall = 24 * (0.7 + 0.3 * G.rateMul);
-    const rate = G.reelHeld ? rise : -fall;
-    G.tension = clamp(G.tension + rate * dt, 0, 100);
+    // yanks: short violent jerks in either direction
+    G.yankTimer = (G.yankTimer || 0) - dt;
+    if(G.yankTimer <= 0){
+      G.yankTimer = rand(0.30, 1.00);
+      G.yank = (Math.random() < 0.5 ? -1 : 1) * rand(45, 115);
+      G.yankDur = 0.12;
+    }
+    if(G.yankDur > 0) G.yankDur -= dt;
 
+    const base = 12 + G.fishStrength * 18;              // 15..43 per second
+    const rise = base * G.rateMul * rand(0.86, 1.16) * (surging ? 1.9 : 1);
+    const fall = 24 * (0.7 + 0.3 * G.rateMul) * rand(0.88, 1.14);
+    let rate = G.reelHeld ? rise : -fall;
+    rate += rand(-1, 1) * (26 + G.fishStrength * 34);   // the lake is never still
+    if(G.yankDur > 0) rate += G.yank;
+
+    G.tension = clamp(G.tension + rate * dt, 0, 100);
     const inSafe = G.tension >= G.bandLo && G.tension <= G.bandHi;
-    if(G.reelHeld) G.progress += dt * (inSafe ? 20 : (G.tension > G.bandHi ? 5 : 9)) * r2.reel;
-    else G.progress -= dt * 1.0;
+
+    // green only: it reels itself, 15% slower than the old manual crank
+    if(inSafe){
+      G.progress += dt * 20 * 0.85 * r2.reel;
+      if(Math.random() < dt * 10) sfx.reelTick();
+    }
     G.progress = clamp(G.progress, 0, 100);
 
-    if(G.reelHeld && Math.random() < dt * 9) sfx.reelTick();
-
-    // slack line: fish spits the hook
-    if(G.tension < G.bandLo - 8){ G.slack += dt; } else { G.slack = Math.max(0, G.slack - dt * 1.8); }
-    if(G.slack > 2.0){ escapeFish('Slack line — it spat the hook!'); }
-
-    // over-tension: snap
-    if(G.tension >= 96){
-      G.snapTimer += dt;
-      if(G.snapTimer > 0.3){
-        sfx.snap();
-        escapeFish(G.over > 0.25 ? 'SNAP! That fish was over your line rating.' : 'Snap! The line couldn\'t take it.');
-      }
-    } else G.snapTimer = 0;
+    // red on either end and the fish is gone that instant
+    if(G.tension >= RED_HI){
+      sfx.snap();
+      escapeFish(G.over > 0.25 ? 'SNAP! That fish was over your line rating.' : 'Snap! Too much tension — the line went.');
+    } else if(G.tension <= RED_LO){
+      sfx.escape();
+      escapeFish('The line went dead slack — it spat the hook.');
+    }
 
     if(G.state === 'reeling' && G.progress >= 100) catchFish();
 
@@ -2097,14 +2114,13 @@ function tick(){
     reelPct.textContent = Math.floor(G.progress) + '%';
 
     const track = $('tensionTrack');
-    track.classList.toggle('danger', G.tension > G.bandHi + 6);
-    track.classList.toggle('slack', G.tension < G.bandLo - 6);
+    track.classList.toggle('danger', G.tension > G.bandHi);
+    track.classList.toggle('slack', G.tension < G.bandLo);
     reelWarn.textContent =
       G.over > 0.25 ? 'LINE OVERLOADED — ' + Math.round(G.fishWeight) + 'lb ON ' + l2.rating + 'lb LINE' :
-      G.slack > 0.5 ? 'SLACK LINE — REEL!' :
-      G.tension > G.bandHi + 4 ? 'TOO TIGHT — LET GO!' :
-      G.tension < G.bandLo - 4 ? 'SLACK LINE — REEL!' :
-      surging ? "IT'S SURGING — EASE OFF!" : '';
+      G.tension > G.bandHi ? 'EASE OFF — no winding outside the green' :
+      G.tension < G.bandLo ? 'WIND IT BACK INTO THE GREEN' :
+      surging ? "IT'S SURGING — HOLD ON" : '';
     reelWarn.classList.toggle('warn', !!reelWarn.textContent);
 
     if(hookedFish){
@@ -2126,7 +2142,6 @@ function tick(){
     }
   } else {
     if(reelWarn.textContent){ reelWarn.textContent = ''; reelWarn.classList.remove('warn'); }
-    if(G.snapTimer !== 0) G.snapTimer = 0;
   }
 
   // ---- caught animation: fish leaps toward the camera ----

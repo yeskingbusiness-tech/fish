@@ -41,17 +41,21 @@ market**, **right to the tackle shop**.
 
 ### The fight
 
-The reel minigame is all about **line tension**, and it does not forgive:
+The reel minigame is all about **line tension**, and the needle is deliberately twitchy.
 
-- The tension bar has a **green safe band**. The needle only makes progress inside it.
-- Holding winds the fish closer and drives the needle up; letting go drops it fast.
-- **Snap**: reach the far right for a third of a second and the line goes — no fish, no coins.
-- **Slack**: drift far below the band for two seconds and the fish spits the hook.
-- Every fish **surges** at random: the needle rockets while it runs.
+The bar is five zones: **red · yellow · green · yellow · red**.
+
+- **Green** — the reel winds itself. You do not need to hold anything; just keep the
+  needle in there and the fish comes in at a steady (15% slower) crank.
+- **Yellow** — nothing happens. The needle is drifting, the fish is not coming in, and no
+  progress is made either way. Yellow is the room you have to correct in.
+- **Red, either end** — the fight ends that instant. Too tight and the line snaps; too
+  slack and the fish spits the hook. No grace period.
+- Holding drives the needle up, letting go drops it, and the fish does not help:
+  random **surges**, sudden **yanks** in either direction, and a constant wobble on top.
+  Bad equipment means more wobble.
 - **The band is sized by how outmatched you are.** Rarer and heavier fish narrow it; a
-  better rod and line widen it back out. Hook a 40lb pike on cotton twine and the band is a
-  sliver with a needle that jumps twice as fast — with a Pro Carbon and 26lb braid the same
-  fish gives you half the bar.
+  better rod and line widen it back out and calm the needle.
 - **Your line is rated for a weight.** Hook something heavier and the bar narrows *and*
   the needle gets wilder, with a `LINE OVERLOADED` warning on screen. Bring line, not luck.
 
