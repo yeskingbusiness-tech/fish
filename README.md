@@ -69,9 +69,9 @@ button appears (or press **E**).
 
 | | First | Then | Last |
 | --- | --- | --- | --- |
-| **Rod** — reach + control | Bamboo Pole `free`, 12m, POWER 8 | Willow Rod `50c` 16m · Graphite `85c` 19m · … | Mythril Rod `47,000c`, 95m, POWER 232 |
-| **Line** — max fish | Cotton Twine `free`, 3lb | 10lb Mono `70c` · 15lb Mono `120c` · … | 1900lb Mythril `36,000c` |
-| **Bait** — what bites | Garden Worm `free`, common–uncommon, any size | Sweet Corn `130c`, common–rare · … | Moonbait `70,500c`, legendary–mythic, 375lb+ |
+| **Rod** — reach + control | Bamboo Pole `free`, 12m, POWER 8 | Willow Rod `50c` 16m · Graphite `85c` 19m · … | Mythril Rod `61,000c`, 95m, POWER 232 |
+| **Line** — max fish | Cotton Twine `free`, 3lb | 10lb Mono `70c` · 15lb Mono `120c` · … | 1900lb Mythril `48,000c` |
+| **Bait** — what bites | Garden Worm `free`, common–uncommon, any size | Sweet Corn `140c`, common–rare · … | Moonbait `95,000c`, legendary–mythic, 375lb+ |
 
 **Bait is the whole progression.** Every bait has a *rarity window* and a *minimum fish
 size*, and it physically cannot hook anything outside them — a beginner worm will never
@@ -93,7 +93,7 @@ mythic is worth hundreds of commons.
 ### Pacing
 
 There are no levels — coins are the only gate. Every price is fitted to what the bait
-tier *actually earns*: **a tier costs about eight catches of the fish you are already
+tier *actually earns*: **a tier costs about ten catches of the fish you are already
 catching**, with a hard 1.75× ceiling on any single jump so no rung is a wall. The pace is
 flat on purpose — no tier is a breeze and none is a brick wall.
 
@@ -103,14 +103,14 @@ of each other without ever feeling like a tax.
 
 | Milestone | Coins | Roughly |
 | --- | --- | --- |
-| Tier 2 bait | 75 | **under four** fish |
-| Tier 4 bait (rare) | 220 | your first few minutes |
-| Tier 9 bait (legendary) | 3,650 | one good session |
-| Tier 14 bait (mythic) | 18,000 | the mythic gate |
-| Tier 20 bait (170lb+ only) | 53,500 | the long haul |
-| Tier 24 bait (375lb+ only) | 70,500 | the thing you will not stop thinking about |
+| Tier 2 bait | 80 | **four** fish |
+| Tier 4 bait (rare) | 240 | your first few minutes |
+| Tier 9 bait (legendary) | 4,250 | one good session |
+| Tier 14 bait (mythic) | 21,000 | the mythic gate |
+| Tier 20 bait (170lb+ only) | 71,500 | the long haul |
+| Tier 24 bait (375lb+ only) | 95,000 | the thing you will not stop thinking about |
 
-A full run is roughly **400 catches** across the three ladders — about 1,100,000 coins —
+A full run is roughly **490 catches** across the three ladders — about 1,420,000 coins —
 while the first rung of each ladder still costs two to four fish.
 
 ## What's in the lake

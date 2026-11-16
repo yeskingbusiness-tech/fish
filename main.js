@@ -218,13 +218,13 @@ const BAIT_NAMES = [
   ['Scent Bomb', 0xd07ae0], ['Chum Cloud', 0xb090c0], ['Firefly Sac', 0xe8f07a],
   ['Silver Minnow', 0xd8e8f0], ['Dragonfly Nymph', 0x6fd0b0], ['Moonbait', 0xc0d8ff],
 ];
-// Prices are fitted to what a bait tier actually earns: ~8 catches of the fish
+// Prices are fitted to what a bait tier actually earns: ~10 catches of the fish
 // that bait hooks buys the next tier, with a 1.75x ceiling on any single jump so
 // no rung is a wall. Bait is the content gate, so it leads the ladder; rod and
 // line are cheaper because they only decide whether you can land what bites.
-const ROD_COST  = [0, 50, 85, 140, 240, 410, 700, 1200, 1400, 2450, 4050, 4400, 6150, 6650, 11500, 19500, 23000, 26500, 29000, 32000, 35000, 38500, 42500, 47000];
-const LINE_COST = [0, 40, 70, 120, 200, 340, 580, 1000, 1100, 1900, 3200, 3500, 4800, 5250, 8900, 15000, 18000, 20000, 22500, 24500, 27000, 29500, 32500, 36000];
-const BAIT_COST = [0, 75, 130, 220, 370, 630, 1050, 1800, 2150, 3650, 6350, 6900, 9500, 10500, 18000, 30500, 36000, 40500, 45000, 49000, 53500, 58000, 64000, 70500];
+const ROD_COST  = [0, 50, 85, 140, 240, 410, 700, 1200, 1600, 2700, 4600, 5450, 7550, 8300, 14000, 24000, 29500, 34000, 38000, 42000, 46000, 50500, 55500, 61000];
+const LINE_COST = [0, 40, 70, 120, 200, 340, 580, 990, 1250, 2100, 3550, 4200, 5850, 6450, 11000, 18500, 23000, 26500, 29500, 32500, 36000, 39500, 43500, 48000];
+const BAIT_COST = [0, 80, 140, 240, 410, 700, 1200, 2050, 2500, 4250, 7200, 8400, 11500, 12500, 21000, 35500, 46000, 52500, 59000, 65000, 71500, 78500, 86500, 95000];
 
 const RODS = ROD_NAMES.map(([name, color], i) => ({
   id:'rod' + i, name, color, cost: ROD_COST[i],
