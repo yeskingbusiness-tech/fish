@@ -1,0 +1,12 @@
+# Render blueprint — static site, no build step, no server to run.
+# Either commit this and use New + -> Blueprint, or create a Static Site by hand
+# with an empty Build Command and "." as the Publish Directory.
+services:
+  - type: web
+    name: reel-deal
+    runtime: static
+    staticPublishPath: .
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache

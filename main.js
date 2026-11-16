@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 // ============================================================
-//  REEL LIFE 3D — blocky first-person fishing
+//  REEL DEAL 3D — blocky first-person fishing
 //  Everything is built from boxes, one shared geometry,
 //  Lambert materials, no shadow pass, instanced clutter.
 // ============================================================
@@ -1166,7 +1166,8 @@ function renderLog(){
 }
 const RED_LO = 8, RED_HI = 92;      // hit either end of the bar and the fish is gone
 
-const SAVE_KEY = 'reel-life-3d-save-v6';
+const SAVE_KEY = 'reel-deal-save-v6';
+const OLD_SAVE_KEY = 'reel-life-3d-save-v6';   // pre-rename saves still load once
 function saveGame(){
   try{
     localStorage.setItem(SAVE_KEY, JSON.stringify({
@@ -1179,7 +1180,12 @@ function saveGame(){
 }
 function loadGame(){
   try{
-    const raw = localStorage.getItem(SAVE_KEY);
+    let raw = localStorage.getItem(SAVE_KEY);
+    if(!raw){
+      // migrate a save made before the rename, then forget the old key
+      raw = localStorage.getItem(OLD_SAVE_KEY);
+      if(raw){ localStorage.setItem(SAVE_KEY, raw); localStorage.removeItem(OLD_SAVE_KEY); }
+    }
     if(!raw) return;
     const d = JSON.parse(raw);
     if(!d) return;
@@ -1970,7 +1976,7 @@ function animate(){
   try { tick(); }
   catch(err){
     // never let one bad frame freeze the canvas
-    if(!animate.reported){ animate.reported = true; console.error('[reel-life] frame error:', err); }
+    if(!animate.reported){ animate.reported = true; console.error('[reel-deal] frame error:', err); }
   }
 }
 function tick(){

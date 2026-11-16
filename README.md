@@ -1,4 +1,4 @@
-# Reel Life 3D — blocky first-person fishing
+# Reel Deal 3D — blocky first-person fishing
 
 A cozy little **first-person** fishing game in the browser. Everything is built from
 boxes: the lake, the dock, the fish, even the UI. Walk the dock and the shore, cast from
@@ -18,6 +18,46 @@ PORT=3000 npm start  # …or pick your own port
 
 No build step and nothing to install — three.js is vendored in `vendor/`.
 (Any static server works: `python3 -m http.server`, `npx serve`, …)
+
+## Deploy
+
+The game is a static site: one HTML file, one CSS file, one JS file and a vendored
+three.js. **Nothing needs to be built or installed**, so deploy it as a static site — no
+server, no cold starts.
+
+### Render — static site (recommended)
+
+1. Push the repo to GitHub.
+2. In Render: **New +** → **Static Site** → pick the repo.
+3. **Branch**: `main` (or the branch you want to preview, e.g. a feature branch).
+4. **Build Command**: leave empty.
+5. **Publish Directory**: `.`
+6. **Create Static Site**. First deploy takes about a minute.
+
+Optional: the same thing as a blueprint — commit `render.yaml` (already in the repo) and pick
+**New +** → **Blueprint**.
+
+### Render — web service (alternative)
+
+There is also a zero-dependency Node static server (`serve.js`) if you would rather run a
+service: **New +** → **Web Service**, Runtime **Node**, Build Command `npm install`, Start
+Command `npm start`. It honours `PORT`, so Render wires it up automatically. The free tier
+sleeps after 15 minutes idle and takes ~30s to wake, which is why the static site is the
+better default.
+
+### Anywhere else
+
+It is plain files: `index.html`, `style.css`, `main.js`, `vendor/`. Drop those four into
+Netlify, Cloudflare Pages, GitHub Pages, S3, or any bucket and it runs. Serve it over HTTP
+(not `file://`) so the ES modules load.
+
+Everything uses relative paths, so it works at a domain root *or* under a subpath.
+
+### Caching
+
+`main.js` / `style.css` are requested with a `?v=` stamp in `index.html`; bump it (e.g.
+`?v=24` → `?v=25`) whenever you ship a change, otherwise returning players get the old
+build out of their browser cache.
 
 ## How to fish
 
@@ -120,7 +160,8 @@ has its own size range, strength, value and a home depth — but the depth is sc
 What decides the bite is the **bait's rarity window and minimum size**, so the pool is
 always exactly the fish that bait is allowed to catch. The catch log (top-right book icon)
 tracks everything you land; the HUD keeps your heaviest catch. Coins, gear, your bag and
-the log are saved to `localStorage` (key `reel-life-3d-save-v6`) — use **Reset** in the log
+the log are saved to `localStorage` (key `reel-deal-save-v6`, migrated automatically from the
+old `reel-life-3d-save-v6`) — use **Reset** in the log
 drawer to wipe progress.
 
 | Rarity | Fish | Typical sale |
