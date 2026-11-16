@@ -10,6 +10,7 @@ const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
 const lerp  = (a,b,t) => a + (b-a) * t;
 const rand  = (a,b) => a + Math.random() * (b-a);
 const hexc  = c => '#' + c.toString(16).padStart(6,'0');
+const fmt   = n => n.toLocaleString('en-US');
 
 // ---------- Species ----------
 // dist = how far out the bobber must be for this fish to bite (deep water)
@@ -219,9 +220,9 @@ const BAIT_NAMES = [
 // Prices are hand-placed so each tier costs roughly a dozen good catches at the
 // depth that tier opens up. Tier 1 is a first-session treat; the last rod is a
 // genuine long-haul goal. Line and bait ladders are deliberately cheaper.
-const ROD_COST  = [0, 130, 180, 240, 400, 390, 800, 820, 1550, 1550, 2900, 3050, 3000, 5200, 5900, 11000, 11000, 20000, 19500, 36000, 38000, 69000, 73500, 75000];
-const LINE_COST = [0, 70, 95, 130, 220, 210, 440, 450, 840, 840, 1600, 1650, 1650, 2850, 3250, 6100, 6000, 11000, 10500, 20000, 21000, 38000, 40500, 41000];
-const BAIT_COST = [0, 50, 70, 95, 160, 160, 320, 330, 610, 610, 1150, 1200, 1200, 2100, 2350, 4400, 4350, 8000, 7800, 14500, 15000, 27500, 29500, 30000];
+const ROD_COST  = [0, 130, 180, 240, 400, 430, 800, 860, 1550, 1650, 2900, 3150, 3400, 5200, 5900, 11000, 12000, 20000, 21500, 36000, 39000, 69000, 74500, 80500];
+const LINE_COST = [0, 70, 95, 130, 220, 240, 440, 480, 840, 910, 1600, 1750, 1900, 2850, 3250, 6100, 6600, 11000, 12000, 20000, 21500, 38000, 41000, 44500];
+const BAIT_COST = [0, 50, 70, 95, 160, 170, 320, 350, 610, 660, 1150, 1250, 1350, 2100, 2350, 4400, 4750, 8000, 8650, 14500, 15500, 27500, 29500, 32000];
 
 const RODS = ROD_NAMES.map(([name, color], i) => ({
   id:'rod' + i, name, color, cost: ROD_COST[i],
@@ -237,6 +238,12 @@ const BAITS = BAIT_NAMES.map(([name, color], i) => ({
   id:'bait' + i, name, color, cost: BAIT_COST[i],
   luck: +(1.05 * Math.pow(i / (BAIT_NAMES.length - 1), 1.35)).toFixed(2),
 }));
+// every tier must cost more than the one below it, whatever the tables say
+[RODS, LINES, BAITS].forEach(list => {
+  for(let i = 1; i < list.length; i++){
+    if(list[i].cost <= list[i - 1].cost) list[i].cost = Math.ceil(list[i - 1].cost * 1.08 / 10) * 10;
+  }
+});
 
 // ---------- Progression ----------
 // No levels: coins are the only gate, and the price ladder is spread so the
@@ -1121,11 +1128,11 @@ function showToast(msg, bad=false){
   showToast._t = setTimeout(()=>toastEl.className = 'toast hidden', 2000);
 }
 function updateStats(){
-  $('caughtCount').textContent = G.caught;
-  $('coinCount').textContent = G.coins;
+  $('caughtCount').textContent = fmt(G.caught);
+  $('coinCount').textContent = fmt(G.coins);
   $('bestNum').textContent = G.best ? G.best.weight + ' lb' : '—';
-  const sc = $('shopCoins'); if(sc) sc.textContent = G.coins;
-  const mc = $('marketCoins'); if(mc) mc.textContent = G.coins;
+  const sc = $('shopCoins'); if(sc) sc.textContent = fmt(G.coins);
+  const mc = $('marketCoins'); if(mc) mc.textContent = fmt(G.coins);
 }
 function renderLog(){
   if(!log.length){ logList.innerHTML = '<p class="empty">No fish yet. Cast your line!</p>'; logSummary.textContent = ''; return; }
@@ -1367,7 +1374,7 @@ function catchFish(){
   $('catchIcon').innerHTML = fishSVG(sp);
   $('catchName').textContent = sp.name;
   $('catchWeight').textContent = weight + ' lbs';
-  $('catchPoints').innerHTML = '+' + sp.pts + ' pts <span class="catch-value">WORTH ' + value + 'c AT THE MARKET</span>';
+  $('catchPoints').innerHTML = '+' + sp.pts + ' pts <span class="catch-value">WORTH ' + fmt(value) + 'c AT THE MARKET</span>';
   $('catchDesc').textContent = sp.desc;
   catchModal.querySelector('.modal-card').className = 'modal-card ' + sp.rarity;
   catchModal.classList.remove('hidden');
@@ -1527,7 +1534,7 @@ function gearRow(kind, g, i){
     ? '<button class="buy-btn equip" disabled>IN USE</button>'
     : owned
       ? `<button class="buy-btn equip" data-buy="${i}">EQUIP</button>`
-      : `<button class="buy-btn" data-buy="${i}" ${afford ? '' : 'disabled'}>${g.cost}c</button>`;
+      : `<button class="buy-btn" data-buy="${i}" ${afford ? '' : 'disabled'}>${fmt(g.cost)}c</button>`;
   const cls = kind === 'bait' ? 'gear-swatch bait' : kind === 'line' ? 'gear-swatch spool' : 'gear-swatch';
   return `<div class="rod-card${equipped ? ' equipped' : ''}${owned ? '' : ' unowned'}" data-tier="${i}">
     <div class="${cls}" style="${swatchStyle(kind, g)}"></div>
@@ -1544,7 +1551,7 @@ const bagTotal = () => bag.reduce((a, e) => a + (e.value || fishValue(e.sp, pars
 
 function renderShop(){
   if(!shopOpen) return;
-  $('shopCoins').textContent = G.coins;
+  $('shopCoins').textContent = fmt(G.coins);
   document.querySelectorAll('#shopOverlay .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === shopTab));
   const kind = shopTab === 'lines' ? 'line' : shopTab === 'bait' ? 'bait' : 'rod';
   shopBody.innerHTML = GEAR[kind].list.map((g, i) => gearRow(kind, g, i)).join('');
@@ -1599,21 +1606,21 @@ function applyGear(){
 // ---------- Fish market ----------
 function renderMarket(){
   if(!marketOpen) return;
-  $('marketCoins').textContent = G.coins;
+  $('marketCoins').textContent = fmt(G.coins);
   const body = $('marketBody');
   if(!bag.length){
     body.innerHTML = '<p class="shop-empty">Your catch bag is empty.<br>Catch something, then bring it here.</p>';
     return;
   }
   body.innerHTML =
-    `<div class="bag-total"><span>${bag.length} fish in the bag</span><span>${bagTotal()}c</span></div>` +
+    `<div class="bag-total"><span>${bag.length} fish in the bag</span><span>${fmt(bagTotal())}c</span></div>` +
     bag.map((e, i) => `<div class="sell-row">
       <div class="e">${fishSVG(e.sp)}</div>
       <div><b>${e.sp.name}</b><small>${e.weight} lbs · ${RARITY[e.sp.rarity].label}</small></div>
-      <div class="val">${e.value || fishValue(e.sp, parseFloat(e.weight))}c</div>
+      <div class="val">${fmt(e.value || fishValue(e.sp, parseFloat(e.weight)))}c</div>
       <button class="buy-btn" data-sell="${i}">Sell</button>
     </div>`).join('') +
-    `<button class="sell-all" id="sellAll">SELL ALL · ${bagTotal()}c</button>`;
+    `<button class="sell-all" id="sellAll">SELL ALL · ${fmt(bagTotal())}c</button>`;
 }
 function openMarket(){
   if(marketOpen || shopOpen || G.state !== 'aim') return;
@@ -1640,7 +1647,7 @@ function sellFish(i){
   bag.splice(i, 1);
   G.coins += v;
   sfx.coin(); updateStats(); saveGame(); renderMarket();
-  showToast('+' + v + ' coins');
+  showToast('+' + fmt(v) + ' coins');
 }
 function sellAll(){
   if(!bag.length) return;
@@ -1648,7 +1655,7 @@ function sellAll(){
   G.coins += total;
   bag.length = 0;
   sfx.coin(); updateStats(); saveGame(); renderMarket();
-  showToast('Sold the lot for ' + total + ' coins!');
+  showToast('Sold the lot for ' + fmt(total) + ' coins!');
 }
 
 // ---------- Pointer lock / input ----------
