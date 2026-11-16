@@ -68,14 +68,15 @@ button appears (or press **E**).
 
 | | First | Then | Last |
 | --- | --- | --- | --- |
-| **Rod** — cast range | Bamboo Pole `free`, 14m | Willow Rod `145c` 17m · Fiberglass `150c` 21m · … | Mythril Rod `28,300c`, 92m |
-| **Line** — max fish | Cotton Twine `free`, 3lb | 4lb Mono `80c` · 6lb `85c` · … | 800lb Mythril `15,600c` |
-| **Bait** — luck | Garden Worm `free` | Bread Ball `60c` · Sweet Corn `60c` · … | Moonbait `11,300c` |
+| **Rod** — cast range | Bamboo Pole `free`, 12m, POWER 8 | Willow Rod `130c` 16m (+38% power) · Fiberglass `180c` 19m · … | Mythril Rod `75,000c`, 95m, POWER 233 |
+| **Line** — max fish | Cotton Twine `free`, 3lb | 6lb Mono `70c` · 10lb `95c` · … | 1600lb Mythril `41,000c` |
+| **Bait** — luck | Garden Worm `free` | Bread Ball `50c` · Sweet Corn `70c` · … | Moonbait `30,000c` |
 
 Rod = **distance + forgiveness**, line = **maximum weight you can land**, bait = **luck**
-(rarer, heavier fish, and quicker bites). Every tier is a straight upgrade over the last —
-the row shows `+3m cast · +0.03x reel` so you can see what you are buying. Any tier you can
-afford is fair game; nothing is level-locked.
+(rarer, heavier fish, and quicker bites). Every tier is a straight upgrade over the last and
+each one is a real step: a rod row shows its **POWER** score and how the next one compares
+(`+4m cast · +38% power`), so 24 tiers stay comparable at a glance. Any tier you can afford
+is fair game; nothing is level-locked.
 
 **Fish Market** — everything you catch goes into your bag instead of vanishing. Sell fish
 one at a time or all at once. Heavier and rarer fish are worth far more, and deep water
@@ -89,14 +90,17 @@ sessions away from the next toy, and the top of the ladder stays far away.
 
 | Milestone | Coins | Roughly |
 | --- | --- | --- |
-| Tier 2–4 rod | 145–260 | your first few minutes |
-| Tier 8 rod (41m) | 820 | one good session |
-| Tier 14 rod (62m) | 2,550 | several sessions |
-| Tier 20 rod (82m) | 15,200 | the long haul |
-| Tier 24 rod (92m) | 28,300 | the thing you will not stop thinking about |
+| Tier 2 rod | 130 | **six** fish |
+| Tier 3–4 rod | 180–240 | your first few minutes |
+| Tier 8 rod (41m) | 1,550 | one good session |
+| Tier 14 rod (62m) | 5,900 | several sessions |
+| Tier 20 rod (84m) | 38,000 | the long haul |
+| Tier 24 rod (95m) | 75,000 | the thing you will not stop thinking about |
 
-Lines and baits compete for the same coins but are cheaper (about 55% and 40% of the rod
-at the same tier), so a full kit is a genuine project rather than a first-sitting purchase.
+The first upgrade is deliberately close — a handful of fish — and the gap widens as you go
+deeper, so the early game never stalls while the late game stays a long way off. Lines and
+baits compete for the same coins but are cheaper (about 55% and 40% of the rod at the same
+tier).
 
 ## What's in the lake
 

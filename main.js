@@ -165,7 +165,7 @@ const RARITY = {
 };
 
 // derive the numbers: deeper water and bigger specimens are worth more and fight harder
-const BAND_PTS = b => 8 * Math.pow(1.5, b);
+const BAND_PTS = b => 20 * Math.pow(1.45, b);
 const BAND_W   = b => 2.2 * Math.pow(1.55, b);
 const SPECIES = FISH_TABLE.map(([name, color, rarity, dist, sf, pattern, desc]) => {
   const b = clamp(Math.round(dist / 8), 0, 11);
@@ -177,7 +177,7 @@ const SPECIES = FISH_TABLE.map(([name, color, rarity, dist, sf, pattern, desc]) 
     belly: lighten(color, 0.66),
     minW, maxW,
     pts: Math.round(BAND_PTS(b) * (0.8 + rar.tier * 0.12) * (0.7 + sf * 0.28)),
-    strength: +Math.min(1.75, 0.13 + b * 0.11 + sf * 0.055 + rar.tier * 0.03).toFixed(2),
+    strength: +Math.min(2.4, 0.12 + b * 0.135 + sf * 0.06 + rar.tier * 0.03).toFixed(2),
     size: +Math.min(1.9, 0.45 + Math.cbrt(maxW) * 0.28).toFixed(2),
     weight: rar.spawn,
   };
@@ -197,14 +197,14 @@ const ROD_NAMES = [
   ['Celestial Rod', 0x7ec8e3], ['Elderwood Rod', 0x3f6b3f], ['Mythril Rod', 0x9b5de5],
 ];
 const LINE_NAMES = [
-  ['Cotton Twine', 0xe8dcc0, 3], ['4lb Mono', 0xdfe9f0, 4], ['6lb Mono', 0xd8f0ff, 6],
-  ['8lb Mono', 0xcfe6f5, 8], ['10lb Mono', 0xbfe0f2, 10], ['12lb Mono', 0x9fe3d8, 12],
-  ['15lb Mono', 0x8fd6cf, 15], ['20lb Mono', 0x7fc9c6, 20], ['25lb Fluoro', 0xa9e5d0, 25],
-  ['30lb Braid', 0xd8f0a0, 30], ['40lb Braid', 0xc8e88a, 40], ['50lb Braid', 0xffd166, 50],
-  ['65lb Braid', 0xf6c445, 65], ['80lb Braid', 0xe8b03a, 80], ['100lb Braid', 0xd99b2b, 100],
-  ['130lb Braid', 0xe07a4a, 130], ['160lb Spectra', 0xd06a3a, 160], ['200lb Spectra', 0xc25a2a, 200],
-  ['250lb Spectra', 0xb84a20, 250], ['300lb Kevlar', 0xc0392b, 300], ['400lb Kevlar', 0xd0402f, 400],
-  ['500lb Aramid', 0xe0503f, 500], ['650lb Dragonline', 0x9ef7c8, 650], ['800lb Mythril', 0xe0d0ff, 800],
+  ['Cotton Twine', 0xe8dcc0, 3], ['6lb Mono', 0xdfe9f0, 6], ['10lb Mono', 0xd8f0ff, 10],
+  ['15lb Mono', 0xcfe6f5, 15], ['20lb Mono', 0xbfe0f2, 20], ['25lb Mono', 0x9fe3d8, 25],
+  ['35lb Fluoro', 0x8fd6cf, 35], ['45lb Fluoro', 0x7fc9c6, 45], ['60lb Fluoro', 0xa9e5d0, 60],
+  ['80lb Braid', 0xd8f0a0, 80], ['100lb Braid', 0xc8e88a, 100], ['130lb Braid', 0xffd166, 130],
+  ['160lb Braid', 0xf6c445, 160], ['200lb Braid', 0xe8b03a, 200], ['250lb Braid', 0xd99b2b, 250],
+  ['300lb Braid', 0xe07a4a, 300], ['380lb Spectra', 0xd06a3a, 380], ['470lb Spectra', 0xc25a2a, 470],
+  ['580lb Spectra', 0xb84a20, 580], ['700lb Kevlar', 0xc0392b, 700], ['850lb Kevlar', 0xd0402f, 850],
+  ['1000lb Aramid', 0xe0503f, 1000], ['1250lb Dragonline', 0x9ef7c8, 1250], ['1600lb Mythril', 0xe0d0ff, 1600],
 ];
 const BAIT_NAMES = [
   ['Garden Worm', 0xd98b7a], ['Bread Ball', 0xe8d9b0], ['Sweet Corn', 0xffd94a],
@@ -219,19 +219,19 @@ const BAIT_NAMES = [
 // Prices are hand-placed so each tier costs roughly a dozen good catches at the
 // depth that tier opens up. Tier 1 is a first-session treat; the last rod is a
 // genuine long-haul goal. Line and bait ladders are deliberately cheaper.
-const ROD_COST  = [0, 145, 150, 250, 260, 260, 440, 420, 820, 780, 1450, 1400, 1450, 2550, 2550, 4350, 5150, 8700, 8450, 9000, 15200, 15700, 27700, 28300];
-const LINE_COST = [0, 80, 85, 135, 140, 145, 240, 230, 450, 430, 810, 770, 810, 1400, 1400, 2400, 2800, 4800, 4650, 4950, 8350, 8600, 15200, 15600];
-const BAIT_COST = [0, 60, 60, 100, 100, 105, 175, 170, 330, 310, 590, 560, 590, 1000, 1000, 1750, 2050, 3500, 3400, 3600, 6050, 6250, 11100, 11300];
+const ROD_COST  = [0, 130, 180, 240, 400, 390, 800, 820, 1550, 1550, 2900, 3050, 3000, 5200, 5900, 11000, 11000, 20000, 19500, 36000, 38000, 69000, 73500, 75000];
+const LINE_COST = [0, 70, 95, 130, 220, 210, 440, 450, 840, 840, 1600, 1650, 1650, 2850, 3250, 6100, 6000, 11000, 10500, 20000, 21000, 38000, 40500, 41000];
+const BAIT_COST = [0, 50, 70, 95, 160, 160, 320, 330, 610, 610, 1150, 1200, 1200, 2100, 2350, 4400, 4350, 8000, 7800, 14500, 15000, 27500, 29500, 30000];
 
 const RODS = ROD_NAMES.map(([name, color], i) => ({
   id:'rod' + i, name, color, cost: ROD_COST[i],
-  cast: Math.round(14 + 3.4 * i),
-  tension: +(1.32 * Math.pow(0.968, i)).toFixed(2),
-  reel: +(0.85 * Math.pow(1.03, i)).toFixed(2),
+  cast: Math.round(12 + 3.6 * i),
+  tension: +(1.55 * Math.pow(0.94, i)).toFixed(2),
+  reel: +(0.75 * Math.pow(1.035, i)).toFixed(2),
 }));
 const LINES = LINE_NAMES.map(([name, color, rating], i) => ({
   id:'line' + i, name, color, rating, cost: LINE_COST[i],
-  strain: +(1.35 * Math.pow(0.965, i)).toFixed(2),
+  strain: +(1.60 * Math.pow(0.945, i)).toFixed(2),
 }));
 const BAITS = BAIT_NAMES.map(([name, color], i) => ({
   id:'bait' + i, name, color, cost: BAIT_COST[i],
@@ -1492,8 +1492,10 @@ const GEAR = {
   line: { list:LINES, label:'line', tab:'lines' },
   bait: { list:BAITS, label:'bait', tab:'bait' },
 };
+// one number that captures cast reach, crank speed and forgiveness
+const rodPower = r => Math.round(r.cast * Math.pow(r.reel / r.tension, 0.6));
 const gearStat = (kind, g) => {
-  if(kind === 'rod')  return `CAST ${g.cast}m · REEL ${g.reel.toFixed(2)}x · FORGIVE ${Math.round((2 - g.tension) * 100)}`;
+  if(kind === 'rod')  return `CAST ${g.cast}m · REEL ${g.reel.toFixed(2)}x · POWER ${rodPower(g)}`;
   if(kind === 'line') return `MAX FISH ${g.rating} lb · STRAIN ${Math.round((2 - g.strain) * 100)}`;
   return `LUCK +${Math.round(g.luck * 100)}% · BITES ${Math.round(g.luck * 45)}% FASTER`;
 };
@@ -1503,8 +1505,11 @@ function gearDelta(kind, g){
   const cur = GEAR[kind].list[G.gear[kind]];
   if(!cur || cur === g) return '<small class="gear-tag on">EQUIPPED</small>';
   if(kind === 'rod'){
-    const c = g.cast - cur.cast, r = g.reel - cur.reel;
-    return `<small class="gear-delta">${c >= 0 ? '+' : ''}${c}m cast · ${r >= 0 ? '+' : ''}${r.toFixed(2)}x reel</small>`;
+    const c = g.cast - cur.cast;
+    const ratio = rodPower(g) / rodPower(cur);
+    const p = ratio >= 1.9 ? '\u00d7' + ratio.toFixed(1) + ' stronger'
+                           : (ratio >= 1 ? '+' : '') + Math.round((ratio - 1) * 100) + '% power';
+    return `<small class="gear-delta">${c >= 0 ? '+' : ''}${c}m cast · ${p}</small>`;
   }
   if(kind === 'line'){
     const d = g.rating - cur.rating;
