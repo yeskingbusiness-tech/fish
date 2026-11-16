@@ -2118,9 +2118,9 @@ function tick(){
     track.classList.toggle('slack', G.tension < G.bandLo);
     reelWarn.textContent =
       G.over > 0.25 ? 'LINE OVERLOADED — ' + Math.round(G.fishWeight) + 'lb ON ' + l2.rating + 'lb LINE' :
-      G.tension > G.bandHi ? 'EASE OFF — no winding outside the green' :
-      G.tension < G.bandLo ? 'WIND IT BACK INTO THE GREEN' :
-      surging ? "IT'S SURGING — HOLD ON" : '';
+      G.tension > G.bandHi ? 'TOO TIGHT — RELEASE TO LOWER IT' :
+      G.tension < G.bandLo ? 'TOO SLACK — HOLD TO RAISE IT' :
+      surging ? "IT'S SURGING — STAY ON IT" : 'WINDING IN';
     reelWarn.classList.toggle('warn', !!reelWarn.textContent);
 
     if(hookedFish){
