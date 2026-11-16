@@ -228,6 +228,11 @@ html,body{height:100%;overflow:hidden;background:#7fc4e0;color:var(--ink);
 .buy-btn{background:var(--teal);color:#fff;border:2px solid var(--ink);padding:8px 12px;cursor:pointer;
   font-family:'Silkscreen','Courier New',monospace;font-size:11px;box-shadow:2px 2px 0 var(--ink);white-space:nowrap}
 .buy-btn:disabled{background:#cfd8db;color:#7c9099;cursor:not-allowed;box-shadow:none}
+.buy-btn.deny{background:#e9d7d7;color:#a4524e;border-style:dashed;
+  display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.1}
+.buy-btn.deny i{font-style:normal;font-size:9px;letter-spacing:.04em;opacity:.85}
+.rod-card.short{opacity:.72}
+.rod-card.short .tier-no{background:#e9d7d7;color:#a4524e}
 .buy-btn.equip{background:#ffd166;color:var(--ink)}
 .buy-btn:hover:enabled{filter:brightness(1.06)}
 
@@ -280,6 +285,7 @@ html,body{height:100%;overflow:hidden;background:#7fc4e0;color:var(--ink);
 .gear-tag{display:inline-block;font-size:9px;font-weight:900;letter-spacing:.5px;padding:1px 5px;
   border:1.5px solid var(--ink);background:#efe2c6;color:var(--ink);margin-left:5px;vertical-align:1px}
 .gear-tag.on{background:var(--teal);color:#fff;border-color:var(--ink)}
+.gear-tag.owned{background:#e7eef0;color:#7c9099;border-color:#b9c9cf}
 .lv-req{font-family:'Silkscreen','Courier New',monospace;font-size:9px;color:#b3261e;display:block;margin-top:2px}
 .bag-total{font-family:'Silkscreen','Courier New',monospace;font-size:11px;color:var(--ink-soft);
   display:flex;justify-content:space-between;padding:2px 4px 6px;border-bottom:2px dashed #cbbfa4;margin-bottom:2px}

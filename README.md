@@ -4,7 +4,8 @@ A cozy little **first-person** fishing game in the browser. Everything is built 
 boxes: the lake, the dock, the fish, even the UI. Walk the dock and the shore, cast from
 wherever the water is, wait for the bobber to dip, strike, then fight the fish in without
 snapping your line. Sell your catch at the **fish market** and spend the coins at the
-**tackle shop** on a better rod, a stronger line and luckier bait.
+**tackle shop** on a better rod, a stronger line and better bait.
+What bites is **pure luck, decided by your bait** — there is no depth to chase.
 
 ![genre](https://img.shields.io/badge/genre-casual%20fishing-0ea5b7) ![style](https://img.shields.io/badge/style-blocky-ef4056) ![three.js](https://img.shields.io/badge/three.js-r160-black)
 
@@ -57,7 +58,7 @@ The bar is five zones: **red · yellow · green · yellow · red**.
 - **The band is sized by how outmatched you are.** Rarer and heavier fish narrow it; a
   better rod and line widen it back out and calm the needle.
 - **Your line is rated for a weight.** Hook something heavier and the bar narrows *and*
-  the needle gets wilder, with a `LINE OVERLOADED` warning on screen. Bring line, not luck.
+  the needle gets wilder, with a `LINE OVERLOADED` warning on screen. Bring line, not hope.
 
 ## The two stalls
 
@@ -68,50 +69,71 @@ button appears (or press **E**).
 
 | | First | Then | Last |
 | --- | --- | --- | --- |
-| **Rod** — cast range | Bamboo Pole `free`, 12m, POWER 8 | Willow Rod `130c` 16m (+38% power) · Fiberglass `180c` 19m · … | Mythril Rod `75,000c`, 95m, POWER 233 |
-| **Line** — max fish | Cotton Twine `free`, 3lb | 6lb Mono `70c` · 10lb `95c` · … | 1600lb Mythril `41,000c` |
-| **Bait** — luck | Garden Worm `free` | Bread Ball `50c` · Sweet Corn `70c` · … | Moonbait `30,000c` |
+| **Rod** — reach + control | Bamboo Pole `free`, 12m, POWER 8 | Willow Rod `40c` 16m · Graphite `90c` 19m · … | Mythril Rod `30,000c`, 95m, POWER 232 |
+| **Line** — max fish | Cotton Twine `free`, 3lb | 10lb Mono `70c` · 15lb Mono `130c` · … | 1900lb Mythril `24,000c` |
+| **Bait** — what bites | Garden Worm `free`, common–uncommon, any size | Sweet Corn `160c`, common–rare · … | Moonbait `47,000c`, legendary–mythic, 375lb+ |
 
-Rod = **distance + forgiveness**, line = **maximum weight you can land**, bait = **luck**
-(rarer, heavier fish, and quicker bites). Every tier is a straight upgrade over the last and
-each one is a real step: a rod row shows its **POWER** score and how the next one compares
-(`+4m cast · +38% power`), so 24 tiers stay comparable at a glance. Any tier you can afford
+**Bait is the whole progression.** Every bait has a *rarity window* and a *minimum fish
+size*, and it physically cannot hook anything outside them — a beginner worm will never
+drag up a leviathan however lucky you get, and the endgame baits no longer waste time on
+bluegills. The shop prints exactly what each one catches
+(`CATCHES EPIC–MYTHIC · 35LB+ · LUCK +50%`), and the row below it says what the next tier
+unlocks.
+
+Rod = **how far you cast and how forgiving the fight is** (the `POWER` score), line =
+**the maximum weight you can actually land**. Neither one changes what bites; they decide
+whether you can hold on once it does. Over-bait your line and the bar narrows to nothing,
+so keep the three ladders within a couple of tiers of each other. Any tier you can afford
 is fair game; nothing is level-locked.
 
 **Fish Market** — everything you catch goes into your bag instead of vanishing. Sell fish
-one at a time or all at once. Heavier and rarer fish are worth far more, and deep water
-(the far sandbars) is where the money is.
+one at a time or all at once. Rarity sets the price and size multiplies it, so a fat
+mythic is worth hundreds of commons.
 
 ### Pacing
 
-There are no levels — coins are the only gate. Prices are placed so that **each tier costs
-roughly eight good catches at the depth that tier opens up**: you always feel one or two
-sessions away from the next toy, and the top of the ladder stays far away.
+There are no levels — coins are the only gate. Every price is fitted to what the bait
+tier *actually earns*: **a tier costs about six catches of the fish you are already
+catching**, with a hard 1.75× ceiling on any single jump so no rung is a wall. The pace is
+flat on purpose — no tier is a breeze and none is a brick wall.
+
+Bait is the ladder that opens content, so it leads on price. Rod and line sit at roughly
+60% and 50% of the bait tier beside them, which keeps all three within a couple of tiers
+of each other without ever feeling like a tax.
 
 | Milestone | Coins | Roughly |
 | --- | --- | --- |
-| Tier 2 rod | 130 | **six** fish |
-| Tier 3–4 rod | 180–240 | your first few minutes |
-| Tier 8 rod (41m) | 1,550 | one good session |
-| Tier 14 rod (62m) | 5,900 | several sessions |
-| Tier 20 rod (84m) | 38,000 | the long haul |
-| Tier 24 rod (95m) | 75,000 | the thing you will not stop thinking about |
+| Tier 2 bait | 60 | **three** fish |
+| Tier 4 bait (rare) | 360 | your first few minutes |
+| Tier 9 bait (legendary) | 2,900 | one good session |
+| Tier 14 bait (mythic) | 13,500 | the mythic gate |
+| Tier 20 bait (170lb+ only) | 37,500 | the long haul |
+| Tier 24 bait (375lb+ only) | 47,000 | the thing you will not stop thinking about |
 
-The first upgrade is deliberately close — a handful of fish — and the gap widens as you go
-deeper, so the early game never stalls while the late game stays a long way off. Lines and
-baits compete for the same coins but are cheaper (about 55% and 40% of the rod at the same
-tier).
+A full run is roughly **320 catches** across the three ladders — about 770,000 coins —
+and your first three upgrades together cost less than ten fish.
 
 ## What's in the lake
 
-**120 species** across six rarities, in twelve depth bands of ten. Every fish has its own
-size range, strength, value and the **depth it lives at** — you can only hook a fish if
-your cast reaches its water, and the deeper you cast the more the pool fills with that
-band's residents. That is the real progression: better rods reach deeper water, which holds
-bigger, rarer, richer fish. The catch log (top-right book icon) tracks everything you land;
-the HUD keeps your heaviest catch. Coins, gear, your bag and the log are saved to
-`localStorage` (key `reel-life-3d-save-v6`) — use **Reset** in the log drawer to wipe
-progress.
+**120 species** across six rarities, fourteen commons up to forty-two mythics. Every fish
+has its own size range, strength, value and a home depth — but the depth is scenery now.
+What decides the bite is the **bait's rarity window and minimum size**, so the pool is
+always exactly the fish that bait is allowed to catch. The catch log (top-right book icon)
+tracks everything you land; the HUD keeps your heaviest catch. Coins, gear, your bag and
+the log are saved to `localStorage` (key `reel-life-3d-save-v6`) — use **Reset** in the log
+drawer to wipe progress.
+
+| Rarity | Fish | Typical sale |
+| --- | --- | --- |
+| Common | 14 | ~13c |
+| Uncommon | 11 | ~37c |
+| Rare | 14 | ~110c |
+| Epic | 14 | ~350c |
+| Legendary | 25 | ~1,150c |
+| Mythic | 42 | ~4,500c |
+
+The bands below are the flavour grouping (deep-water fish run bigger and score higher);
+they no longer gate anything.
 
 | Depth | Who lives there |
 | --- | --- |
@@ -128,8 +150,9 @@ progress.
 | 80m | The Drowned, Star Whale, Ironjaw, Sunken Spire, Lunar Leviathan, Hollow Moon, Deep Root, The Listener, Bone Tide, Crown of Salt |
 | 88m | The Hollow God, World Serpent, Moon-Eater, The First Fish, Leviathan Prime, Sunken Crown, The Deep Itself, Pale Sun, Elder Tide, **Reel Life** |
 
-Rarity runs common → uncommon → rare → epic → legendary → mythic, and rarer fish are worth
-far more per pound. Everything past 48m is legendary or better — that is where the coins are.
+Rarity runs common → uncommon → rare → epic → legendary → mythic, and each step up is worth
+roughly three to four times the one below it. Everything past 48m is legendary or better —
+that is where the coins are, and a legendary–mythic bait is how you get at them.
 
 ## Built to run light
 
@@ -165,7 +188,8 @@ vendor/      three.js r160 module
 - Fight difficulty: `fightSetup()` — `demand` vs `supply` sets both the band width and the
   needle speed in one ratio.
 - Tension/reel feel: the `reeling` block inside `animate()`.
-- Fish prices: `fishValue()`.
+- Fish prices: `fishValue()` and the `value` column of `RARITY`.
+- What each bait can hook: `BAIT_WINDOW` (rarity) and the `minSize` curve in `BAITS`.
 - Walkable area: `groundAt()` — return `null` to block a spot; `SHOP_POS` / `MARKET_POS`
   are the two stalls.
 - Cast range: `landingPoint()`; rod pose angles: the `DIR_*` vectors.

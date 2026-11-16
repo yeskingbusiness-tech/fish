@@ -13,11 +13,10 @@ const hexc  = c => '#' + c.toString(16).padStart(6,'0');
 const fmt   = n => n.toLocaleString('en-US');
 
 // ---------- Species ----------
-// dist = how far out the bobber must be for this fish to bite (deep water)
-// ---------- Species ----------
 // Compact table, one row per fish:
 //   [name, colour, rarity, depth, sizeFactor, pattern, blurb]
-// depth     = how far out the bobber has to be before it will bite
+// depth     = flavour only now — bait, not reach, decides what bites. It still
+//             drives size/score so the deep-water monsters stay the big ones.
 // sizeFactor= how big this fish runs for its depth band (0.6 = runt, 6 = leviathan)
 // pattern   = 0 none, 1 stripes, 2 spots, 3 rainbow, 4 patches, 5 scales, 6 whiskers
 // Weight, points, strength and body size are derived in buildSpecies().
@@ -156,14 +155,16 @@ const FISH_TABLE = [
   ['Reel Life', 0xd8d0c0, 'mythic', 88, 5.50, 5, 'The one at the end of the line.'],
 ];
 
+// value = what a fish of this rarity sells for, before size is factored in
 const RARITY = {
-  common:    { tier:0, label:'COMMON',    value:1.00, spawn:26 },
-  uncommon:  { tier:1, label:'UNCOMMON',  value:1.15, spawn:15 },
-  rare:      { tier:2, label:'RARE',      value:1.35, spawn:7.5 },
-  epic:      { tier:3, label:'EPIC',      value:1.60, spawn:3.6 },
-  legendary: { tier:4, label:'LEGENDARY', value:2.00, spawn:1.5 },
-  mythic:    { tier:5, label:'MYTHIC',    value:2.60, spawn:0.55 },
+  common:    { tier:0, label:'COMMON',    value:24,    spawn:26 },
+  uncommon:  { tier:1, label:'UNCOMMON',  value:65,    spawn:15 },
+  rare:      { tier:2, label:'RARE',      value:180,   spawn:7.5 },
+  epic:      { tier:3, label:'EPIC',      value:520,   spawn:3.6 },
+  legendary: { tier:4, label:'LEGENDARY', value:1500,  spawn:1.5 },
+  mythic:    { tier:5, label:'MYTHIC',    value:4600,  spawn:0.55 },
 };
+const RARITY_ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
 
 // derive the numbers: deeper water and bigger specimens are worth more and fight harder
 const BAND_PTS = b => 20 * Math.pow(1.45, b);
@@ -205,7 +206,7 @@ const LINE_NAMES = [
   ['160lb Braid', 0xf6c445, 160], ['200lb Braid', 0xe8b03a, 200], ['250lb Braid', 0xd99b2b, 250],
   ['300lb Braid', 0xe07a4a, 300], ['380lb Spectra', 0xd06a3a, 380], ['470lb Spectra', 0xc25a2a, 470],
   ['580lb Spectra', 0xb84a20, 580], ['700lb Kevlar', 0xc0392b, 700], ['850lb Kevlar', 0xd0402f, 850],
-  ['1000lb Aramid', 0xe0503f, 1000], ['1250lb Dragonline', 0x9ef7c8, 1250], ['1600lb Mythril', 0xe0d0ff, 1600],
+  ['1000lb Aramid', 0xe0503f, 1000], ['1400lb Dragonline', 0x9ef7c8, 1400], ['1900lb Mythril', 0xe0d0ff, 1900],
 ];
 const BAIT_NAMES = [
   ['Garden Worm', 0xd98b7a], ['Bread Ball', 0xe8d9b0], ['Sweet Corn', 0xffd94a],
@@ -217,12 +218,13 @@ const BAIT_NAMES = [
   ['Scent Bomb', 0xd07ae0], ['Chum Cloud', 0xb090c0], ['Firefly Sac', 0xe8f07a],
   ['Silver Minnow', 0xd8e8f0], ['Dragonfly Nymph', 0x6fd0b0], ['Moonbait', 0xc0d8ff],
 ];
-// Prices are hand-placed so each tier costs roughly a dozen good catches at the
-// depth that tier opens up. Tier 1 is a first-session treat; the last rod is a
-// genuine long-haul goal. Line and bait ladders are deliberately cheaper.
-const ROD_COST  = [0, 130, 180, 240, 400, 430, 800, 860, 1550, 1650, 2900, 3150, 3400, 5200, 5900, 11000, 12000, 20000, 21500, 36000, 39000, 69000, 74500, 80500];
-const LINE_COST = [0, 70, 95, 130, 220, 240, 440, 480, 840, 910, 1600, 1750, 1900, 2850, 3250, 6100, 6600, 11000, 12000, 20000, 21500, 38000, 41000, 44500];
-const BAIT_COST = [0, 50, 70, 95, 160, 170, 320, 350, 610, 660, 1150, 1250, 1350, 2100, 2350, 4400, 4750, 8000, 8650, 14500, 15500, 27500, 29500, 32000];
+// Prices are fitted to what a bait tier actually earns: ~6 catches of the fish
+// that bait hooks buys the next tier, with a 1.75x ceiling on any single jump so
+// no rung is a wall. Bait is the content gate, so it leads the ladder; rod and
+// line are cheaper because they only decide whether you can land what bites.
+const ROD_COST  = [0, 40, 90, 170, 320, 560, 630, 990, 1050, 1850, 3050, 3300, 4550, 4900, 8600, 15000, 16500, 19000, 20500, 22000, 24000, 26000, 28000, 30000];
+const LINE_COST = [0, 30, 70, 130, 250, 440, 490, 770, 830, 1450, 2400, 2600, 3550, 3850, 6750, 12000, 13000, 14500, 16000, 17500, 19000, 20500, 22000, 24000];
+const BAIT_COST = [0, 60, 160, 360, 500, 880, 980, 1550, 1650, 2900, 4750, 5150, 7050, 7600, 13500, 23500, 26000, 29000, 32000, 34500, 37500, 40500, 43500, 47000];
 
 const RODS = ROD_NAMES.map(([name, color], i) => ({
   id:'rod' + i, name, color, cost: ROD_COST[i],
@@ -234,10 +236,20 @@ const LINES = LINE_NAMES.map(([name, color, rating], i) => ({
   id:'line' + i, name, color, rating, cost: LINE_COST[i],
   strain: +(1.60 * Math.pow(0.945, i)).toFixed(2),
 }));
-const BAITS = BAIT_NAMES.map(([name, color], i) => ({
-  id:'bait' + i, name, color, cost: BAIT_COST[i],
-  luck: +(1.05 * Math.pow(i / (BAIT_NAMES.length - 1), 1.35)).toFixed(2),
-}));
+// each bait can only ever hook fish inside its rarity window
+const BAIT_WINDOW = [
+  [0,1],[0,1],[0,2],[1,2],[1,2],[1,3],[1,3],[2,3],[2,3],[2,4],[2,4],[2,4],
+  [3,4],[3,4],[3,5],[3,5],[3,5],[4,5],[4,5],[4,5],[4,5],[4,5],[4,5],[4,5],
+];
+const BAITS = BAIT_NAMES.map(([name, color], i) => {
+  const [lo, hi] = BAIT_WINDOW[i];
+  return {
+    id:'bait' + i, name, color, cost: BAIT_COST[i], lo, hi,
+    // and it will only interest fish at least this big
+    minSize: Math.round(0.9 * Math.pow(1.30, i) - 0.9),
+    luck: +(0.9 * Math.pow(i / (BAIT_NAMES.length - 1), 1.2)).toFixed(2),
+  };
+});
 // every tier must cost more than the one below it, whatever the tables say
 [RODS, LINES, BAITS].forEach(list => {
   for(let i = 1; i < list.length; i++){
@@ -249,22 +261,31 @@ const BAITS = BAIT_NAMES.map(([name, color], i) => ({
 // No levels: coins are the only gate, and the price ladder is spread so the
 // last rod/line/bait is a serious long-haul goal, not a first-session purchase.
 function fishValue(sp, weight){
-  // big fish are worth more, but the curve flattens so late-game monsters
-  // don't trivialise the price ladder
-  const bulk = 2.4 * Math.pow(Math.max(1, weight), 0.78);
-  return Math.max(6, Math.round((sp.pts * 0.9 + bulk) * RARITY[sp.rarity].value));
+  // rarity sets the base, the specimen size multiplies it — a fat fish of a
+  // rare species is where the money is
+  const rel = clamp((weight - sp.minW) / Math.max(0.1, sp.maxW - sp.minW), 0, 1);
+  const bulk = 0.6 + 0.4 * Math.pow(Math.max(0.5, weight) / 50, 0.35);
+  return Math.max(6, Math.round(RARITY[sp.rarity].value * (0.5 + 0.5 * rel) * bulk));
 }
 
-// Luck lifts the odds of rarer tiers (1 + luck)^tier and calms the bite timer.
-// Distance matters too: a deep cast rarely drags up a bluegill.
-function pickSpecies(dist){
-  const luck = BAITS[G.gear.bait].luck;
-  const pool = SPECIES.filter(s => (s.dist || 0) <= dist + 0.5);
-  const list = pool.length ? pool : [SPECIES[0]];
+// The bait decides everything: each bait has a rarity window [lo, hi] and it
+// physically cannot hook outside it, no matter the luck.
+function baitWindow(i){
+  const b = BAITS[i] || BAITS[0];
+  return [b.lo, b.hi];
+}
+function pickSpecies(){
+  const bait = BAITS[G.gear.bait] || BAITS[0];
+  const lo = bait.lo, hi = bait.hi;
+  const list = SPECIES.filter(s => {
+    const t = RARITY[s.rarity].tier;
+    return t >= lo && t <= hi && s.maxW >= bait.minSize;
+  });
+  if(!list.length) return SPECIES[0];
   let total = 0;
   const w = list.map(s => {
-    const near = Math.pow(0.55, Math.abs((s.dist || 0) - dist) / 8);
-    const v = s.weight * near * Math.pow(1 + luck, RARITY[s.rarity].tier * 0.9);
+    const t = RARITY[s.rarity].tier - lo;
+    const v = s.weight * Math.pow(1 + bait.luck * 2.0, t);   // luck pushes to the top of the window
     total += v; return v;
   });
   let r = Math.random() * total;
@@ -1338,7 +1359,7 @@ function fightSetup(sp, weight){
   return R;
 }
 function hookFish(){
-  hookedSpecies = pickSpecies(G.castDist || 10);
+  hookedSpecies = pickSpecies();
   const w = rollWeight(hookedSpecies);
   hookedWeight = +w.toFixed(1);
   if(hookedFish){ scene.remove(hookedFish); }
@@ -1502,28 +1523,38 @@ const GEAR = {
 // one number that captures cast reach, crank speed and forgiveness
 const rodPower = r => Math.round(r.cast * Math.pow(r.reel / r.tension, 0.6));
 const gearStat = (kind, g) => {
-  if(kind === 'rod')  return `CAST ${g.cast}m · REEL ${g.reel.toFixed(2)}x · POWER ${rodPower(g)}`;
+  if(kind === 'rod')  return `REACH ${g.cast}m · REEL ${g.reel.toFixed(2)}x · POWER ${rodPower(g)}`;
   if(kind === 'line') return `MAX FISH ${g.rating} lb · STRAIN ${Math.round((2 - g.strain) * 100)}`;
-  return `LUCK +${Math.round(g.luck * 100)}% · BITES ${Math.round(g.luck * 45)}% FASTER`;
+  const lo = RARITY[RARITY_ORDER[g.lo]].label, hi = RARITY[RARITY_ORDER[g.hi]].label;
+  const size = g.minSize ? `${g.minSize}lb+` : 'any size';
+  return `CATCHES ${lo === hi ? lo : lo + '–' + hi} · ${size.toUpperCase()} · LUCK +${Math.round(g.luck * 100)}%`;
 };
 const swatchStyle = (kind, g) => `background:#${g.color.toString(16).padStart(6, '0')}`;
 // how this tier compares to what you have on
-function gearDelta(kind, g){
+function gearDelta(kind, g, i){
   const cur = GEAR[kind].list[G.gear[kind]];
   if(!cur || cur === g) return '<small class="gear-tag on">EQUIPPED</small>';
+  // tiers behind the one you field are history — don't score them against it
+  if(typeof i === 'number' && i < G.gear[kind]) return '<small class="gear-tag owned">OWNED</small>';
   if(kind === 'rod'){
     const c = g.cast - cur.cast;
     const ratio = rodPower(g) / rodPower(cur);
     const p = ratio >= 1.9 ? '\u00d7' + ratio.toFixed(1) + ' stronger'
                            : (ratio >= 1 ? '+' : '') + Math.round((ratio - 1) * 100) + '% power';
-    return `<small class="gear-delta">${c >= 0 ? '+' : ''}${c}m cast · ${p}</small>`;
+    return `<small class="gear-delta">${p} · +${c}m reach</small>`;
   }
   if(kind === 'line'){
     const d = g.rating - cur.rating;
     return `<small class="gear-delta">${d >= 0 ? '+' : ''}${d} lb rating</small>`;
   }
   const d = Math.round((g.luck - cur.luck) * 100);
-  return `<small class="gear-delta">${d >= 0 ? '+' : ''}${d}% luck</small>`;
+  const parts = [];
+  const winChanged = g.hi > cur.hi || g.lo > cur.lo;
+  if(g.hi > cur.hi) parts.push(`unlocks ${RARITY[RARITY_ORDER[g.hi]].label}`);
+  if(g.lo > cur.lo) parts.push(`drops ${RARITY[RARITY_ORDER[g.lo - 1]].label} and below`);
+  if(!winChanged && g.minSize > cur.minSize) parts.push(`${g.minSize}lb+ only`);
+  parts.push(`${d >= 0 ? '+' : ''}${d}% luck`);
+  return `<small class="gear-delta">${parts.join(' \u00b7 ')}</small>`;
 }
 
 function gearRow(kind, g, i){
@@ -1534,14 +1565,17 @@ function gearRow(kind, g, i){
     ? '<button class="buy-btn equip" disabled>IN USE</button>'
     : owned
       ? `<button class="buy-btn equip" data-buy="${i}">EQUIP</button>`
-      : `<button class="buy-btn" data-buy="${i}" ${afford ? '' : 'disabled'}>${fmt(g.cost)}c</button>`;
+      : afford
+        ? `<button class="buy-btn" data-buy="${i}">${fmt(g.cost)}c</button>`
+        : `<button class="buy-btn deny" disabled>${fmt(g.cost)}c<i>need ${fmt(g.cost - G.coins)} more</i></button>`;
   const cls = kind === 'bait' ? 'gear-swatch bait' : kind === 'line' ? 'gear-swatch spool' : 'gear-swatch';
-  return `<div class="rod-card${equipped ? ' equipped' : ''}${owned ? '' : ' unowned'}" data-tier="${i}">
+  const short = !owned && !afford ? ' short' : '';
+  return `<div class="rod-card${equipped ? ' equipped' : ''}${owned ? '' : ' unowned'}${short}" data-tier="${i}">
     <div class="${cls}" style="${swatchStyle(kind, g)}"></div>
     <div class="rod-info">
       <b>${g.name}<span class="tier-no">${i + 1}</span></b>
       <small>${gearStat(kind, g)}</small>
-      ${gearDelta(kind, g)}
+      ${gearDelta(kind, g, i)}
     </div>
     ${btn}
   </div>`;
@@ -1588,7 +1622,11 @@ function buyGear(kind, i){
     saveGame(); updateStats(); renderShop();
     return;
   }
-  if(G.coins < g.cost){ sfx.deny(); showToast('Not enough coins — sell some fish!', true); return; }
+  if(G.coins < g.cost){
+    sfx.deny();
+    showToast(`Not enough coins — you need ${fmt(g.cost - G.coins)} more.`, true);
+    return;
+  }
   G.coins -= g.cost;
   G.owned[kind].push(i);
   G.gear[kind] = i;
@@ -2225,7 +2263,8 @@ window.__reelLife = {
   G, SPECIES, RODS, renderer, scene, camera, bobber, bobberPos, water, rodRig, aimMarker,
   get shopOpen(){ return shopOpen; },
   openShop, closeShop, openMarket, closeMarket, buyGear, sellAll, sellFish,
-  renderShop, renderMarket, fightSetup, pickSpecies, paintTensionBand, RARITY, LINES, BAITS,
+  renderShop, renderMarket, fightSetup, pickSpecies, paintTensionBand, RARITY, RARITY_ORDER, LINES, BAITS,
+  updateStats, fishValue, rollWeight,
   walkable, groundAt, landBobber, triggerBite, hookFish, catchFish, SHOP_POS, MARKET_POS,
   openMarket, sellFish, bag
 };
