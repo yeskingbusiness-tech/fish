@@ -3,179 +3,92 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Reel Deal 3D — Fishing Game</title>
-<meta name="description" content="Reel Deal 3D — a blocky first-person browser fishing game. Walk the lake, cast, fight the fish, and spend your coins on rods, line and bait." />
-<meta name="theme-color" content="#0ea5b7" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230ea5b7'/%3E%3Crect x='14' y='24' width='28' height='16' fill='%23fff'/%3E%3Crect x='42' y='16' width='8' height='10' fill='%23fff'/%3E%3Crect x='42' y='38' width='8' height='10' fill='%23fff'/%3E%3Crect x='48' y='26' width='6' height='12' fill='%23fff'/%3E%3Crect x='20' y='28' width='4' height='4' fill='%230ea5b7'/%3E%3C/svg%3E" />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=24" />
-<script type="importmap">
-{
-  "imports": {
-    "three": "./vendor/three.module.js?v=24"
-  }
-}
-</script>
+<title>Reel Deal 3D — The Archipelago</title>
+<meta name="description" content="A cube-built fishing adventure. Explore six islands, buy boats, master 72 gear upgrades and discover all 120 fish." />
+<meta name="theme-color" content="#193d45" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23193d45'/%3E%3Crect x='14' y='24' width='28' height='16' fill='%23f0d49a'/%3E%3Crect x='42' y='16' width='8' height='10' fill='%23f0d49a'/%3E%3Crect x='42' y='38' width='8' height='10' fill='%23f0d49a'/%3E%3Crect x='48' y='26' width='6' height='12' fill='%23f0d49a'/%3E%3Crect x='20' y='28' width='4' height='4' fill='%23193d45'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="style.css?v=25" />
+<script type="importmap">{"imports":{"three":"./vendor/three.module.js?v=25"}}</script>
 </head>
 <body>
 <div id="app">
-  <canvas id="scene"></canvas>
-
-  <!-- HUD -->
+  <canvas id="scene" aria-label="First-person cube fishing world"></canvas>
   <div id="hud">
     <div class="hud-top">
-      <div class="brand">
-        <div class="brand-icon">
-          <svg viewBox="0 0 24 24" shape-rendering="crispEdges">
-            <rect x="11" y="3" width="2" height="18" fill="#fff"/>
-            <rect x="7" y="5" width="4" height="2" fill="#fff"/>
-            <rect x="13" y="15" width="4" height="2" fill="#fff"/>
-            <rect x="5" y="18" width="4" height="3" fill="#fff"/>
-          </svg>
-        </div>
-        <div>
-          <h1>REEL DEAL <span>3D</span></h1>
-          <p>Cast • Wait • Hook • Reel</p>
-        </div>
-      </div>
+      <div class="brand"><div class="brand-icon">RD</div><div><h1>REEL DEAL <span>3D</span></h1><p>THE ARCHIPELAGO</p></div></div>
       <div class="stats">
         <div class="stat best"><label>BEST</label><strong id="bestNum">—</strong></div>
-        <div class="stat"><label>CAUGHT</label><strong id="caughtCount">0</strong></div>
+        <div class="stat caught-stat"><label>CAUGHT</label><strong id="caughtCount">0</strong></div>
         <div class="stat coins"><label>COINS</label><strong id="coinCount">0</strong></div>
-        <button id="logBtn" class="icon-btn" title="Catch log">
-          <svg viewBox="0 0 24 24" shape-rendering="crispEdges">
-            <rect x="5" y="3" width="14" height="18" fill="none" stroke="currentColor" stroke-width="2"/>
-            <rect x="8" y="7" width="8" height="2" fill="currentColor"/>
-            <rect x="8" y="11" width="8" height="2" fill="currentColor"/>
-            <rect x="8" y="15" width="5" height="2" fill="currentColor"/>
-          </svg>
-        </button>
-        <button id="soundBtn" class="icon-btn" title="Sound on/off">
-          <svg viewBox="0 0 24 24" shape-rendering="crispEdges">
-            <rect x="4" y="9" width="4" height="6" fill="currentColor"/>
-            <rect x="8" y="6" width="3" height="12" fill="currentColor"/>
-            <rect x="15" y="8" width="2" height="8" fill="currentColor"/>
-            <rect x="19" y="10" width="2" height="4" fill="currentColor"/>
-          </svg>
-        </button>
+        <button id="logBtn" class="icon-btn" title="Catch log" aria-label="Catch log">≡</button>
+        <button id="soundBtn" class="icon-btn" title="Sound on/off" aria-label="Toggle sound"></button>
       </div>
     </div>
-
-    <div id="biteIndicator">!</div>
-    <div id="crosshair"></div>
-
-    <div id="prompt" class="prompt">Mouse to look — <b>hold CLICK</b> to charge, release to cast!</div>
-
-    <div id="castMeter" class="cast-meter hidden">
-      <div class="cast-label">CAST POWER</div>
-      <div class="cast-track"><div id="castFill"></div></div>
+    <div class="location-card">
+      <span class="eyebrow" id="zoneNumber">ISLAND 01 / 06</span>
+      <h2 id="zoneName">Reedhaven</h2>
+      <p id="zoneWaters">Panfish, bass &amp; carp</p>
+      <div class="level-line"><b id="levelNum">LV. 1</b><span id="xpText">0 / 112 XP</span></div>
+      <div class="xp-track"><div id="xpFill"></div></div>
+      <p class="journey-objective" id="journeyObjective">Next stop · Pinewater at level 5</p>
     </div>
-
-    <!-- Reel minigame -->
+    <div class="hud-actions">
+      <button id="mapBtn" class="nav-btn"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5l6-2 6 2 6-2v16l-6 2-6-2-6 2zM9 3v16m6-14v16"/></svg></span> Sea chart <kbd>M</kbd></button>
+      <button id="indexBtn" class="nav-btn"><span class="nav-icon">▤</span> Fish index <small id="indexCount">0/120</small><kbd>F</kbd></button>
+      <button id="kitBtn" class="nav-btn"><span class="nav-icon">▥</span> Tackle bag <kbd>I</kbd></button>
+    </div>
+    <div id="equipmentStrip" class="equipment-strip"></div>
+    <div id="biteIndicator">!</div><div id="crosshair"></div>
+    <div id="prompt" class="prompt">Hold click to cast. Turn around to visit the village.</div>
+    <div id="castMeter" class="cast-meter hidden"><div class="cast-label">CAST POWER</div><div class="cast-track"><div id="castFill"></div></div></div>
     <div id="reelUI" class="reel-ui hidden">
-      <div class="reel-head">
-        <span id="reelFishName">Fish on!</span>
-        <span id="reelPct">0%</span>
-      </div>
-      <div class="reel-bars">
-        <div class="bar-wrap">
-          <label>LINE TENSION</label>
-          <div class="tension-track" id="tensionTrack">
-            <div id="tensionSafe" class="tension-safe"></div>
-            <div id="tensionNeedle"></div>
-          </div>
-        </div>
-        <div class="bar-wrap">
-          <label>REEL PROGRESS</label>
-          <div class="progress-track"><div id="progressFill"></div></div>
-        </div>
-      </div>
-      <div id="reelWarn" class="reel-warn"></div>
-      <p class="reel-hint">Green winds it in · yellow stalls · red ends the fight</p>
+      <div class="reel-head"><span id="reelFishName">Fish on!</span><span id="reelPct">0%</span></div>
+      <div class="reel-bars"><div class="bar-wrap"><label>LINE TENSION</label><div class="tension-track" id="tensionTrack"><div id="tensionSafe" class="tension-safe"></div><div id="tensionNeedle"></div></div></div><div class="bar-wrap"><label>REEL PROGRESS</label><div class="progress-track"><div id="progressFill"></div></div></div></div>
+      <div id="reelWarn" class="reel-warn"></div><p class="reel-hint">Green reels itself · yellow stalls · red loses the fish</p>
     </div>
-
-    <button id="shopBtn" class="shop-btn hidden">Tackle Shop <b>E</b></button>
+    <button id="shopBtn" class="shop-btn hidden">Rod Works <b>E</b></button>
     <button id="marketBtn" class="shop-btn market hidden">Fish Market <b>E</b></button>
+    <button id="portBtn" class="shop-btn port hidden">Boat Shop &amp; Voyages <b>E</b></button>
     <div id="lockHint" class="lock-hint hidden">Click to look around</div>
     <div id="stick" class="stick hidden"><div class="stick-knob"></div></div>
-
-    <div class="controls-hint">
-      <span>WASD: walk</span><span>Mouse: look</span><span>Hold click: cast</span><span>Space: hook &amp; reel</span><span>E: shop / market</span>
-    </div>
+    <div class="controls-hint"><span>WASD walk · Shift jog</span><span>Mouse look</span><span>Hold &amp; release to cast</span><span>Space hook / tension</span><span>E interact</span></div>
+    <div id="voyageHUD" class="voyage-hud hidden"><span class="eyebrow">OUT ON THE WATER</span><h2 id="voyageName"></h2><p id="voyageDetail"></p><div class="voyage-track"><div id="voyageFill"></div></div><button id="skipVoyage" class="ghost-btn">Skip crossing →</button></div>
+    <div id="arrivalBanner" class="arrival-banner hidden"><span class="eyebrow">LAND AHOY</span><h2 id="arrivalName"></h2><p id="arrivalDesc"></p></div>
   </div>
 
-  <!-- Tackle shop -->
-  <div id="shopOverlay" class="modal hidden">
-    <div class="shop-card">
-      <div class="shop-head">
-        <h2>Tackle Shop</h2>
-        <div class="shop-coins">COINS <span id="shopCoins">0</span></div>
-        <button id="shopClose" class="shop-close">✕</button>
-      </div>
-      <div class="shop-tabs">
-        <button class="tab active" data-tab="rods">Rods</button>
-        <button class="tab" data-tab="lines">Line</button>
-        <button class="tab" data-tab="bait">Bait</button>
-      </div>
+  <div id="shopOverlay" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="shopTitle">
+    <div class="shop-card"><div class="shop-head"><div><span class="eyebrow" id="shopEyebrow">LOCAL OUTFITTER</span><h2 id="shopTitle">Rod Works</h2></div><div class="shop-coins">COINS <span id="shopCoins">0</span></div><button id="shopClose" class="shop-close" aria-label="Close shop">✕</button></div>
+      <p id="shopNote" class="panel-note"></p>
+      <div class="shop-tabs hidden"><button class="tab active" data-tab="rods">Rods</button><button class="tab" data-tab="lines">Line</button><button class="tab" data-tab="bait">Bait</button></div>
       <div id="shopBody" class="shop-body"></div>
     </div>
   </div>
+  <div id="marketOverlay" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="marketTitle"><div class="shop-card"><div class="shop-head market-head"><h2 id="marketTitle">Fish Market</h2><div class="shop-coins">COINS <span id="marketCoins">0</span></div><button id="marketClose" class="shop-close" aria-label="Close market">✕</button></div><p class="panel-note">Selling never erases a discovery. Your index is yours to keep.</p><div id="marketBody" class="shop-body"></div></div></div>
 
-  <!-- Fish market -->
-  <div id="marketOverlay" class="modal hidden">
-    <div class="shop-card">
-      <div class="shop-head market-head">
-        <h2>Fish Market</h2>
-        <div class="shop-coins">COINS <span id="marketCoins">0</span></div>
-        <button id="marketClose" class="shop-close">✕</button>
-      </div>
-      <div id="marketBody" class="shop-body"></div>
+  <div id="chartOverlay" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="chartTitle">
+    <div class="expedition-card"><div class="shop-head"><div><span class="eyebrow">THE REEL DEAL ARCHIPELAGO</span><h2 id="chartTitle">Choose your next horizon.</h2></div><button id="chartClose" class="shop-close" aria-label="Close sea chart">✕</button></div>
+      <div class="expedition-tabs"><button id="destinationsTab" class="tab active">Sea chart</button><button id="boatsTab" class="tab">Boat shop <span id="boatCoins"></span></button></div>
+      <div id="chartView" class="chart-layout"><div class="sea-chart" id="seaChart"></div><div id="destinationDetail" class="destination-detail"></div></div>
+      <div id="fleetView" class="fleet-grid hidden"></div>
+      <div class="expedition-foot" id="chartFooter"></div>
     </div>
   </div>
-
-  <!-- Catch modal -->
-  <div id="catchModal" class="modal hidden">
-    <div class="modal-card">
-      <div class="modal-eyebrow" id="catchRarity">COMMON CATCH</div>
-      <div id="catchIcon" class="catch-icon"></div>
-      <h2 id="catchName">Bluegill</h2>
-      <p id="catchWeight" class="catch-weight">1.2 lbs</p>
-      <p id="catchPoints" class="catch-points">+25 pts</p>
-      <p id="catchDesc" class="catch-desc"></p>
-      <button id="continueBtn" class="primary-btn">Keep Fishing →</button>
+  <div id="indexOverlay" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="indexTitle">
+    <div class="index-card"><div class="shop-head"><div><span class="eyebrow">AN ANGLER'S FIELD GUIDE</span><h2 id="indexTitle">The fish index</h2></div><div class="collection-total"><strong id="collectionTotal">0 / 120</strong><small>SPECIES DISCOVERED</small></div><button id="indexClose" class="shop-close" aria-label="Close fish index">✕</button></div>
+      <div class="collection-track"><div id="collectionFill"></div></div>
+      <div id="indexIslands" class="index-islands"></div>
+      <div class="index-toolbar"><p id="indexHint">An unknown shape. A story still to be caught.</p><label class="sr-only" for="indexFilter">Filter fish index</label><select id="indexFilter"><option value="all">All entries</option><option value="found">Discovered</option><option value="missing">Undiscovered</option></select></div>
+      <div id="fishGrid" class="fish-grid"></div>
+      <div class="index-foot"><span>Land a fish to reveal its name, colors and story.</span><span id="indexIslandCount"></span></div>
     </div>
   </div>
-
-  <!-- Toast -->
-  <div id="toast" class="toast hidden"></div>
-
-  <!-- Log drawer -->
-  <aside id="logDrawer" class="drawer hidden">
-    <div class="drawer-head"><h3>Catch Log</h3><div class="drawer-actions"><button id="resetBtn" class="ghost-btn">Reset</button><button id="closeLog">✕</button></div></div>
-    <div id="logList"><p class="empty">No fish yet. Cast your line!</p></div>
-    <div class="drawer-foot" id="logSummary"></div>
-  </aside>
-
-  <!-- Start overlay -->
+  <div id="catchModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="catchName"><div class="modal-card"><div class="discovery-banner hidden" id="newDiscovery">NEW INDEX ENTRY</div><div class="modal-eyebrow" id="catchRarity">COMMON CATCH</div><div id="catchIcon" class="catch-icon"></div><h2 id="catchName">Bluegill</h2><p id="catchWeight" class="catch-weight">1.2 lbs</p><p id="catchPoints" class="catch-points"></p><p id="catchDesc" class="catch-desc"></p><p id="catchLevel" class="catch-level hidden"></p><button id="continueBtn" class="primary-btn">Keep Fishing →</button></div></div>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+  <aside id="logDrawer" class="drawer hidden" aria-label="Catch log"><div class="drawer-head"><h3>Catch Log</h3><div class="drawer-actions"><button id="resetBtn" class="ghost-btn">Reset</button><button id="closeLog" aria-label="Close catch log">✕</button></div></div><div id="logList"><p class="empty">No fish yet. Cast your line!</p></div><div class="drawer-foot" id="logSummary"></div></aside>
   <div id="startOverlay" class="start-overlay">
-    <div class="start-card">
-      <div class="start-art" id="startArt"></div>
-      <h2>REEL DEAL <span>3D</span></h2>
-      <p>A quiet blocky lake. Something golden lurks in the deep…</p>
-      <ul>
-        <li><b>WASD</b> to walk · mouse to look</li>
-        <li><b>Hold &amp; release</b> to cast</li>
-        <li><b>Strike</b> when the bobber dips</li>
-        <li><b>Reel</b> — keep the needle in the green</li>
-        <li><b>Shop</b> for rod, line &amp; bait</li>
-        <li><b>Market</b> to sell your catch</li>
-      </ul>
-      <button id="startBtn" class="primary-btn big">Start Fishing</button>
-      <p class="tiny">120 species • three gear ladders • one lake</p>
-    </div>
+    <div class="start-card"><span class="update-badge">THE ARCHIPELAGO UPDATE</span><div class="start-art" id="startArt"></div><h2>REEL DEAL <span>3D</span></h2><p class="start-lead">A little boat. A bigger world.</p><p>Six cube-built islands. One hundred and twenty secrets beneath the surface. Your next great catch is out there.</p><div class="start-features"><span>06 <small>ISLANDS</small></span><span>120 <small>FISH</small></span><span>72 <small>GEAR TIERS</small></span></div><ul><li><b>WASD</b> to walk · mouse to look</li><li><b>Hold &amp; release</b> to cast · Space to hook</li><li><b>Green</b> reels in · avoid red tension</li><li><b>Catch</b> to level up · sell to buy gear &amp; boats</li><li><b>E</b> at stalls · <b>M</b> chart · <b>F</b> index · <b>I</b> tackle</li></ul><button id="startBtn" class="primary-btn big">Let’s go fishing →</button><p class="tiny">Progress saves automatically on this device.</p></div>
   </div>
 </div>
-<script type="module" src="main.js?v=24"></script>
+<script type="module" src="main.js?v=25"></script>
 </body>
 </html>

@@ -1,237 +1,206 @@
-# Reel Deal 3D — blocky first-person fishing
+# Reel Deal 3D — The Archipelago
 
-A cozy little **first-person** fishing game in the browser. Everything is built from
-boxes: the lake, the dock, the fish, even the UI. Walk the dock and the shore, cast from
-wherever the water is, wait for the bobber to dip, strike, then fight the fish in without
-snapping your line. Sell your catch at the **fish market** and spend the coins at the
-**tackle shop** on a better rod, a stronger line and better bait.
-What bites is **pure luck, decided by your bait** — there is no depth to chase.
+A first-person, cube-built fishing adventure. **Six explorable islands, 120 fish,
+three 24-tier gear ladders, six boats, and a persistent fish index.** Walk the docks
+and villages, sell your catches, earn island licenses, and sail to better waters.
 
-![genre](https://img.shields.io/badge/genre-casual%20fishing-0ea5b7) ![style](https://img.shields.io/badge/style-blocky-ef4056) ![three.js](https://img.shields.io/badge/three.js-r160-black)
+Everything in the world is made from cuboids: islands, trees, fish, boats, vendors,
+landmarks, clouds, snow, even the square ripples. No model downloads, external fonts,
+image services, build step, or runtime dependencies. Three.js is vendored.
 
-## Play
+## Run
 
-```bash
-npm start          # serves on http://localhost:3100
-PORT=3000 npm start  # …or pick your own port
+```sh
+npm start                 # http://localhost:3100
+PORT=3000 npm start        # alternate port; binds 0.0.0.0 for hosted previews
+npm test                  # dependency-free data/progression/save regression tests
 ```
 
-No build step and nothing to install — three.js is vendored in `vendor/`.
-(Any static server works: `python3 -m http.server`, `npx serve`, …)
+Node 18 or newer. Any static HTTP server also works; opening `index.html` as `file://`
+does not support the module imports.
 
-## Deploy
+## The six islands
 
-The game is a static site: one HTML file, one CSS file, one JS file and a vendored
-three.js. **Nothing needs to be built or installed**, so deploy it as a static site — no
-server, no cold starts.
+| Island | Level | Local gear tiers | Landmark / character | Fish |
+| --- | ---: | --- | --- | ---: |
+| **Reedhaven** | 1 | 1–4 | Reed beds, a striped lighthouse, sunny fishing village | 20 |
+| **Pinewater Isle** | 5 | 5–8 | Tall spruce, mossy terraces, working timber waterwheel | 20 |
+| **Sunscar Atoll** | 12 | 9–12 | Palms, coral, sandstone sun gate | 20 |
+| **Frostfall Isle** | 22 | 13–16 | Snow-capped pines, icebergs, frozen watchtower | 20 |
+| **Emberforge** | 35 | 17–20 | Basalt, glowing lava, smoking volcano, floating embers | 20 |
+| **Moontide Sanctum** | 50 | 21–24 | Luminous moon gate, amethyst-colored stone, drifting lights | 20 |
 
-### Render — static site (recommended)
+Each island has **five separate stalls**: Rod Works, Line & Spool, Bait Shack,
+Fish Market, and Boat Shop & Voyages. Each of the three gear vendors stocks only
+**four local tiers**, not the entire ladder. Follow the paths and approach the
+counter; **E** opens the nearest stall. Shop buttons never overlap.
 
-1. Push the repo to GitHub.
-2. In Render: **New +** → **Static Site** → pick the repo.
-3. **Branch**: `main` (or the branch you want to preview, e.g. a feature branch).
-4. **Build Command**: leave empty.
-5. **Publish Directory**: `.`
-6. **Create Static Site**. First deploy takes about a minute.
+Catch XP unlocks island licenses. Coins buy equipment and boats. There are no tolls,
+consumable bait charges, or boat fuel costs. You can always return to an earlier island
+once you have an appropriate boat. The sea chart shows the exact missing requirement.
 
-Optional: the same thing as a blueprint — commit `render.yaml` (already in the repo) and pick
-**New +** → **Blueprint**.
+### Boats and travel
 
-### Render — web service (alternative)
+| Boat | Level | Price | Farthest destination |
+| --- | ---: | ---: | --- |
+| Harbor Skiff | 1 | Free | Home harbor |
+| Pinewood Dinghy | 5 | 150c | Pinewater |
+| Sunrunner | 12 | 1,800c | Sunscar |
+| Frostbreaker | 22 | 12,000c | Frostfall |
+| Cinderwake | 35 | 45,000c | Emberforge |
+| Astral Voyager | 50 | 120,000c | Moontide |
 
-There is also a zero-dependency Node static server (`serve.js`) if you would rather run a
-service: **New +** → **Web Service**, Runtime **Node**, Build Command `npm install`, Start
-Command `npm start`. It honours `PORT`, so Render wires it up automatically. The free tier
-sleeps after 15 minutes idle and takes ~30s to wake, which is why the static site is the
-better default.
+Open **M** anywhere to study the sea chart. To purchase/equip a boat or depart, visit a
+physical Boat Shop. Choose a destination and sail. Crossings are **automatic, animated
+voyages**, not free-steering boat controls, and can be skipped. Routes navigate around
+islands using a visibility graph rather than cutting straight through land. Arrival
+places you safely on the destination's fishing pier. Water is not walkable.
 
-### Anywhere else
+### Fish selection and gear
 
-It is plain files: `index.html`, `style.css`, `main.js`, `vendor/`. Drop those four into
-Netlify, Cloudflare Pages, GitHub Pages, S3, or any bucket and it runs. Serve it over HTTP
-(not `file://`) so the ES modules load.
+**Current island + equipped bait** determine the fish pool. Cast distance never
+selects a species, and fishing from one island cannot summon another island's fish.
+Every bait keeps its strict rarity window and minimum species-size filter. Luck
+weights the rarer species inside that valid pool; it never bypasses the limits.
 
-Everything uses relative paths, so it works at a domain root *or* under a subpath.
+The local bait shop and tackle bag show how many local species each bait can attract.
+If a bait has no valid fish here, casting is blocked with an explanation—there is no
+silent fallback to an incorrect species. Every local bait has at least one local fish,
+and the previous island's top bait works when arriving on the next island.
 
-### Caching
+- **Rods:** cast reach, reel speed, and control. Bamboo Pole → Mythril Rod.
+- **Lines:** weight rating and reduced strain. Cotton Twine → 1900lb Mythril.
+- **Bait:** rarity window, minimum species size, and luck. Garden Worm → Moonbait.
+- **Tackle bag (I):** equip any already-owned tier from anywhere. It cannot buy remote stock.
 
-`main.js` / `style.css` are requested with a `?v=` stamp in `index.html`; bump it (e.g.
-`?v=24` → `?v=25`) whenever you ship a change, otherwise returning players get the old
-build out of their browser cache.
+Some collection entries reward revisiting an island with a different bait. For example,
+Pinewater's Golden Koi requires a legendary-capable bait from a later island; Sunscar's
+American Eel takes an earlier uncommon-capable bait. Keep your old tackle!
 
-## How to fish
+The existing strictly increasing gear prices are retained: the first rod is **50c**,
+the first line **40c**, and the first bait **80c**. Tier 24 costs **61,000c / 48,000c /
+95,000c** respectively. Higher-island fish have progressively greater median sale
+values, with an island premium added to the rarity and specimen-size calculation.
+Displayed prices are the exact prices charged. Unaffordable buttons show the shortage.
 
-| Action | Control |
-| --- | --- |
-| Walk | WASD or arrow keys (Shift to jog) |
-| Look around | Mouse (pointer lock — click to capture) |
-| Charge a cast | Hold left click (or hold Space) |
-| Cast | Release |
-| Strike a bite | Click / Space when the bobber dips |
-| Reel in | Hold click / Space |
-| Open a stall | **E** near the Tackle Shop or Fish Market button |
-| Release the cursor | Esc |
+### XP and the field guide
 
-Touch: the on-screen stick walks, drag anywhere else to look, hold still to charge and
-release to cast, tap to strike or reel in.
+Every landed fish awards XP, with more for later-island fish, higher rarity, and larger
+specimens. A **new species awards a 50% discovery XP bonus**. Selling does not award XP.
+The level meter and next island milestone are always visible. Total XP for level `L` is
+`90 × (L−1) + 22 × (L−1)²`; levels cap at 99. The final island requires level 50.
 
-You can walk the length of the pier and out onto the whole shore clearing behind it —
-roughly 60m across, fenced in, with trees and bushes along the back. The planks, sand and
-grass are solid; the water is not. From the pier the dirt path forks: **left to the fish
-market**, **right to the tackle shop**.
+The **fish index (F)** contains all 120 numbered entries:
 
-### The fight
+- Undiscovered fish have an **opaque dark silhouette and `???`**, with no species name,
+  colors, rarity, description, tooltip, or accessible-label spoiler in the entry markup.
+- Land a fish to reveal its name, colors, rarity, home island, story, catch count, and
+  personal-best weight. Hooking or losing it is not enough.
+- Filter by island and discovered/undiscovered status. Expand a discovered entry for details.
+- Selling fish or trimming the recent catch log **never removes discoveries**.
 
-The reel minigame is all about **line tension**, and the needle is deliberately twitchy.
+The full spoiler roster is in **[FISH_ROSTER.md](FISH_ROSTER.md)**.
 
-The bar is five zones: **red · yellow · green · yellow · red**.
+## Controls
 
-- **Green** — the reel winds itself. You do not need to hold anything; just keep the
-  needle in there and the fish comes in at a steady (15% slower) crank.
-- **Yellow** — nothing happens. The needle is drifting, the fish is not coming in, and no
-  progress is made either way. Yellow is the room you have to correct in.
-- **Red, either end** — the fight ends that instant. Too tight and the line snaps; too
-  slack and the fish spits the hook. No grace period.
-- Holding drives the needle up, letting go drops it, and the fish does not help:
-  random **surges**, sudden **yanks** in either direction, and a constant wobble on top.
-  Bad equipment means more wobble.
-- **The band is sized by how outmatched you are.** Rarer and heavier fish narrow it; a
-  better rod and line widen it back out and calm the needle.
-- **Your line is rated for a weight.** Hook something heavier and the bar narrows *and*
-  the needle gets wilder, with a `LINE OVERLOADED` warning on screen. Bring line, not hope.
-
-## The two stalls
-
-The shore behind the pier has two separate structures — walk up to either one and its
-button appears (or press **E**).
-
-**Tackle Shop** — three tabs with **24 tiers each**, bought with coins:
-
-| | First | Then | Last |
-| --- | --- | --- | --- |
-| **Rod** — reach + control | Bamboo Pole `free`, 12m, POWER 8 | Willow Rod `50c` 16m · Graphite `85c` 19m · … | Mythril Rod `61,000c`, 95m, POWER 232 |
-| **Line** — max fish | Cotton Twine `free`, 3lb | 10lb Mono `70c` · 15lb Mono `120c` · … | 1900lb Mythril `48,000c` |
-| **Bait** — what bites | Garden Worm `free`, common–uncommon, any size | Sweet Corn `140c`, common–rare · … | Moonbait `95,000c`, legendary–mythic, 375lb+ |
-
-**Bait is the whole progression.** Every bait has a *rarity window* and a *minimum fish
-size*, and it physically cannot hook anything outside them — a beginner worm will never
-drag up a leviathan however lucky you get, and the endgame baits no longer waste time on
-bluegills. The shop prints exactly what each one catches
-(`CATCHES EPIC–MYTHIC · 35LB+ · LUCK +50%`), and the row below it says what the next tier
-unlocks.
-
-Rod = **how far you cast and how forgiving the fight is** (the `POWER` score), line =
-**the maximum weight you can actually land**. Neither one changes what bites; they decide
-whether you can hold on once it does. Over-bait your line and the bar narrows to nothing,
-so keep the three ladders within a couple of tiers of each other. Any tier you can afford
-is fair game; nothing is level-locked.
-
-**Fish Market** — everything you catch goes into your bag instead of vanishing. Sell fish
-one at a time or all at once. Rarity sets the price and size multiplies it, so a fat
-mythic is worth hundreds of commons.
-
-### Pacing
-
-There are no levels — coins are the only gate. Every price is fitted to what the bait
-tier *actually earns*: **a tier costs about ten catches of the fish you are already
-catching**, with a hard 1.75× ceiling on any single jump so no rung is a wall. The pace is
-flat on purpose — no tier is a breeze and none is a brick wall.
-
-Bait is the ladder that opens content, so it leads on price. Rod and line sit at roughly
-65% and 50% of the bait tier beside them, which keeps all three within a couple of tiers
-of each other without ever feeling like a tax.
-
-| Milestone | Coins | Roughly |
+| Action | Desktop | Touch |
 | --- | --- | --- |
-| Tier 2 bait | 80 | **four** fish |
-| Tier 4 bait (rare) | 240 | your first few minutes |
-| Tier 9 bait (legendary) | 4,250 | one good session |
-| Tier 14 bait (mythic) | 21,000 | the mythic gate |
-| Tier 20 bait (170lb+ only) | 71,500 | the long haul |
-| Tier 24 bait (375lb+ only) | 95,000 | the thing you will not stop thinking about |
+| Walk / jog | WASD or arrows / Shift | On-screen stick |
+| Look | Mouse; click canvas to capture | Drag the scene |
+| Charge and cast | Hold click or Space, then release | Hold still, then release |
+| Hook a bite | Click / Space | Tap |
+| Raise tension | Hold click / Space | Hold |
+| Lower tension | Release | Release |
+| Interact at a stall | E or its on-screen button | Tap its button |
+| Sea chart / boats | M | Sea chart button |
+| Fish index | F | Fish index button |
+| Owned tackle | I | Tackle bag button |
+| Close panel / release cursor | Escape | Close button / backdrop |
 
-A full run is roughly **490 catches** across the three ladders — about 1,420,000 coins —
-while the first rung of each ladder still costs two to four fish.
+If pointer lock is unavailable, **drag with the mouse to look**; this still supports a
+full turn. Touch joystick releases cannot accidentally cast or hook a fish. Menus
+block movement/casting, support keyboard focus, and close with Escape. Fish encounters
+must finish before opening another panel. Hidden browser tabs pause the simulation.
 
-## What's in the lake
+### The tension fight
 
-**120 species** across six rarities, fourteen commons up to forty-two mythics. Every fish
-has its own size range, strength, value and a home depth — but the depth is scenery now.
-What decides the bite is the **bait's rarity window and minimum size**, so the pool is
-always exactly the fish that bait is allowed to catch. The catch log (top-right book icon)
-tracks everything you land; the HUD keeps your heaviest catch. Coins, gear, your bag and
-the log are saved to `localStorage` (key `reel-deal-save-v6`, migrated automatically from the
-old `reel-life-3d-save-v6`) — use **Reset** in the log
-drawer to wipe progress.
+The rule is unchanged: **green auto-reels, yellow stalls, red immediately loses the fish**.
+Holding raises the needle; releasing lowers it. Random surges and yanks keep it active.
+Better rods and lines widen the safe band and reduce strain; an overloaded line makes
+the fight harder. Unknown fish remain unidentified in the reel HUD until landed.
 
-| Rarity | Fish | Typical sale |
-| --- | --- | --- |
-| Common | 14 | ~13c |
-| Uncommon | 11 | ~37c |
-| Rare | 14 | ~110c |
-| Epic | 14 | ~350c |
-| Legendary | 25 | ~1,150c |
-| Mythic | 42 | ~4,500c |
+## Save compatibility
 
-The bands below are the flavour grouping (deep-water fish run bigger and score higher);
-they no longer gate anything.
+Progress is saved to this browser and site origin under **`reel-deal-save-v7`**:
+coins, gear, boats, XP, island, visited islands, bag, best catch, discoveries, and the
+latest 200 catches. There are no accounts or cross-device/cloud saves.
 
-| Depth | Who lives there |
-| --- | --- |
-| 0m | Bluegill, Pumpkinseed, Rock Bass, Yellow Perch, Black Crappie, Green Sunfish, Warmouth, White Perch, Redear Sunfish, Brown Bullhead |
-| 8m | Largemouth / Smallmouth / Spotted / Yellow / White Bass, River & Grass Carp, Longear Sunfish, Saugeye, Creek Chub |
-| 16m | Rainbow / Brown / Brook Trout, Walleye, Sauger, Channel & Blue Catfish, Tiger Muskie, Northern Pike, Burbot |
-| 24m | Muskellunge, Striped Bass, Lake Trout, Chinook & Coho Salmon, Steelhead, Flathead Catfish, Bighead & Silver Carp, Golden Koi |
-| 32m | Mirror & Leather Carp, Atlantic Salmon, Alligator Gar, Paddlefish, Bowfin, American Eel, Lake Sturgeon, Giant Snakehead, Golden Dorado |
-| 40m | Wels Catfish, Goonch, Arapaima, Giant Gourami, Mekong Giant Catfish, Giant Stingray, Black Pacu, Tambaqui, Bull Shark, Golden Mahseer |
-| 48m | Goliath Tigerfish, Giant Trevally, Napoleon Wrasse, Ocean Sunfish, Coelacanth, Giant Oarfish, Giant Manta, Whale Shark, Blue Marlin, Great White |
-| 56m | Leviathan Sturgeon, Moonfish, Ancient Carp, Abyssal Wyrm, Star-Eater, Lunar Coelacanth, Deep One, Trench Serpent, Hollow Gar, Pale Leviathan |
-| 64m | Titan Sturgeon, Void Angler, Elder Leviathan, Sunken God, Marrow Eel, Ghost Sturgeon, Colossal Squid, Megamouth, River Kraken, Golden Leviathan |
-| 72m | World-Eater, Timefish, Bone Sail, Deep Choir, The Warden, Salt Ghost, Hollow King, Trench Widow, Old Growth, Pale Crown |
-| 80m | The Drowned, Star Whale, Ironjaw, Sunken Spire, Lunar Leviathan, Hollow Moon, Deep Root, The Listener, Bone Tide, Crown of Salt |
-| 88m | The Hollow God, World Serpent, Moon-Eater, The First Fish, Leviathan Prime, Sunken Crown, The Deep Itself, Pale Sun, Elder Tide, **Reel Life** |
+Both old keys (`reel-deal-save-v6` and `reel-life-3d-save-v6`) migrate automatically:
 
-Rarity runs common → uncommon → rare → epic → legendary → mythic, and each step up is worth
-roughly three to four times the one below it. Everything past 48m is legendary or better —
-that is where the coins are, and a legendary–mythic bait is how you get at them.
+- Coins, equipped/owned gear, bag, best fish and catch count are retained.
+- Discoveries are reconstructed from the saved log, bag and best catch.
+- Returning veterans receive XP and a boat appropriate to their highest already-owned
+  gear chunk, so previously earned equipment does not become stranded behind a new gate.
+- Old keys are removed **only after** the new save is successfully written.
 
-## Built to run light
+The catch log's **Reset** button asks for confirmation before clearing progress. Storage
+failures show a warning instead of silently pretending the session was saved.
 
-The scene is deliberately cheap so it holds 60fps on modest hardware:
+## Deploy to Render
 
-- **~60 draw calls / ~28k triangles** for the whole lake (both stalls are merged into one
-  mesh each, so a second building costs a single draw call). Every box shares one
-  `BoxGeometry`, and the clutter (rocks, reeds, lily pads, treeline, clouds, hills, the
-  path to the shop, splash particles) is drawn with `InstancedMesh`.
-- **No shadow pass** — flat, blocky lighting instead.
-- **`MeshLambertMaterial`** everywhere, plus a tiny custom water shader with posterised
-  bands.
-- **No blur / backdrop-filter** in the UI, no image or audio assets to download
-  (all sound is synthesised with Web Audio).
-- **Adaptive resolution**: if the first couple of seconds come in under 50fps it drops the
-  pixel ratio, then again under 30fps.
+Use a **Static Site**—no server or build is necessary:
+
+1. Push this branch to GitHub.
+2. Render → **New + → Static Site**, select this repository.
+3. Select the branch **containing this update**. Use `arena/ac060c44-fish` until its work
+   has been merged into `main`; selecting an older `main` will not deploy these changes.
+4. **Build Command:** leave empty. **Publish Directory:** `.`.
+5. Create/deploy the site. `render.yaml` also supports deployment as a Blueprint.
+
+Alternatively, a Node Web Service can use `npm install` / `npm start`; `serve.js` honors
+Render's `PORT`. Static hosting avoids the need for a running Node process.
+
+For other static hosts, deploy `index.html`, `style.css`, `main.js`, **all four `.mjs`
+modules**, and `vendor/`. Every browser-facing path is relative and every dependency is
+local. `.mjs` must be served as JavaScript (already handled by `serve.js`).
+
+Cache stamps are currently **`v=25`** in the HTML and module imports. Bump the corresponding
+stamps when changing a cached module. Render's blueprint also sends `Cache-Control: no-cache`.
+
+## Testing
+
+`npm test` checks 144,000 seeded fish draws, all-species reachability, local bait pools,
+gear locations/cost monotonicity, increasing island sale values, XP thresholds, both
+travel gates, old-save migration, persistent discoveries and malformed save handling.
+
+Optional browser tests exercise the real WebGL game, all 18 vendors, actual
+cast/hook/tension/catch/sale, all 30 sailing routes, old-save boot, and mobile controls:
+
+```sh
+# Use an installed Chromium/Chrome:
+npm install --no-save playwright-core
+CHROMIUM_PATH=/path/to/chrome npm run test:browser
+
+# Or install @sparticuz/chromium as well on a compatible Linux system.
+# Override TEST_URL if the game is not served on port 3100.
+```
+
+Screenshots go to `.artifacts/` (ignored by Git). The optional test dependencies are not
+required to run or deploy the game.
 
 ## Project layout
 
-```
-index.html   markup + HUD
-style.css    blocky UI styling
-main.js      three.js scene, water shader, state machine, gear/economy, audio
-serve.js     tiny zero-dependency static server
-vendor/      three.js r160 module
-```
+| File | Purpose |
+| --- | --- |
+| `main.js` | Fishing, input, UI, shops, collection, voyage playback, saves |
+| `game-data.mjs` | 120 species, 72 gear tiers, fish pools, prices and weight rolls |
+| `archipelago.mjs` | Island / boat definitions, XP and travel requirements |
+| `world.mjs` | Merged cube terrain and props, collision, distant-island LOD, sea routing |
+| `save-state.mjs` | Validated save normalization and legacy migration |
+| `index.html`, `style.css` | Responsive HUD, chart, index and shop panels |
+| `serve.js`, `render.yaml` | Zero-dependency local server / static hosting blueprint |
+| `tests/` | Pure logic and optional browser regression suites |
 
-## Tweaking
-
-- Species table: `FISH_TABLE` at the top of `main.js` — one row per fish, with the numbers
-  derived in the builder right below it (`BAND_PTS` / `BAND_W`).
-- Gear tiers and prices: `ROD_NAMES` / `LINE_NAMES` / `BAIT_NAMES` plus the `*_COST` arrays.
-- Fight difficulty: `fightSetup()` — `demand` vs `supply` sets both the band width and the
-  needle speed in one ratio.
-- Tension/reel feel: the `reeling` block inside `animate()`.
-- Fish prices: `fishValue()` and the `value` column of `RARITY`.
-- What each bait can hook: `BAIT_WINDOW` (rarity) and the `minSize` curve in `BAITS`.
-- Walkable area: `groundAt()` — return `null` to block a spot; `SHOP_POS` / `MARKET_POS`
-  are the two stalls.
-- Cast range: `landingPoint()`; rod pose angles: the `DIR_*` vectors.
-- Water colours and bands: `waterMat` shader.
+The world uses merged vertex-colored cuboids, instanced particles, simple lighting,
+no shadow pass and reduced-detail distant islands. Resolution adapts on slow devices.
+Fish materials are disposed after encounters instead of accumulating in GPU memory.
