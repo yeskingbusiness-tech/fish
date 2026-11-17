@@ -41,10 +41,10 @@ fs.mkdirSync(shots,{recursive:true});
     await atVendor('port',0);await page.evaluate(()=>{const a=__reelDeal;a.G.xp=0;a.G.coins=999999;a.openChart();});
     await page.locator('[data-destination="1"]').click();assert.equal(await page.locator('#sailBtn').isDisabled(),true);
     assert.equal(await page.evaluate(()=>__reelDeal.sailTo(1)),false);
-    await page.evaluate(()=>{const a=__reelDeal;const c=a.G.coins;a.buyBoat(1);if(a.G.coins!==c)throw Error('level gate bypass');a.G.xp=a.xpForLevel(5);a.G.coins=149;a.renderChart();});
+    await page.evaluate(()=>{const a=__reelDeal;const c=a.G.coins;a.buyBoat(1);if(a.G.coins!==c)throw Error('level gate bypass');a.G.xp=a.xpForLevel(5);a.G.coins=a.BOATS[1].cost-1;a.renderChart();});
     await page.click('#boatsTab');assert.equal(await page.locator('[data-boat="1"]').isDisabled(),true);
-    assert.equal(await page.evaluate(()=>{const a=__reelDeal;a.buyBoat(1);return a.G.coins===149&&a.G.boat===0;}),true);
-    await page.evaluate(()=>{__reelDeal.G.coins=150;__reelDeal.renderChart();});
+    assert.equal(await page.evaluate(()=>{const a=__reelDeal;a.buyBoat(1);return a.G.coins===a.BOATS[1].cost-1&&a.G.boat===0;}),true);
+    await page.evaluate(()=>{__reelDeal.G.coins=__reelDeal.BOATS[1].cost;__reelDeal.renderChart();});
     await page.locator('[data-boat="1"]').click();
     assert.deepEqual(await page.evaluate(()=>[__reelDeal.G.coins,__reelDeal.G.boat]),[0,1]);
     await page.click('#destinationsTab');await page.locator('[data-destination="1"]').click();await page.click('#sailBtn');
@@ -57,7 +57,20 @@ fs.mkdirSync(shots,{recursive:true});
     await page.click('#startBtn');await page.evaluate(()=>document.exitPointerLock?.());
     await atVendor('port',1);await page.evaluate(()=>{const a=__reelDeal;a.G.xp=a.xpForLevel(50);a.openChart();});
     assert.equal(await page.evaluate(()=>__reelDeal.sailTo(2)),false,'correct level but wrong boat must fail');
-    console.log('PASS: physical dock, level, coin and vessel gates; voyage and reload');
+    await page.click('#boatsTab');
+    for(let id=2;id<6;id++){
+      await page.evaluate(id=>{const a=__reelDeal;a.G.coins=a.BOATS[id].cost-1;a.renderChart();},id);
+      assert.equal(await page.locator(`[data-boat="${id}"]`).isDisabled(),true);
+      assert.equal(await page.evaluate(id=>{const a=__reelDeal;const before=a.G.coins;a.buyBoat(id);return a.G.coins===before&&!a.G.ownedBoats.includes(id);},id),true);
+      await page.evaluate(id=>{const a=__reelDeal;a.G.coins=a.BOATS[id].cost+123;a.renderChart();},id);
+      const shown=Number((await page.locator(`[data-boat="${id}"]`).textContent()).replace(/[^0-9]/g,''));
+      const before=await page.evaluate(()=>__reelDeal.G.coins);
+      await page.locator(`[data-boat="${id}"]`).click();
+      assert.equal(before-await page.evaluate(()=>__reelDeal.G.coins),shown);
+      assert.equal(await page.evaluate(()=>__reelDeal.G.coins),123);
+    }
+    assert.equal(await page.evaluate(()=>{const a=__reelDeal;a.G.coins=0;a.buyBoat(1);return a.G.coins===0&&a.G.boat===1;}),true);
+    console.log('PASS: all five boat charges, one-coin-short rejection, free re-equips; voyage and reload');
 
     // All 18 separate vendors display exactly their four local tiers.
     for(let zone=0;zone<6;zone++)for(const kind of ['rod','line','bait']){
@@ -65,16 +78,30 @@ fs.mkdirSync(shots,{recursive:true});
       await page.evaluate(kind=>{const a=__reelDeal;a.G.xp=a.xpForLevel(60);a.G.coins=1000000;a.openShop(kind);},kind);
       const rows=await page.locator('#shopBody .rod-card').evaluateAll(rows=>rows.map(r=>Number(r.dataset.tier)));
       assert.deepEqual(rows,[zone*4,zone*4+1,zone*4+2,zone*4+3]);
-      const buy=zone*4+1,wrong=((zone+1)%6)*4+2;
+      const wrong=((zone+1)%6)*4+2;
       const denied=await page.evaluate(({kind,wrong})=>{const a=__reelDeal;const before=a.G.coins;a.buyGear(kind,wrong);return a.G.coins===before;},{kind,wrong});assert.equal(denied,true);
-      const shown=Number((await page.locator(`[data-buy="${buy}"]`).textContent()).replace(/[^0-9]/g,''));
-      const before=await page.evaluate(()=>__reelDeal.G.coins);
-      await page.locator(`[data-buy="${buy}"]`).click();
-      const after=await page.evaluate(()=>__reelDeal.G.coins);assert.equal(before-after,shown);
-      assert.equal(await page.evaluate(kind=>__reelDeal.G.gear[kind],kind),buy);
+      for(const buy of rows.filter(i=>i>0)){
+        const cost=await page.evaluate(({kind,buy})=>{const a=__reelDeal;return ({rod:a.RODS,line:a.LINES,bait:a.BAITS})[kind][buy].cost;},{kind,buy});
+        await page.evaluate(cost=>{__reelDeal.G.coins=cost-1;__reelDeal.renderShop();},cost);
+        assert.equal(await page.locator(`#shopBody [data-tier="${buy}"] .buy-btn`).isDisabled(),true);
+        assert.equal(await page.evaluate(({kind,buy})=>{const a=__reelDeal;const before=a.G.coins;a.buyGear(kind,buy);return a.G.coins===before&&!a.G.owned[kind].includes(buy);},{kind,buy}),true);
+        await page.evaluate(cost=>{__reelDeal.G.coins=cost+123;__reelDeal.renderShop();},cost);
+        const shown=Number((await page.locator(`[data-buy="${buy}"]`).textContent()).replace(/[^0-9]/g,''));
+        assert.equal(shown,cost);
+        const before=await page.evaluate(()=>__reelDeal.G.coins);
+        await page.locator(`[data-buy="${buy}"]`).click();
+        const after=await page.evaluate(()=>__reelDeal.G.coins);assert.equal(before-after,shown);assert.equal(after,123);
+        assert.equal(await page.evaluate(kind=>__reelDeal.G.gear[kind],kind),buy);
+      }
+      // A new price must never recharge a tier the player already owns.
+      const owned=zone===0?1:zone*4;
+      await page.evaluate(()=>{__reelDeal.G.coins=0;__reelDeal.renderShop();});
+      await page.locator(`[data-buy="${owned}"]`).click();
+      assert.equal(await page.evaluate(()=>__reelDeal.G.coins),0);
+      assert.equal(await page.evaluate(kind=>__reelDeal.G.gear[kind],kind),owned);
     }
     await screenshot('local-bait-shop');
-    console.log('PASS: 18 vendors, 72 tier locations, cross-island purchase rejection, exact charges');
+    console.log('PASS: all 69 paid gear charges, shortages and free re-equips across 18 vendors');
 
     // Walkable routes to all five stalls; ocean and other islands stay out of bounds.
     const routes=await page.evaluate(()=>{

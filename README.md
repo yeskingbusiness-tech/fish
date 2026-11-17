@@ -44,11 +44,15 @@ once you have an appropriate boat. The sea chart shows the exact missing require
 | Boat | Level | Price | Farthest destination |
 | --- | ---: | ---: | --- |
 | Harbor Skiff | 1 | Free | Home harbor |
-| Pinewood Dinghy | 5 | 150c | Pinewater |
-| Sunrunner | 12 | 1,800c | Sunscar |
-| Frostbreaker | 22 | 12,000c | Frostfall |
-| Cinderwake | 35 | 45,000c | Emberforge |
-| Astral Voyager | 50 | 120,000c | Moontide |
+| Pinewood Dinghy | 5 | 350c | Pinewater |
+| Sunrunner | 12 | 3,000c | Sunscar |
+| Frostbreaker | 22 | 15,500c | Frostfall |
+| Cinderwake | 35 | 90,000c | Emberforge |
+| Astral Voyager | 50 | 225,000c | Moontide |
+
+These are saving goals of roughly **8 / 15 / 22 / 28 / 34 landed-and-sold fish**
+using the **departure island's top local bait**. Boats are not priced against the
+better fish that remain locked on their destination island.
 
 Open **M** anywhere to study the sea chart. To purchase/equip a boat or depart, visit a
 physical Boat Shop. Choose a destination and sail. Crossings are **automatic, animated
@@ -77,11 +81,38 @@ Some collection entries reward revisiting an island with a different bait. For e
 Pinewater's Golden Koi requires a legendary-capable bait from a later island; Sunscar's
 American Eel takes an earlier uncommon-capable bait. Keep your old tackle!
 
-The existing strictly increasing gear prices are retained: the first rod is **50c**,
-the first line **40c**, and the first bait **80c**. Tier 24 costs **61,000c / 48,000c /
-95,000c** respectively. Higher-island fish have progressively greater median sale
-values, with an island premium added to the rarity and specimen-size calculation.
-Displayed prices are the exact prices charged. Unaffordable buttons show the shortage.
+### Shop price balance · v26
+
+**Every paid gear tier and boat costs more than in v25.** Prices are fixed defaults,
+not an inflation system tied to your wallet or level. The starter kit remains free.
+The first paid rod is **100c** (about six starter catches), line **80c**, and bait **140c**.
+
+Rod prices follow a smooth geometric curve between island milestones. Line costs
+approximately **80% of the same-tier rod**, and permanent bait approximately **140%**,
+rounded to readable coin amounts. Gear prices strictly increase; no consecutive paid
+gear tier jumps by more than 75%. The increase eases toward the top of the ladder
+instead of flattening out and then spiking.
+
+| Island's highest local tier | Rod | Line | Bait |
+| --- | ---: | ---: | ---: |
+| Reedhaven · tier 4 | 260c | 210c | 360c |
+| Pinewater · tier 8 | 1,800c | 1,450c | 2,500c |
+| Sunscar · tier 12 | 12,000c | 9,600c | 17,000c |
+| Frostfall · tier 16 | 50,000c | 40,000c | 70,000c |
+| Emberforge · tier 20 | 105,000c | 84,000c | 147,000c |
+| Moontide · tier 24 | 180,000c | 144,000c | 252,000c |
+
+Prices are checked against fish available with the **previous bait on the shop's
+island**, not income from the upgrade you cannot yet afford. Expected individual
+saving goals are roughly **5–20 catches for rods, 4–16 for lines, and 7–28 for bait**.
+A new island's better income provides some breathing room before its later upgrades.
+These are successful, landed-and-sold catches with suitable tackle—not guaranteed
+catch attempts or elapsed time. Species luck and specimen sizes still vary.
+
+**Fish sale values, gear stats, XP, island gates, saved coins and existing ownership
+are unchanged.** Old purchases are never charged again; re-equipping owned gear and
+boats remains free. Displayed prices are the exact prices charged, and unaffordable
+buttons show the shortage. Run `npm run economy` for the full tier-by-tier income audit.
 
 ### XP and the field guide
 
@@ -164,17 +195,24 @@ For other static hosts, deploy `index.html`, `style.css`, `main.js`, **all four 
 modules**, and `vendor/`. Every browser-facing path is relative and every dependency is
 local. `.mjs` must be served as JavaScript (already handled by `serve.js`).
 
-Cache stamps are currently **`v=25`** in the HTML and module imports. Bump the corresponding
+Cache stamps are currently **`v=26`** in the HTML and module imports. Bump the corresponding
 stamps when changing a cached module. Render's blueprint also sends `Cache-Control: no-cache`.
 
 ## Testing
 
 `npm test` checks 144,000 seeded fish draws, all-species reachability, local bait pools,
-gear locations/cost monotonicity, increasing island sale values, XP thresholds, both
-travel gates, old-save migration, persistent discoveries and malformed save handling.
+gear locations, smooth price growth, catch-income budgets, increasing island sale
+values, XP thresholds, both travel gates, old-save migration, persistent discoveries
+and malformed save handling. The economy tests also compare every paid price to the
+published v25 baseline and verify that price changes preserve owned items and coins.
 
-Optional browser tests exercise the real WebGL game, all 18 vendors, actual
-cast/hook/tension/catch/sale, all 30 sailing routes, old-save boot, and mobile controls:
+`npm run economy` prints the deterministic income estimates and saving goals for
+every gear tier and boat, using fixed weight quantiles rather than lucky random runs.
+
+Optional browser tests exercise all **69 paid gear purchases and five boat purchases**,
+including one-coin-short rejection, displayed-versus-charged prices and free re-equips.
+They also cover the real cast/hook/tension/catch/sale loop, all 30 sailing routes,
+old-save boot, and mobile controls:
 
 ```sh
 # Use an installed Chromium/Chrome:
@@ -199,7 +237,8 @@ required to run or deploy the game.
 | `save-state.mjs` | Validated save normalization and legacy migration |
 | `index.html`, `style.css` | Responsive HUD, chart, index and shop panels |
 | `serve.js`, `render.yaml` | Zero-dependency local server / static hosting blueprint |
-| `tests/` | Pure logic and optional browser regression suites |
+| `tests/` | Pure logic, economy and optional browser regression suites |
+| `scripts/economy.mjs` | Deterministic tier/boat pricing audit (`npm run economy`) |
 
 The world uses merged vertex-colored cuboids, instanced particles, simple lighting,
 no shadow pass and reduced-detail distant islands. Resolution adapts on slow devices.

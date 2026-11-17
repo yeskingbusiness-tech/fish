@@ -1,5 +1,5 @@
-import { SPECIES, RODS, LINES, BAITS } from './game-data.mjs?v=25';
-import { BOATS, ISLANDS, gearIsland, xpForLevel, levelForXp, catchXP } from './archipelago.mjs?v=25';
+import { SPECIES, RODS, LINES, BAITS } from './game-data.mjs?v=26';
+import { BOATS, ISLANDS, gearIsland, xpForLevel, levelForXp, catchXP } from './archipelago.mjs?v=26';
 
 const finite = (n, fallback=0) => Number.isFinite(Number(n)) ? Math.max(0,Number(n)) : fallback;
 const integer = n => Math.min(Number.MAX_SAFE_INTEGER,Math.floor(finite(n)));

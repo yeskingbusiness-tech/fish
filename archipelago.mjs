@@ -33,13 +33,15 @@ export const ISLANDS = [
     landmark:'The Moon Gate', stock:'Celestial & mythril', waters:'The final twenty legends' },
 ];
 
+// Budgeted from the island an angler is LEAVING, not the destination's income:
+// about 8 / 15 / 22 / 28 / 34 landed fish with that departure island's top bait.
 export const BOATS = [
   { id:0, name:'Harbor Skiff', range:0, level:1, cost:0, speed:30, color:0xb78755, stripe:0xeee2b5, description:'Your trusty starter. Built for the home harbor.' },
-  { id:1, name:'Pinewood Dinghy', range:1, level:5, cost:150, speed:35, color:0x527f6b, stripe:0xe9d4a1, description:'A wooden runabout for your first crossing.' },
-  { id:2, name:'Sunrunner', range:2, level:12, cost:1800, speed:44, color:0xd69b52, stripe:0x68c3c5, description:'A shaded cabin and a hull made for warm seas.' },
-  { id:3, name:'Frostbreaker', range:3, level:22, cost:12000, speed:52, color:0x7eb3c7, stripe:0xe7f3f3, description:'Reinforced blue steel for the frozen shelf.' },
-  { id:4, name:'Cinderwake', range:4, level:35, cost:45000, speed:60, color:0x59606b, stripe:0xf4a15e, description:'An ironclad cruiser for rough volcanic waters.' },
-  { id:5, name:'Astral Voyager', range:5, level:50, cost:120000, speed:72, color:0x8a7fbc, stripe:0xd1e4ff, description:'A moonlit expedition vessel. No water is beyond you.' },
+  { id:1, name:'Pinewood Dinghy', range:1, level:5, cost:350, speed:35, color:0x527f6b, stripe:0xe9d4a1, description:'A wooden runabout for your first crossing.' },
+  { id:2, name:'Sunrunner', range:2, level:12, cost:3000, speed:44, color:0xd69b52, stripe:0x68c3c5, description:'A shaded cabin and a hull made for warm seas.' },
+  { id:3, name:'Frostbreaker', range:3, level:22, cost:15500, speed:52, color:0x7eb3c7, stripe:0xe7f3f3, description:'Reinforced blue steel for the frozen shelf.' },
+  { id:4, name:'Cinderwake', range:4, level:35, cost:90000, speed:60, color:0x59606b, stripe:0xf4a15e, description:'An ironclad cruiser for rough volcanic waters.' },
+  { id:5, name:'Astral Voyager', range:5, level:50, cost:225000, speed:72, color:0x8a7fbc, stripe:0xd1e4ff, description:'A moonlit expedition vessel. No water is beyond you.' },
 ];
 
 export const MAX_LEVEL = 99;

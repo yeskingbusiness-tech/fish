@@ -181,8 +181,8 @@ const SPECIES = FISH_TABLE.map(([name, color, rarity, dist, sf, pattern, desc], 
 });
 
 // ---------- Gear ----------
-// Three ladders of 24 tiers each. Stats follow smooth curves; only the names,
-// colours, line ratings and prices are authored (ROD_COST / LINE_COST / BAIT_COST).
+// Three ladders of 24 tiers each. Stats follow smooth curves. Names, colours
+// and line ratings are authored; prices follow the shared island-anchor curve.
 const ROD_NAMES = [
   ['Bamboo Pole', 0xc98a4b], ['Willow Rod', 0xb99a5a], ['Fiberglass Rod', 0x69c8db],
   ['Graphite Rod', 0x6a6a72], ['Carbon Rod', 0x3a424e], ['Carbon Pro', 0x2f3640],
@@ -213,12 +213,32 @@ const BAIT_NAMES = [
   ['Scent Bomb', 0xd07ae0], ['Chum Cloud', 0xb090c0], ['Firefly Sac', 0xe8f07a],
   ['Silver Minnow', 0xd8e8f0], ['Dragonfly Nymph', 0x6fd0b0], ['Moonbait', 0xc0d8ff],
 ];
-// The established coin ladder is preserved. Four tiers are sold per island;
-// island licenses and boat range now gate access to later chunks. Bait leads
-// on price, while rods and lines decide how well you can land the local fish.
-const ROD_COST  = [0, 50, 85, 140, 240, 410, 700, 1200, 1600, 2700, 4600, 5450, 7550, 8300, 14000, 24000, 29500, 34000, 38000, 42000, 46000, 50500, 55500, 61000];
-const LINE_COST = [0, 40, 70, 120, 200, 340, 580, 990, 1250, 2100, 3550, 4200, 5850, 6450, 11000, 18500, 23000, 26500, 29500, 32500, 36000, 39500, 43500, 48000];
-const BAIT_COST = [0, 80, 140, 240, 410, 700, 1200, 2050, 2500, 4250, 7200, 8400, 11500, 12500, 21000, 35500, 46000, 52500, 59000, 65000, 71500, 78500, 86500, 95000];
+// Fixed base prices, never scaled to a player's wallet or level. Anchors are
+// [zero-based tier, rod price]: the first paid upgrade, then each island's top
+// tier. Geometric interpolation avoids cheap plateaus followed by sudden walls.
+// Calibrated against local fish income using the PREVIOUS bait, not the bait a
+// player is saving up to buy. `npm run economy` audits the resulting catch effort.
+const PRICE_ANCHORS = [
+  [1, 100], [3, 260], [7, 1800], [11, 12000],
+  [15, 50000], [19, 105000], [23, 180000],
+];
+function roundShopPrice(value){
+  const step = value < 1000 ? 10 : value < 10000 ? 50 : value < 100000 ? 500 : 1000;
+  return Math.round(value / step) * step;
+}
+function rodPrice(tier){
+  if(tier === 0) return 0; // the starter kit must always be free
+  if(tier === 1) return PRICE_ANCHORS[0][1];
+  const upper = PRICE_ANCHORS.findIndex(([end]) => end >= tier);
+  const [from, low] = PRICE_ANCHORS[upper - 1];
+  const [to, high] = PRICE_ANCHORS[upper];
+  return roundShopPrice(low * Math.pow(high / low, (tier - from) / (to - from)));
+}
+const ROD_COST = ROD_NAMES.map((_, tier) => rodPrice(tier));
+// Keep the three ladders in proportion: line remains cheaper than rod, and
+// permanent bait costs more because it opens the better-paying fish pools.
+const LINE_COST = ROD_COST.map(price => roundShopPrice(price * 0.8));
+const BAIT_COST = ROD_COST.map(price => roundShopPrice(price * 1.4));
 
 const RODS = ROD_NAMES.map(([name, color], i) => ({
   id:'rod' + i, name, color, cost: ROD_COST[i],

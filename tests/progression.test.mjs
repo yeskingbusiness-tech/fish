@@ -49,7 +49,7 @@ test('gear costs are exact, strictly increasing and stats improve every rung',()
     assert.ok(RODS[i].cast>RODS[i-1].cast);assert.ok(RODS[i].reel>RODS[i-1].reel);assert.ok(RODS[i].tension<RODS[i-1].tension);
     assert.ok(LINES[i].rating>LINES[i-1].rating);assert.ok(LINES[i].strain<LINES[i-1].strain);
   }
-  assert.equal(RODS[1].cost,50);assert.equal(LINES[1].cost,40);assert.equal(BAITS[1].cost,80);
+  assert.equal(RODS[1].cost,100);assert.equal(LINES[1].cost,80);assert.equal(BAITS[1].cost,140);
 });
 
 test('higher islands have progressively better median catch values',()=>{
