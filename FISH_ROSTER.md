@@ -29,7 +29,7 @@ Earlier bait can be re-equipped from the tackle bag for return trips.
 | 019 | Saugeye | rare | 0.7–4.1 lb |
 | 020 | Creek Chub | common | 0.3–2 lb |
 
-## Pinewater Isle · Level 5
+## Pinewater Isle · Level 10
 
 | # | Fish | Rarity | Weight range |
 | --- | --- | --- | --- |
@@ -54,7 +54,7 @@ Earlier bait can be re-equipped from the tackle bag for return trips.
 | 039 | Silver Carp | uncommon | 2.9–18 lb |
 | 040 | Golden Koi | legendary | 2–12.3 lb |
 
-## Sunscar Atoll · Level 12
+## Sunscar Atoll · Level 25
 
 | # | Fish | Rarity | Weight range |
 | --- | --- | --- | --- |
@@ -79,7 +79,7 @@ Earlier bait can be re-equipped from the tackle bag for return trips.
 | 059 | Bull Shark | legendary | 11–68.9 lb |
 | 060 | Golden Mahseer | epic | 7.6–47.2 lb |
 
-## Frostfall Isle · Level 22
+## Frostfall Isle · Level 45
 
 | # | Fish | Rarity | Weight range |
 | --- | --- | --- | --- |
@@ -104,7 +104,7 @@ Earlier bait can be re-equipped from the tackle bag for return trips.
 | 079 | Hollow Gar | legendary | 21.9–137.1 lb |
 | 080 | Pale Leviathan | legendary | 28.8–179.7 lb |
 
-## Emberforge · Level 35
+## Emberforge · Level 65
 
 | # | Fish | Rarity | Weight range |
 | --- | --- | --- | --- |
@@ -129,7 +129,7 @@ Earlier bait can be re-equipped from the tackle bag for return trips.
 | 099 | Old Growth | legendary | 65.4–409 lb |
 | 100 | Pale Crown | mythic | 70.9–443.1 lb |
 
-## Moontide Sanctum · Level 50
+## Moontide Sanctum · Level 90
 
 | # | Fish | Rarity | Weight range |
 | --- | --- | --- | --- |

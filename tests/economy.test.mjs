@@ -69,7 +69,7 @@ test('boats scale in departure-island catch effort, with no income-from-locked-f
 
 test('the price update never recharges owned gear or rewrites saved coins and progress', () => {
   const d=normalizeSave({
-    coins:4321,xp:712,caught:25,
+    version:7,coins:4321,xp:712,caught:25,
     owned:{rod:[0,1,2],line:[0,1],bait:[0,1,3]},gear:{rod:2,line:1,bait:3},
     ownedBoats:[0,1],boat:1,zone:1,
   });

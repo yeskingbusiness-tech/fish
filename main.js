@@ -13,10 +13,10 @@ const hexc  = c => '#' + c.toString(16).padStart(6,'0');
 const fmt   = n => n.toLocaleString('en-US');
 
 import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow,
-  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=26';
-import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, travelRequirement } from './archipelago.mjs?v=26';
-import { createWorld } from './world.mjs?v=26';
-import { normalizeSave } from './save-state.mjs?v=26';
+  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=28';
+import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, hasIslandLicense, travelRequirement } from './archipelago.mjs?v=28';
+import { createWorld } from './world.mjs?v=28';
+import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=28';
 
 const pickSpecies = () => drawSpecies(G.zone, G.gear.bait);
 const rollWeight = sp => drawWeight(sp, G.gear.bait);
@@ -311,7 +311,7 @@ const G = {
   caughtAnim:0,
   // player + economy
   px:0, pz:5.0, camY:2.77, bob:0, walked:0, nearShop:false, nearMarket:false,
-  coins:0, bag:[], xp:0, zone:0, visited:[0], discoveries:{},
+  coins:0, bag:[], xp:0, licenses:[0], zone:0, visited:[0], discoveries:{},
   boat:0, ownedBoats:[0], nearPort:false,
   owned:{ rod:[0], line:[0], bait:[0] },
   gear:{ rod:0, line:0, bait:0 },
@@ -325,6 +325,7 @@ let selectedIsland = 0, indexIsland = -1, fleetTab = false, voyage = null;
 let nearbyStall = null;
 const uiBusy = () => shopOpen || marketOpen || chartOpen || indexOpen || drawerOpen;
 const level = () => levelForXp(G.xp);
+const hasLicense = target => hasIslandLicense(target,G.xp,G.licenses);
 
 const bag = G.bag;
 const bobberPos = new THREE.Vector3(0, 0.1, -6);
@@ -373,7 +374,7 @@ function updateStats(){
   $('zoneNumber').textContent = `ISLAND 0${G.zone + 1} / 06`;
   $('zoneName').textContent = zone.name;
   $('zoneWaters').textContent = zone.waters;
-  const next = ISLANDS.find(i => i.level > progress.level);
+  const next = ISLANDS.find(i => !hasLicense(i.id));
   $('journeyObjective').textContent = next ? `Next stop · ${next.short} at level ${next.level}` : 'All island licenses unlocked · fill your index';
   const found = Object.keys(G.discoveries).length;
   $('indexCount').textContent = found + '/120';
@@ -390,13 +391,12 @@ function renderLog(){
 }
 const RED_LO = 8, RED_HI = 92;      // hit either end of the bar and the fish is gone
 
-const SAVE_KEY = 'reel-deal-save-v7';
-const LEGACY_KEYS = ['reel-deal-save-v6', 'reel-life-3d-save-v6'];
 let storageWarning = false;
 function saveGame(){
   try{
     localStorage.setItem(SAVE_KEY, JSON.stringify({
-      version:7, score:G.score, caught:G.caught, best:G.best, coins:G.coins, xp:G.xp,
+      version:SAVE_VERSION, score:G.score, caught:G.caught, best:G.best, coins:G.coins, xp:G.xp,
+      licenses:ISLANDS.filter(i=>hasLicense(i.id)).map(i=>i.id),
       zone:G.zone, visited:G.visited, boat:G.boat, ownedBoats:G.ownedBoats,
       discoveries:G.discoveries, owned:G.owned, gear:G.gear,
       bag:bag.map(e=>({ n:e.sp.name, w:e.weight })),
@@ -413,7 +413,7 @@ function loadGame(){
     let raw=localStorage.getItem(SAVE_KEY), legacyKey=null;
     if(!raw){for(const key of LEGACY_KEYS){raw=localStorage.getItem(key);if(raw){legacyKey=key;break;}}}
     if(!raw) return;
-    const normalized=normalizeSave(JSON.parse(raw),!!legacyKey);
+    const normalized=normalizeSave(JSON.parse(raw),legacyKey?.endsWith('v6')||false);
     const {bag:loadedBag,log:loadedLog,...state}=normalized;
     Object.assign(G,state); bag.push(...loadedBag); log.push(...loadedLog);
     if(legacyKey && saveGame()) for(const key of LEGACY_KEYS)localStorage.removeItem(key);
@@ -590,7 +590,7 @@ function catchFish(){
   const sp = hookedSpecies;
   const weight = (hookedWeight || rollWeight(sp)).toFixed(1);
   const value = fishValue(sp, parseFloat(weight));
-  const oldLevel=level(), isNew=!G.discoveries[sp.id];
+  const oldLevel=level(), lockedBefore=ISLANDS.filter(i=>!hasLicense(i.id)), isNew=!G.discoveries[sp.id];
   const earnedXP=catchXP(sp,Number(weight),isNew);
   G.xp+=earnedXP;
   const record=G.discoveries[sp.id]||(G.discoveries[sp.id]={count:0,best:0,first:new Date().toISOString().slice(0,10)});
@@ -599,7 +599,7 @@ function catchFish(){
   G.caughtAnim=0;
   $('newDiscovery').classList.toggle('hidden',!isNew);
   $('catchLevel').classList.toggle('hidden',level()===oldLevel);
-  const unlocked=ISLANDS.filter(i=>i.level>oldLevel&&i.level<=level());
+  const unlocked=lockedBefore.filter(i=>hasLicense(i.id));
   $('catchLevel').textContent=level()>oldLevel ? `LEVEL ${level()}!${unlocked.length?' · '+unlocked.map(i=>i.short).join(', ')+' license unlocked':' · one step closer to the next island'}`:'';
   const isBest = !G.best || parseFloat(weight) > parseFloat(G.best.weight);
   if(!G.best || parseFloat(weight) > parseFloat(G.best.weight)) G.best = { name:sp.name, weight };
@@ -745,8 +745,9 @@ const gearStat = (kind, g) => {
   if(kind === 'rod')  return `REACH ${g.cast}m · REEL ${g.reel.toFixed(2)}x · POWER ${rodPower(g)}`;
   if(kind === 'line') return `MAX FISH ${g.rating} lb · STRAIN ${Math.round((2 - g.strain) * 100)}`;
   const lo = RARITY[RARITY_ORDER[g.lo]].label, hi = RARITY[RARITY_ORDER[g.hi]].label;
-  const size = g.minSize ? `${g.minSize}lb+` : 'any size';
-  return `CATCHES ${lo === hi ? lo : lo + '–' + hi} · ${size.toUpperCase()} · LUCK +${Math.round(g.luck * 100)}%`;
+  const size = g.minSize ? `SPECIES MAX ${g.minSize}LB+` : 'ANY SPECIES SIZE';
+  const weight = g.weightBonus ? `WEIGHT UP TO +${fmt(g.weightBonus * 100)}%` : 'STANDARD WEIGHT';
+  return `CATCHES ${lo === hi ? lo : lo + '–' + hi} · ${size} · LUCK +${Math.round(g.luck * 100)}% · ${weight}`;
 };
 const swatchStyle = (kind, g) => `background:#${g.color.toString(16).padStart(6, '0')}`;
 // how this tier compares to what you have on
@@ -771,8 +772,10 @@ function gearDelta(kind, g, i){
   const winChanged = g.hi > cur.hi || g.lo > cur.lo;
   if(g.hi > cur.hi) parts.push(`unlocks ${RARITY[RARITY_ORDER[g.hi]].label}`);
   if(g.lo > cur.lo) parts.push(`drops ${RARITY[RARITY_ORDER[g.lo - 1]].label} and below`);
-  if(!winChanged && g.minSize > cur.minSize) parts.push(`${g.minSize}lb+ only`);
+  if(!winChanged && g.minSize > cur.minSize) parts.push(`species max ${g.minSize}lb+`);
   parts.push(`${d >= 0 ? '+' : ''}${d}% luck`);
+  const weightDelta = (g.weightBonus - cur.weightBonus) * 100;
+  parts.push(`${weightDelta >= 0 ? '+' : ''}${fmt(weightDelta)}% weight bonus cap`);
   return `<small class="gear-delta">${parts.join(' \u00b7 ')}</small>`;
 }
 
@@ -812,6 +815,7 @@ function renderShop(){
   $('shopTitle').textContent=kitOpen?'Your tackle bag':{rod:'Rod Works',line:'Line & Spool',bait:'Bait Shack'}[kind];
   $('shopEyebrow').textContent=kitOpen?'OWNED GEAR · EQUIP ANYWHERE':i.name.toUpperCase()+' · LOCAL OUTFITTER';
   $('shopNote').textContent=kitOpen?'Switch to any gear you already own. Earlier bait is useful when revisiting old waters.':`Only tiers ${i.id*4+1}–${i.id*4+4} are sold here. Explore new islands for the next four. Prices below are the exact coins charged.`;
+  if(kind==='bait')$('shopNote').textContent+=' Better bait adds a small weight boost. The bonus tapers near each species’ maximum; individual catches still vary.';
   const items=GEAR[kind].list.map((g,index)=>({g,index})).filter(({index})=>kitOpen?G.owned[kind].includes(index):gearIsland(index)===G.zone);
   shopBody.innerHTML=items.map(({g,index})=>{
     let row=gearRow(kind,g,index);
@@ -840,7 +844,7 @@ function closeShop(){
 function buyGear(kind, i){
   const g = GEAR[kind]?.list[i];
   if(!g || !Number.isInteger(i) || !shopOpen || G.state !== 'aim') return;
-  if(!G.owned[kind].includes(i) && (kitOpen || shopKind !== kind || gearIsland(i) !== G.zone || level()<ISLANDS[G.zone].level || !isNearVendor(kind))){
+  if(!G.owned[kind].includes(i) && (kitOpen || shopKind !== kind || gearIsland(i) !== G.zone || !hasLicense(G.zone) || !isNearVendor(kind))){
     showToast(`Sold at ${ISLANDS[gearIsland(i)].name}'s ${kind} stall.`,true);return;
   }
   if(G.owned[kind].includes(i)){
@@ -1016,11 +1020,11 @@ function renderChart(){
   $('chartFooter').innerHTML=`<span>${atDock?'AT THE DOCK · '+ISLANDS[G.zone].name:'CHART ONLY · Visit a Boat Shop to buy or sail'}</span><span>${BOATS[G.boat].name} · Level ${level()}</span>`;
   const points=CHART_POINTS.map(p=>p.join(',')).join(' ');
   $('seaChart').innerHTML=`<div class="chart-caption"><b>THE SIX ISLES</b><span>CHART No. 001 · NOT TO SCALE</span></div><svg class="chart-route" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline points="${points}" fill="none" stroke="#a9c3bc" stroke-width=".35" stroke-dasharray="1.4 1.4"/></svg><span class="chart-north">N<br>↑</span><span class="chart-ocean">THE WANDERING SEA</span>`+
-    ISLANDS.map(i=>`<button class="map-island ${level()<i.level?'locked':''} ${i.id===G.zone?'current':''} ${selectedIsland===i.id?'selected':''}" style="left:${CHART_POINTS[i.id][0]}%;top:${CHART_POINTS[i.id][1]}%" data-destination="${i.id}" aria-label="${i.name}, level ${i.level}${i.id===G.zone?', current island':''}">${islandGlyph(i)}<b>${i.short}</b><span>${i.id===G.zone?'YOU ARE HERE':level()<i.level?'LOCKED · LV '+i.level:G.visited.includes(i.id)?'VISITED':'LV '+i.level+' · UNCHARTED'}</span></button>`).join('');
-  const i=ISLANDS[selectedIsland],requirement=travelRequirement(i.id,G.xp,G.boat),here=i.id===G.zone;
+    ISLANDS.map(i=>`<button class="map-island ${!hasLicense(i.id)?'locked':''} ${i.id===G.zone?'current':''} ${selectedIsland===i.id?'selected':''}" style="left:${CHART_POINTS[i.id][0]}%;top:${CHART_POINTS[i.id][1]}%" data-destination="${i.id}" aria-label="${i.name}, level ${i.level}${i.id===G.zone?', current island':''}">${islandGlyph(i)}<b>${i.short}</b><span>${i.id===G.zone?'YOU ARE HERE':!hasLicense(i.id)?'LOCKED · LV '+i.level:G.visited.includes(i.id)?'VISITED':'LICENSE READY'}</span></button>`).join('');
+  const i=ISLANDS[selectedIsland],requirement=travelRequirement(i.id,G.xp,G.boat,G.licenses),here=i.id===G.zone;
   const reason=here?'You are already here.':requirement||(!atDock?'Walk to a Boat Shop to depart.':'');
   const discovered=SPECIES.filter(s=>s.island===i.id&&G.discoveries[s.id]).length;
-  $('destinationDetail').innerHTML=`<div class="destination-art" style="--island-color:${i.color}">${islandGlyph(i)}<span>ISLAND 0${i.id+1}</span></div><div class="destination-copy"><span class="eyebrow">LEVEL ${i.level} LICENSE</span><h3>${i.name}</h3><p>${i.description}</p><dl><div><dt>LOCAL GEAR</dt><dd>Tiers ${i.id*4+1}–${i.id*4+4}</dd></div><div><dt>FIELD GUIDE</dt><dd>${discovered} / 20 discovered</dd></div><div><dt>LANDMARK</dt><dd>${i.landmark}</dd></div></dl><p class="destination-requirement ${reason&&!here?'blocked':''}">${reason||'License ready. Boat ready. Let’s cast off.'}</p><button id="sailBtn" class="primary-btn" ${reason?'disabled':''}>${here?'Current island':'Sail to '+i.short+' →'}</button>${requirement&&level()>=i.level?'<button id="viewBoats" class="text-btn">Find a seaworthy boat →</button>':''}</div>`;
+  $('destinationDetail').innerHTML=`<div class="destination-art" style="--island-color:${i.color}">${islandGlyph(i)}<span>ISLAND 0${i.id+1}</span></div><div class="destination-copy"><span class="eyebrow">LEVEL ${i.level} LICENSE${hasLicense(i.id)&&level()<i.level?' · RETAINED':''}</span><h3>${i.name}</h3><p>${i.description}</p><dl><div><dt>LOCAL GEAR</dt><dd>Tiers ${i.id*4+1}–${i.id*4+4}</dd></div><div><dt>FIELD GUIDE</dt><dd>${discovered} / 20 discovered</dd></div><div><dt>LANDMARK</dt><dd>${i.landmark}</dd></div></dl><p class="destination-requirement ${reason&&!here?'blocked':''}">${reason||'License ready. Boat ready. Let’s cast off.'}</p><button id="sailBtn" class="primary-btn" ${reason?'disabled':''}>${here?'Current island':'Sail to '+i.short+' →'}</button>${requirement&&hasLicense(i.id)?'<button id="viewBoats" class="text-btn">Find a seaworthy boat →</button>':''}</div>`;
   renderFleet();
 }
 function boatSVG(b){
@@ -1031,14 +1035,14 @@ function renderFleet(){
   const atDock=isNearVendor('port');
   $('fleetView').innerHTML=BOATS.map(b=>{
     const owned=G.ownedBoats.includes(b.id),equipped=G.boat===b.id;
-    const reason=equipped?'IN USE':!atDock?'VISIT A BOAT SHOP':level()<b.level?`LEVEL ${b.level} REQUIRED`:!owned&&G.coins<b.cost?`NEED ${fmt(b.cost-G.coins)}c MORE`:'';
-    return `<article class="boat-card ${equipped?'equipped':''}"><div class="boat-art">${boatSVG(b)}<span>CLASS 0${b.id+1}</span></div><div class="boat-copy"><span class="eyebrow">${b.id===0?'HOME WATERS':'UP TO '+ISLANDS[b.range].short.toUpperCase()}</span><h3>${b.name}</h3><p>${b.description}</p><div class="boat-specs"><span>LEVEL ${b.level}</span><span>${b.cost?fmt(b.cost)+'c':'FREE'}</span><span>${b.speed} KNOTS</span></div><button class="buy-btn ${owned?'equip':''}" data-boat="${b.id}" ${reason?'disabled':''}>${reason|| (owned?'Launch this boat':fmt(b.cost)+'c · BUY BOAT')}</button></div></article>`;
+    const reason=equipped?'IN USE':!atDock?'VISIT A BOAT SHOP':!hasLicense(b.range)?`LEVEL ${b.level} REQUIRED`:!owned&&G.coins<b.cost?`NEED ${fmt(b.cost-G.coins)}c MORE`:'';
+    return `<article class="boat-card ${equipped?'equipped':''}"><div class="boat-art">${boatSVG(b)}<span>CLASS 0${b.id+1}</span></div><div class="boat-copy"><span class="eyebrow">${b.id===0?'HOME WATERS':'UP TO '+ISLANDS[b.range].short.toUpperCase()}</span><h3>${b.name}</h3><p>${b.description}</p><div class="boat-specs"><span>LEVEL ${b.level}${hasLicense(b.range)&&level()<b.level?' · RETAINED':''}</span><span>${b.cost?fmt(b.cost)+'c':'FREE'}</span><span>${b.speed} KNOTS</span></div><button class="buy-btn ${owned?'equip':''}" data-boat="${b.id}" ${reason?'disabled':''}>${reason|| (owned?'Launch this boat':fmt(b.cost)+'c · BUY BOAT')}</button></div></article>`;
   }).join('');
 }
 function buyBoat(id){
   const b=BOATS[id];
   if(!b||!chartOpen||!isNearVendor('port')||G.state!=='aim')return;
-  if(level()<b.level){showToast(`This boat requires level ${b.level}.`,true);return;}
+  if(!hasLicense(b.range)){showToast(`This boat requires level ${b.level}.`,true);return;}
   if(!G.ownedBoats.includes(id)){
     if(G.coins<b.cost){showToast(`You need ${fmt(b.cost-G.coins)} more coins.`,true);return;}
     G.coins-=b.cost;G.ownedBoats.push(id);
@@ -1047,7 +1051,7 @@ function buyBoat(id){
 }
 function sailTo(target){
   if(!Number.isInteger(target)||!ISLANDS[target]||target===G.zone||G.state!=='aim'||!chartOpen)return false;
-  const reason=travelRequirement(target,G.xp,G.boat);
+  const reason=travelRequirement(target,G.xp,G.boat,G.licenses);
   if(reason||!isNearVendor('port')){showToast(reason||'Depart from a Boat Shop.',true);return false;}
   const curve=world.route(G.zone,target);
   if(!curve){showToast('No clear sailing route. Try another destination.',true);return false;}
@@ -1319,7 +1323,7 @@ stickEl.addEventListener('pointerup', endStick);
 stickEl.addEventListener('pointercancel', endStick);
 $('resetBtn').addEventListener('click',()=>{
   if(!confirm('Start over? This erases all coins, levels, boats, gear and fish discoveries on this device.'))return;
-  const fresh=normalizeSave({});const {bag:emptyBag,log:emptyLog,...state}=fresh;
+  const fresh=normalizeSave({version:SAVE_VERSION});const {bag:emptyBag,log:emptyLog,...state}=fresh;
   Object.assign(G,state);bag.length=0;log.length=0;
   logDrawer.classList.add('hidden');drawerOpen=false;world.setBoat(0);spawnAtIsland(0);
   applyGear();renderLog();saveGame();resumeWorld();showToast('A fresh adventure. Tight lines!');
@@ -1643,7 +1647,7 @@ window.__reelDeal = window.__reelLife = {
   openShop,closeShop,openKit,openMarket,closeMarket,buyGear,sellAll,sellFish,
   openChart,closeChart,renderChart,buyBoat,sailTo,finishVoyage,openIndex,closeIndex,renderIndex,
   renderShop,renderMarket,fightSetup,pickSpecies,paintTensionBand,eligibleSpecies,
-  updateStats,fishValue,rollWeight,xpForLevel,level,saveGame,levelProgress,
+  updateStats,fishValue,rollWeight,xpForLevel,level,hasLicense,saveGame,levelProgress,
   walkable,groundAt,landBobber,triggerBite,hookFish,catchFish,SHOP_POS,MARKET_POS,
   startCharge,releaseCast,landingPoint,inWater,spawnAtIsland,nearestVendor
 };

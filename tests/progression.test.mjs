@@ -9,7 +9,7 @@ function rng(seed=52){return ()=>{seed=(seed*1664525+1013904223)>>>0;return seed
 test('six unique islands each own exactly twenty species and four tiers per ladder',()=>{
   assert.equal(SPECIES.length,120);
   assert.equal(new Set(SPECIES.map(s=>s.id)).size,120);
-  assert.deepEqual(ISLANDS.map(i=>i.level),[1,5,12,22,35,50]);
+  assert.deepEqual(ISLANDS.map(i=>i.level),[1,10,25,45,65,90]);
   for(const zone of ISLANDS){
     assert.equal(SPECIES.filter(s=>s.island===zone.id).length,20);
     for(const list of [RODS,LINES,BAITS])assert.equal(list.filter((_,i)=>gearIsland(i)===zone.id).length,4);
@@ -101,7 +101,7 @@ test('legacy saves retain coins, owned gear, bag, catches and reveal only known 
 
 test('discoveries survive selling, log truncation and repeated save loads',()=>{
   const sp=SPECIES[119];
-  const data={coins:12000,xp:xpForLevel(50),zone:5,boat:5,ownedBoats:[0,1,5],visited:[0,1,5],discoveries:{[sp.id]:{count:8,best:sp.maxW,first:'2026-11-13'}},bag:[],log:[]};
+  const data={version:7,coins:12000,xp:xpForLevel(50),zone:5,boat:5,ownedBoats:[0,1,5],visited:[0,1,5],discoveries:{[sp.id]:{count:8,best:sp.maxW,first:'2026-11-13'}},bag:[],log:[]};
   const d=normalizeSave(data);
   assert.equal(d.zone,5);assert.equal(d.discoveries[sp.id].count,8);assert.equal(d.bag.length,0);
   const twice=normalizeSave({...data,discoveries:d.discoveries});

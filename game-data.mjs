@@ -259,9 +259,12 @@ const BAITS = BAIT_NAMES.map(([name, color], i) => {
   const [lo, hi] = BAIT_WINDOW[i];
   return {
     id:'bait' + i, name, color, cost: BAIT_COST[i], lo, hi,
-    // and it will only interest fish at least this big
+    // Species-size eligibility uses maxW, not a minimum specimen weight.
     minSize: Math.round(0.9 * Math.pow(1.30, i) - 0.9),
     luck: +(0.9 * Math.pow(i / (BAIT_NAMES.length - 1), 1.2)).toFixed(2),
+    // A separate, gentle weight bonus: +0.5 percentage points per upgrade.
+    // This is the upper bound on the rolled-weight boost, not a higher maxW.
+    weightBonus: +(i * 0.005).toFixed(3),
   };
 });
 // every tier must cost more than the one below it, whatever the tables say
@@ -304,9 +307,15 @@ function pickSpecies(island, baitIndex, random = Math.random){
   return list[list.length - 1];
 }
 function rollWeight(sp, baitIndex = 0, random = Math.random){
-  const luck = (BAITS[baitIndex] || BAITS[0]).luck;
-  const t = Math.pow(random(), 1 / (1 + luck * 1.8));   // biased heavier with better bait
-  return sp.minW + (sp.maxW - sp.minW) * t;
+  const bait = BAITS[baitIndex] || BAITS[0];
+  const t = Math.pow(random(), 1 / (1 + bait.luck * 1.8));
+  const weight = clamp(sp.minW + (sp.maxW - sp.minW) * t, sp.minW, sp.maxW);
+  if(!bait.weightBonus || weight === sp.maxW) return weight;
+  const bonus = weight * bait.weightBonus, room = sp.maxW - weight;
+  // Soft-cap the extra weight to the remaining headroom. Small fish get nearly
+  // the advertised bonus; trophies get less. Unlike a hard multiplier + clamp,
+  // this doesn't turn a whole band of lucky rolls into identical max-size fish.
+  return Math.min(sp.maxW, weight + bonus * room / (bonus + room));
 }
 
 

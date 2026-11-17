@@ -1,5 +1,11 @@
-import { SPECIES, RODS, LINES, BAITS } from './game-data.mjs?v=26';
-import { BOATS, ISLANDS, gearIsland, xpForLevel, levelForXp, catchXP } from './archipelago.mjs?v=26';
+import { SPECIES, RODS, LINES, BAITS } from './game-data.mjs?v=28';
+import { BOATS, ISLANDS, gearIsland, xpForLevel, levelForXp, catchXP, hasIslandLicense } from './archipelago.mjs?v=28';
+
+export const SAVE_VERSION = 8;
+export const SAVE_KEY = 'reel-deal-save-v8';
+export const LEGACY_KEYS = ['reel-deal-save-v7', 'reel-deal-save-v6', 'reel-life-3d-save-v6'];
+// Never use the new gates to infer which licenses an old save already earned.
+const PREVIOUS_ISLAND_LEVELS = [1,5,12,22,35,50];
 
 const finite = (n, fallback=0) => Number.isFinite(Number(n)) ? Math.max(0,Number(n)) : fallback;
 const integer = n => Math.min(Number.MAX_SAFE_INTEGER,Math.floor(finite(n)));
@@ -15,6 +21,7 @@ export function decodeFish(items){
 
 // Both v6 names migrate. A veteran keeps their coins/gear/fish and receives the
 // island license + boat appropriate to their best already-owned gear chunk.
+// v7 retains its exact XP; previously earned licenses migrate independently.
 export function normalizeSave(d={}, legacy=false){
   if(!d || typeof d!=='object' || Array.isArray(d)) d={};
   const owned={},gear={};
@@ -51,12 +58,18 @@ export function normalizeSave(d={}, legacy=false){
   if(legacy){
     const rank=Math.max(...Object.values(owned).flat().map(gearIsland));
     const loggedXp=log.reduce((a,e)=>a+catchXP(e.sp,e.weight),0);
-    xp=Math.max(caught*28,loggedXp,xpForLevel(ISLANDS[rank].level));
+    xp=Math.max(caught*28,loggedXp,xpForLevel(PREVIOUS_ISLAND_LEVELS[rank]));
     ownedBoats=[...new Set([0,rank])]; boat=rank;
   }
+  let licenses=ids(d.licenses,ISLANDS.length);
+  if(legacy || integer(d.version)<SAVE_VERSION){
+    // Includes earned-but-unvisited destinations, without granting any new ones.
+    licenses=ISLANDS.filter(i=>levelForXp(xp)>=PREVIOUS_ISLAND_LEVELS[i.id]).map(i=>i.id);
+  }
+  licenses=ISLANDS.filter(i=>hasIslandLicense(i.id,xp,licenses)).map(i=>i.id);
   const wanted=Number.isInteger(d.zone)&&ISLANDS[d.zone]?d.zone:0;
-  const zone=levelForXp(xp)>=ISLANDS[wanted].level&&BOATS[boat].range>=wanted?wanted:0;
-  const visited=ids(d.visited,ISLANDS.length).filter(i=>levelForXp(xp)>=ISLANDS[i].level);
+  const zone=hasIslandLicense(wanted,xp,licenses)&&BOATS[boat].range>=wanted?wanted:0;
+  const visited=ids(d.visited,ISLANDS.length).filter(i=>hasIslandLicense(i,xp,licenses));
   if(!visited.includes(zone))visited.push(zone);
-  return {score:integer(d.score),caught,best,coins:integer(d.coins),xp,zone,visited,owned,gear,ownedBoats,boat,discoveries,bag,log:log.slice(0,200)};
+  return {version:SAVE_VERSION,score:integer(d.score),caught,best,coins:integer(d.coins),xp,licenses,zone,visited,owned,gear,ownedBoats,boat,discoveries,bag,log:log.slice(0,200)};
 }

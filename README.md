@@ -24,11 +24,11 @@ does not support the module imports.
 | Island | Level | Local gear tiers | Landmark / character | Fish |
 | --- | ---: | --- | --- | ---: |
 | **Reedhaven** | 1 | 1–4 | Reed beds, a striped lighthouse, sunny fishing village | 20 |
-| **Pinewater Isle** | 5 | 5–8 | Tall spruce, mossy terraces, working timber waterwheel | 20 |
-| **Sunscar Atoll** | 12 | 9–12 | Palms, coral, sandstone sun gate | 20 |
-| **Frostfall Isle** | 22 | 13–16 | Snow-capped pines, icebergs, frozen watchtower | 20 |
-| **Emberforge** | 35 | 17–20 | Basalt, glowing lava, smoking volcano, floating embers | 20 |
-| **Moontide Sanctum** | 50 | 21–24 | Luminous moon gate, amethyst-colored stone, drifting lights | 20 |
+| **Pinewater Isle** | 10 | 5–8 | Tall spruce, mossy terraces, working timber waterwheel | 20 |
+| **Sunscar Atoll** | 25 | 9–12 | Palms, coral, sandstone sun gate | 20 |
+| **Frostfall Isle** | 45 | 13–16 | Snow-capped pines, icebergs, frozen watchtower | 20 |
+| **Emberforge** | 65 | 17–20 | Basalt, glowing lava, smoking volcano, floating embers | 20 |
+| **Moontide Sanctum** | 90 | 21–24 | Luminous moon gate, amethyst-colored stone, drifting lights | 20 |
 
 Each island has **five separate stalls**: Rod Works, Line & Spool, Bait Shack,
 Fish Market, and Boat Shop & Voyages. Each of the three gear vendors stocks only
@@ -39,18 +39,24 @@ Catch XP unlocks island licenses. Coins buy equipment and boats. There are no to
 consumable bait charges, or boat fuel costs. You can always return to an earlier island
 once you have an appropriate boat. The sea chart shows the exact missing requirement.
 
+**Wider island milestones · v27:** licenses now require levels **1 / 10 / 25 / 45 /
+65 / 90**, with gaps of **9 / 15 / 20 / 20 / 25 levels**. Every gap is larger than the
+previous 4 / 7 / 10 / 13 / 15. Boat licenses use the same milestones. XP rewards,
+the XP curve, gear prices and boat prices have not changed. Existing earned licenses
+are retained, even for destinations not yet visited; only future unlocks use the new gates.
+
 ### Boats and travel
 
 | Boat | Level | Price | Farthest destination |
 | --- | ---: | ---: | --- |
 | Harbor Skiff | 1 | Free | Home harbor |
-| Pinewood Dinghy | 5 | 350c | Pinewater |
-| Sunrunner | 12 | 3,000c | Sunscar |
-| Frostbreaker | 22 | 15,500c | Frostfall |
-| Cinderwake | 35 | 90,000c | Emberforge |
-| Astral Voyager | 50 | 225,000c | Moontide |
+| Pinewood Dinghy | 10 | 350c | Pinewater |
+| Sunrunner | 25 | 3,000c | Sunscar |
+| Frostbreaker | 45 | 15,500c | Frostfall |
+| Cinderwake | 65 | 90,000c | Emberforge |
+| Astral Voyager | 90 | 225,000c | Moontide |
 
-These are saving goals of roughly **8 / 15 / 22 / 28 / 34 landed-and-sold fish**
+These are saving goals of roughly **8 / 14 / 21 / 27 / 33 landed-and-sold fish**
 using the **departure island's top local bait**. Boats are not priced against the
 better fish that remain locked on their destination island.
 
@@ -74,12 +80,31 @@ and the previous island's top bait works when arriving on the next island.
 
 - **Rods:** cast reach, reel speed, and control. Bamboo Pole → Mythril Rod.
 - **Lines:** weight rating and reduced strain. Cotton Twine → 1900lb Mythril.
-- **Bait:** rarity window, minimum species size, and luck. Garden Worm → Moonbait.
+- **Bait:** rarity window, minimum species size, luck, and a gentle weight bonus. Garden Worm → Moonbait.
 - **Tackle bag (I):** equip any already-owned tier from anywhere. It cannot buy remote stock.
 
 Some collection entries reward revisiting an island with a different bait. For example,
 Pinewater's Golden Koi requires a legendary-capable bait from a later island; Sunscar's
 American Eel takes an earlier uncommon-capable bait. Keep your old tackle!
+
+### Slightly heavier catches · v28
+
+Every bait upgrade adds **0.5 percentage points** to its maximum rolled-weight bonus:
+Garden Worm **0%**, Bread Ball **up to +0.5%**, Salmon Egg **up to +3.5%**, and Moonbait
+**up to +11.5%**. This is a small extra benefit on top of bait's existing luck-based
+weight bias. The bait shop and tackle bag show the bonus and upgrade comparison.
+
+The bonus tapers as a fish approaches its species' natural maximum, rather than
+clamping many rolls into identical maximum-size trophies. Fish stay within their
+species' weight range. Better bait yields slightly heavier fish **on average**, not
+a guaranteed heavier fish on every catch. The species-size filter uses a species'
+maximum possible weight, not a guaranteed minimum catch weight.
+
+Only **new catches with the equipped bait** receive the boost. Switching back to a
+lower tier lowers the bonus immediately; already-caught fish, saved records and coins
+are not rewritten. Island/bait exclusivity, prices, and sale/XP formulas are unchanged.
+Heavier catches naturally earn a little more through the existing formulas. The income
+audit includes the new weights and still passes the established saving-goal limits.
 
 ### Shop price balance · v26
 
@@ -109,8 +134,8 @@ A new island's better income provides some breathing room before its later upgra
 These are successful, landed-and-sold catches with suitable tackle—not guaranteed
 catch attempts or elapsed time. Species luck and specimen sizes still vary.
 
-**Fish sale values, gear stats, XP, island gates, saved coins and existing ownership
-are unchanged.** Old purchases are never charged again; re-equipping owned gear and
+**The v26 price rebalance left fish sale values, gear stats, XP, saved coins and
+existing ownership unchanged.** Old purchases are never charged again; re-equipping owned gear and
 boats remains free. Displayed prices are the exact prices charged, and unaffordable
 buttons show the shortage. Run `npm run economy` for the full tier-by-tier income audit.
 
@@ -119,7 +144,7 @@ buttons show the shortage. Run `npm run economy` for the full tier-by-tier incom
 Every landed fish awards XP, with more for later-island fish, higher rarity, and larger
 specimens. A **new species awards a 50% discovery XP bonus**. Selling does not award XP.
 The level meter and next island milestone are always visible. Total XP for level `L` is
-`90 × (L−1) + 22 × (L−1)²`; levels cap at 99. The final island requires level 50.
+`90 × (L−1) + 22 × (L−1)²`; levels cap at 99. The final island requires level 90.
 
 The **fish index (F)** contains all 120 numbered entries:
 
@@ -162,16 +187,23 @@ the fight harder. Unknown fish remain unidentified in the reel HUD until landed.
 
 ## Save compatibility
 
-Progress is saved to this browser and site origin under **`reel-deal-save-v7`**:
-coins, gear, boats, XP, island, visited islands, bag, best catch, discoveries, and the
+Progress is saved to this browser and site origin under **`reel-deal-save-v8`**:
+coins, gear, boats, XP, earned licenses, island, visited islands, bag, best catch, discoveries, and the
 latest 200 catches. There are no accounts or cross-device/cloud saves.
 
-Both old keys (`reel-deal-save-v6` and `reel-life-3d-save-v6`) migrate automatically:
+The v7 key (`reel-deal-save-v7`) migrates automatically, keeping exact XP, coins,
+owned items, current island and visited history. Licenses earned under the old levels
+are saved permanently, so the wider gaps never lock returning players out. The next
+unearned license still requires its new level; migration never boosts a v7 player's
+XP or unlocks additional islands. The chart labels below-level licenses **RETAINED**.
+
+Both v6 keys (`reel-deal-save-v6` and `reel-life-3d-save-v6`) also migrate automatically:
 
 - Coins, equipped/owned gear, bag, best fish and catch count are retained.
 - Discoveries are reconstructed from the saved log, bag and best catch.
 - Returning veterans receive XP and a boat appropriate to their highest already-owned
-  gear chunk, so previously earned equipment does not become stranded behind a new gate.
+  gear chunk using the original milestones; their earned licenses are then retained.
+  Previously earned equipment does not become stranded behind a new gate.
 - Old keys are removed **only after** the new save is successfully written.
 
 The catch log's **Reset** button asks for confirmation before clearing progress. Storage
@@ -195,15 +227,17 @@ For other static hosts, deploy `index.html`, `style.css`, `main.js`, **all four 
 modules**, and `vendor/`. Every browser-facing path is relative and every dependency is
 local. `.mjs` must be served as JavaScript (already handled by `serve.js`).
 
-Cache stamps are currently **`v=26`** in the HTML and module imports. Bump the corresponding
+Cache stamps are currently **`v=28`** in the HTML and module imports. Bump the corresponding
 stamps when changing a cached module. Render's blueprint also sends `Cache-Control: no-cache`.
 
 ## Testing
 
 `npm test` checks 144,000 seeded fish draws, all-species reachability, local bait pools,
 gear locations, smooth price growth, catch-income budgets, increasing island sale
-values, XP thresholds, both travel gates, old-save migration, persistent discoveries
-and malformed save handling. The economy tests also compare every paid price to the
+values, XP thresholds, wider level gaps, matching boat licenses, both travel gates,
+retained v7 access, one-time save migration, persistent discoveries, and malformed
+save handling. Weight tests cover every species and bait tier, bounded bonuses,
+strictly heavier averages after display rounding, and unchanged saved catches. The economy tests also compare every paid price to the
 published v25 baseline and verify that price changes preserve owned items and coins.
 
 `npm run economy` prints the deterministic income estimates and saving goals for
@@ -211,8 +245,9 @@ every gear tier and boat, using fixed weight quantiles rather than lucky random 
 
 Optional browser tests exercise all **69 paid gear purchases and five boat purchases**,
 including one-coin-short rejection, displayed-versus-charged prices and free re-equips.
-They also cover the real cast/hook/tension/catch/sale loop, all 30 sailing routes,
-old-save boot, and mobile controls:
+They also cover all five new level boundaries, retained old-save access, displayed
+bait bonuses and actual equipped-bait hook weights, the real cast/hook/tension/catch/sale
+loop, all 30 sailing routes, old-save boot, and mobile controls:
 
 ```sh
 # Use an installed Chromium/Chrome:

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ISLANDS, BOATS } from './archipelago.mjs?v=26';
+import { ISLANDS, BOATS } from './archipelago.mjs?v=28';
 
 const UNIT = new THREE.BoxGeometry(1, 1, 1);
 const scratch = new THREE.Object3D();

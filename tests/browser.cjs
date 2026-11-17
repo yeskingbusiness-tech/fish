@@ -21,6 +21,8 @@ fs.mkdirSync(shots,{recursive:true});
   async function screenshot(name){await page.waitForTimeout(150);await page.screenshot({path:`${shots}/${name}.png`});}
   try{
     await boot();
+    const islandLevels=await page.evaluate(()=>__reelDeal.ISLANDS.map(i=>i.level));
+    assert.deepEqual(islandLevels,[1,10,25,45,65,90]);
     // Book secrecy + modal input isolation.
     await page.keyboard.press('f');
     assert.equal(await page.locator('.fish-entry.undiscovered').count(),120);
@@ -33,15 +35,43 @@ fs.mkdirSync(shots,{recursive:true});
     await screenshot('index-undiscovered');await page.keyboard.press('Escape');
     console.log('PASS: 120 secret entries; overlays cannot move/cast');
 
+    // Every new level gate must agree across chart labels, disabled controls and runtime guards.
+    for(let id=1;id<6;id++){
+      await atVendor('port',0);
+      await page.evaluate(id=>{const a=__reelDeal;a.G.xp=a.xpForLevel(a.ISLANDS[id].level)-1;a.G.licenses=[0];a.G.boat=0;a.G.ownedBoats=[0];a.G.coins=1000000;a.world.setBoat(0);a.openChart();a.updateStats();},id);
+      await page.locator(`[data-destination="${id}"]`).click();
+      assert.equal(await page.locator(`[data-destination="${id}"]`).evaluate(e=>e.classList.contains('locked')),true);
+      assert.equal(await page.locator('#sailBtn').isDisabled(),true);
+      assert.match(await page.locator('.destination-requirement').textContent(),new RegExp(`Reach level ${islandLevels[id]}`));
+      assert.match(await page.locator('#journeyObjective').textContent(),new RegExp(`level ${islandLevels[id]}$`));
+      await page.click('#boatsTab');
+      assert.equal(await page.locator(`[data-boat="${id}"]`).isDisabled(),true);
+      assert.equal(await page.locator(`[data-boat="${id}"]`).textContent(),`LEVEL ${islandLevels[id]} REQUIRED`);
+      assert.equal(await page.evaluate(id=>{const a=__reelDeal;a.buyBoat(id);return a.G.boat===0&&a.G.coins===1000000&&!a.G.ownedBoats.includes(id);},id),true);
+      // Even owning the right boat cannot bypass the level gate.
+      assert.equal(await page.evaluate(id=>{const a=__reelDeal;a.G.boat=id;a.G.ownedBoats=[0,id];return a.sailTo(id);},id),false);
+      await page.evaluate(id=>{const a=__reelDeal;a.G.xp=a.xpForLevel(a.ISLANDS[id].level);a.G.boat=0;a.G.ownedBoats=[0];a.G.coins=a.BOATS[id].cost;a.renderChart();},id);
+      assert.equal(await page.locator(`[data-boat="${id}"]`).isDisabled(),false);
+      await page.locator(`[data-boat="${id}"]`).click();
+      assert.deepEqual(await page.evaluate(()=>[__reelDeal.G.boat,__reelDeal.G.coins]),[id,0]);
+      await page.click('#destinationsTab');await page.locator(`[data-destination="${id}"]`).click();
+      assert.equal(await page.locator('#sailBtn').isDisabled(),false);
+      await page.click('#sailBtn');await page.click('#skipVoyage');
+      assert.equal(await page.evaluate(()=>__reelDeal.G.zone),id);
+    }
+    await atVendor('port',0);
+    await page.evaluate(()=>{const a=__reelDeal;a.G.xp=0;a.G.licenses=[0];a.G.boat=0;a.G.ownedBoats=[0];a.G.visited=[0];a.G.coins=0;a.world.setBoat(0);a.saveGame();a.spawnAtIsland(0);a.updateStats();});
+    console.log('PASS: all five wider level boundaries, chart/HUD labels, boat locks and exact-threshold voyages');
+
     // Boats require a physical dock, a license, and the exact price.
     await page.click('#mapBtn');await page.click('#boatsTab');
     assert.equal(await page.locator('[data-boat="1"]').isDisabled(),true);
-    const noRemote=await page.evaluate(()=>{const a=__reelDeal;a.G.xp=a.xpForLevel(50);a.G.coins=999999;const n=a.G.coins;a.buyBoat(5);return a.G.coins===n&&a.G.boat===0;});
+    const noRemote=await page.evaluate(()=>{const a=__reelDeal;a.G.xp=a.xpForLevel(a.ISLANDS.at(-1).level);a.G.coins=999999;const n=a.G.coins;a.buyBoat(5);return a.G.coins===n&&a.G.boat===0;});
     assert.equal(noRemote,true);
     await atVendor('port',0);await page.evaluate(()=>{const a=__reelDeal;a.G.xp=0;a.G.coins=999999;a.openChart();});
     await page.locator('[data-destination="1"]').click();assert.equal(await page.locator('#sailBtn').isDisabled(),true);
     assert.equal(await page.evaluate(()=>__reelDeal.sailTo(1)),false);
-    await page.evaluate(()=>{const a=__reelDeal;const c=a.G.coins;a.buyBoat(1);if(a.G.coins!==c)throw Error('level gate bypass');a.G.xp=a.xpForLevel(5);a.G.coins=a.BOATS[1].cost-1;a.renderChart();});
+    await page.evaluate(()=>{const a=__reelDeal;const c=a.G.coins;a.buyBoat(1);if(a.G.coins!==c)throw Error('level gate bypass');a.G.xp=a.xpForLevel(a.ISLANDS[1].level);a.G.coins=a.BOATS[1].cost-1;a.renderChart();});
     await page.click('#boatsTab');assert.equal(await page.locator('[data-boat="1"]').isDisabled(),true);
     assert.equal(await page.evaluate(()=>{const a=__reelDeal;a.buyBoat(1);return a.G.coins===a.BOATS[1].cost-1&&a.G.boat===0;}),true);
     await page.evaluate(()=>{__reelDeal.G.coins=__reelDeal.BOATS[1].cost;__reelDeal.renderChart();});
@@ -53,9 +83,9 @@ fs.mkdirSync(shots,{recursive:true});
     assert.equal(await page.evaluate(()=>__reelDeal.G.zone),1);
     assert.equal(await page.evaluate(()=>__reelDeal.walkable(__reelDeal.G.px,__reelDeal.G.pz)),true);
     await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>!!window.__reelDeal);
-    assert.deepEqual(await page.evaluate(()=>[__reelDeal.G.zone,__reelDeal.G.boat,__reelDeal.level()]),[1,1,5]);
+    assert.deepEqual(await page.evaluate(()=>[__reelDeal.G.zone,__reelDeal.G.boat,__reelDeal.level()]),[1,1,islandLevels[1]]);
     await page.click('#startBtn');await page.evaluate(()=>document.exitPointerLock?.());
-    await atVendor('port',1);await page.evaluate(()=>{const a=__reelDeal;a.G.xp=a.xpForLevel(50);a.openChart();});
+    await atVendor('port',1);await page.evaluate(()=>{const a=__reelDeal;a.G.xp=a.xpForLevel(a.ISLANDS.at(-1).level);a.openChart();});
     assert.equal(await page.evaluate(()=>__reelDeal.sailTo(2)),false,'correct level but wrong boat must fail');
     await page.click('#boatsTab');
     for(let id=2;id<6;id++){
@@ -75,9 +105,16 @@ fs.mkdirSync(shots,{recursive:true});
     // All 18 separate vendors display exactly their four local tiers.
     for(let zone=0;zone<6;zone++)for(const kind of ['rod','line','bait']){
       await atVendor(kind,zone);
-      await page.evaluate(kind=>{const a=__reelDeal;a.G.xp=a.xpForLevel(60);a.G.coins=1000000;a.openShop(kind);},kind);
+      await page.evaluate(kind=>{const a=__reelDeal;a.G.xp=a.xpForLevel(a.ISLANDS.at(-1).level);a.G.coins=1000000;a.openShop(kind);},kind);
       const rows=await page.locator('#shopBody .rod-card').evaluateAll(rows=>rows.map(r=>Number(r.dataset.tier)));
       assert.deepEqual(rows,[zone*4,zone*4+1,zone*4+2,zone*4+3]);
+      if(kind==='bait'){
+        assert.match(await page.locator('#shopNote').textContent(),/small weight boost/);
+        for(const tier of rows){
+          const label=await page.evaluate(tier=>{const b=__reelDeal.BAITS[tier];return b.weightBonus?`WEIGHT UP TO +${(b.weightBonus*100).toLocaleString('en-US')}%`:'STANDARD WEIGHT';},tier);
+          assert.ok((await page.locator(`#shopBody [data-tier="${tier}"] .rod-info`).textContent()).includes(label));
+        }
+      }
       const wrong=((zone+1)%6)*4+2;
       const denied=await page.evaluate(({kind,wrong})=>{const a=__reelDeal;const before=a.G.coins;a.buyGear(kind,wrong);return a.G.coins===before;},{kind,wrong});assert.equal(denied,true);
       for(const buy of rows.filter(i=>i>0)){
@@ -154,17 +191,72 @@ fs.mkdirSync(shots,{recursive:true});
     assert.equal(await page.evaluate(()=>Object.keys(__reelDeal.G.discoveries).length),1);assert.equal(await page.evaluate(()=>__reelDeal.bag.length),0);
     console.log('PASS: actual cast/hook/reel, new entry + XP, no duplicate award, sale, reload');
 
+    // Same fish and random weight quantile: the equipped bait must affect the actual hook.
+    await page.click('#startBtn');await page.evaluate(()=>document.exitPointerLock?.());
+    const hookWeights=await page.evaluate(()=>{
+      const a=__reelDeal,original=Math.random,weights=[];
+      a.spawnAtIsland(0);a.G.owned.bait=[0,2];
+      try{
+        for(const bait of [0,2,0]){
+          a.G.gear.bait=bait;a.G.state='bite';
+          let calls=0;Math.random=()=>calls++===0?0:.5;
+          a.hookFish();
+          if(a.G.state!=='reeling')throw Error('Bait weight hook did not start');
+          weights.push(a.G.fishWeight);
+        }
+      }finally{Math.random=original;}
+      return weights;
+    });
+    assert.deepEqual(hookWeights,[1.1,1.2,1.1]);
+    assert.equal(await page.evaluate(()=>__reelDeal.G.caught),1,'hook tests must not award extra catches');
+    console.log('PASS: all 24 displayed bait bonuses; actual hooks get heavier with better bait and reset on re-equip');
+
+    // v7 earned licenses remain usable below the new level, without changing XP or coins.
+    await page.evaluate(()=>{const a=__reelDeal;localStorage.clear();localStorage.setItem('reel-deal-save-v7',JSON.stringify({version:7,coins:54321,xp:a.xpForLevel(22),caught:42,zone:3,visited:[0,1,2,3],boat:3,ownedBoats:[0,3],owned:{rod:[0,12],line:[0,12],bait:[0,11]},gear:{rod:12,line:12,bait:11}}));});
+    await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>!!window.__reelDeal);
+    assert.deepEqual(await page.evaluate(()=>{const a=__reelDeal;return [a.G.coins,a.G.xp===a.xpForLevel(22),a.G.zone,a.G.boat,a.G.licenses];}),[54321,true,3,3,[0,1,2,3]]);
+    assert.equal(await page.evaluate(()=>!!localStorage.getItem('reel-deal-save-v8')&&!localStorage.getItem('reel-deal-save-v7')),true);
+    await page.click('#startBtn');await page.evaluate(()=>document.exitPointerLock?.());
+    assert.match(await page.locator('#journeyObjective').textContent(),/Emberforge at level 65/);
+    await atVendor('rod',3);await page.evaluate(()=>__reelDeal.openShop('rod'));
+    const retainedGearCost=await page.evaluate(()=>__reelDeal.RODS[13].cost);
+    await page.locator('[data-buy="13"]').click();
+    assert.deepEqual(await page.evaluate(()=>[__reelDeal.G.coins,__reelDeal.G.gear.rod]),[54321-retainedGearCost,13]);
+    await atVendor('port',3);await page.evaluate(()=>__reelDeal.openChart());await page.click('#boatsTab');
+    await page.locator('[data-boat="0"]').click();await page.locator('[data-boat="3"]').click();
+    assert.deepEqual(await page.evaluate(()=>[__reelDeal.G.coins,__reelDeal.G.boat]),[54321-retainedGearCost,3]);
+    // An earned-but-unpurchased boat can still be bought on its retained license.
+    const retainedBoatCost=await page.evaluate(()=>__reelDeal.BOATS[2].cost);
+    await page.locator('[data-boat="2"]').click();
+    assert.equal(await page.evaluate(()=>__reelDeal.G.coins),54321-retainedGearCost-retainedBoatCost);
+    await page.click('#destinationsTab');await page.locator('[data-destination="2"]').click();
+    assert.match(await page.locator('#destinationDetail .eyebrow').textContent(),/RETAINED/);
+    assert.equal(await page.locator('#sailBtn').isDisabled(),false);
+    await page.click('#sailBtn');await page.click('#skipVoyage');
+    assert.equal(await page.evaluate(()=>__reelDeal.G.zone),2);
+    await atVendor('port',2);await page.evaluate(()=>__reelDeal.openChart());await page.locator('[data-destination="3"]').click();
+    assert.equal(await page.locator('#sailBtn').isDisabled(),true,'retained license cannot bypass boat range');
+    await page.click('#boatsTab');await page.locator('[data-boat="3"]').click();
+    await page.click('#destinationsTab');await page.locator('[data-destination="3"]').click();
+    assert.equal(await page.locator('#sailBtn').isDisabled(),false);
+    // Reaching an OLD milestone after migration must not grant another old license on reload.
+    await page.evaluate(()=>{const a=__reelDeal;a.G.xp=a.xpForLevel(35);a.saveGame();});
+    await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>!!window.__reelDeal);
+    assert.equal(await page.evaluate(()=>__reelDeal.hasLicense(4)),false);
+    assert.deepEqual(await page.evaluate(()=>__reelDeal.G.licenses),[0,1,2,3]);
+    console.log('PASS: v7 licenses retained for travel, gear and boats; XP/coins preserved; migration is one-time');
+
     // Old-save migration through the actual boot path.
     await page.evaluate(()=>{localStorage.clear();localStorage.setItem('reel-life-3d-save-v6',JSON.stringify({coins:4321,caught:25,owned:{rod:[0,14],line:[0,12],bait:[0,10]},gear:{rod:14,line:12,bait:10},bag:[{n:'Bluegill',w:'1.2'}],log:[{n:'Bluegill',w:'1.2'}]}));});
     await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>!!window.__reelDeal);
     assert.deepEqual(await page.evaluate(()=>[__reelDeal.G.coins,__reelDeal.G.gear.rod,__reelDeal.level(),__reelDeal.G.boat,__reelDeal.bag.length]),[4321,14,22,3,1]);
-    assert.equal(await page.evaluate(()=>!!localStorage.getItem('reel-deal-save-v7')&&!localStorage.getItem('reel-life-3d-save-v6')),true);
+    assert.equal(await page.evaluate(()=>!!localStorage.getItem('reel-deal-save-v8')&&!localStorage.getItem('reel-life-3d-save-v6')),true);
     await page.click('#startBtn');await page.evaluate(()=>document.exitPointerLock?.());
     console.log('PASS: old save migrated without losing money, gear, fish or island access');
 
     // Screenshots of each biome, and all 30 boat routes avoid land.
     await page.setViewportSize({width:1365,height:850});
-    await page.evaluate(()=>{const a=__reelDeal;a.G.xp=a.xpForLevel(60);a.G.boat=5;a.G.ownedBoats=[0,1,2,3,4,5];a.world.setBoat(5);});
+    await page.evaluate(()=>{const a=__reelDeal;a.G.xp=a.xpForLevel(a.ISLANDS.at(-1).level);a.G.boat=5;a.G.ownedBoats=[0,1,2,3,4,5];a.world.setBoat(5);});
     const blocked=[];
     for(let from=0;from<6;from++)for(let to=0;to<6;to++)if(from!==to){
       await atVendor('port',from);
@@ -203,7 +295,12 @@ fs.mkdirSync(shots,{recursive:true});
     await mp.locator('[data-destination="5"]').click();assert.equal(await mp.locator('#sailBtn').isDisabled(),true);
     const box=await mp.locator('.expedition-card').boundingBox();assert.ok(box.x>=0&&box.x+box.width<=391&&box.y+box.height<=845);
     await mp.screenshot({path:`${shots}/mobile-chart.png`});await mp.click('#boatsTab');await mp.screenshot({path:`${shots}/mobile-boats.png`});
-    await mobile.close();console.log('PASS: mobile drag-look, joystick, index, chart, boat shop');
+    await mp.click('#chartClose');
+    await mp.evaluate(()=>{const a=__reelDeal,s=a.world.stalls.find(s=>s.zone===0&&s.kind==='bait');a.G.px=s.x;a.G.pz=s.z-3.8;a.openShop('bait');});
+    assert.match(await mp.locator('#shopBody [data-tier="1"] .rod-info').textContent(),/WEIGHT UP TO \+0\.5%/);
+    assert.equal(await mp.locator('#shopBody').evaluate(e=>e.scrollWidth<=e.clientWidth+1),true);
+    await mp.screenshot({path:`${shots}/mobile-bait.png`});
+    await mobile.close();console.log('PASS: mobile drag-look, joystick, index, chart, boat shop and bait weight stats');
     console.log('Renderer:',await page.evaluate(()=>({calls:__reelDeal.renderer.info.render.calls,triangles:__reelDeal.renderer.info.render.triangles})));
     assert.deepEqual(errors,[],'No browser errors allowed');
     console.log('ALL BROWSER CHECKS PASSED');

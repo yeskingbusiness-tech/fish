@@ -61,6 +61,6 @@ function report(){
     'coins/catch':r.income.toFixed(1), 'landed catches':r.catches.toFixed(1),
   })));
   console.log('These are expected landed-and-sold catches, not guarantees or catch attempts.');
-  console.log('Prices are fixed; fish sale values, XP and existing ownership are unchanged.');
+  console.log('Prices, sale/XP formulas and existing ownership are unchanged; bait weight bonuses are included.');
 }
 if(process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) report();
