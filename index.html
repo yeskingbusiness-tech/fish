@@ -7,12 +7,12 @@
 <meta name="description" content="A cube-built fishing adventure. Explore six islands, buy boats, master 72 gear upgrades and discover all 120 fish." />
 <meta name="theme-color" content="#193d45" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23193d45'/%3E%3Crect x='14' y='24' width='28' height='16' fill='%23f0d49a'/%3E%3Crect x='42' y='16' width='8' height='10' fill='%23f0d49a'/%3E%3Crect x='42' y='38' width='8' height='10' fill='%23f0d49a'/%3E%3Crect x='48' y='26' width='6' height='12' fill='%23f0d49a'/%3E%3Crect x='20' y='28' width='4' height='4' fill='%23193d45'/%3E%3C/svg%3E" />
-<link rel="stylesheet" href="style.css?v=33" />
-<script type="importmap">{"imports":{"three":"./vendor/three.module.js?v=33"}}</script>
+<link rel="stylesheet" href="style.css?v=34" />
+<script type="importmap">{"imports":{"three":"./vendor/three.module.js?v=34"}}</script>
 </head>
 <body>
 <div id="app">
-  <canvas id="scene" aria-label="First-person cube fishing world"></canvas>
+  <canvas id="scene" aria-label="Cube fishing world"></canvas>
   <div id="hud">
     <div class="hud-top">
       <div class="brand"><div class="brand-icon">RD</div><div><h1>REEL DEAL <span>3D</span></h1><p>THE ARCHIPELAGO</p></div></div>
@@ -36,8 +36,11 @@
       <button id="mapBtn" class="nav-btn"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5l6-2 6 2 6-2v16l-6 2-6-2-6 2zM9 3v16m6-14v16"/></svg></span> Sea chart <kbd>M</kbd></button>
       <button id="indexBtn" class="nav-btn"><span class="nav-icon">▤</span> Fish index <small id="indexCount">0/120</small><kbd>F</kbd></button>
       <button id="kitBtn" class="nav-btn"><span class="nav-icon">▥</span> Tackle bag <kbd>I</kbd></button>
+      <button id="bagBtn" class="nav-btn"><span class="nav-icon" aria-hidden="true">▱</span> Fish bag <small id="bagCount">0</small><kbd>B</kbd></button>
+      <button id="viewBtn" class="nav-btn" aria-pressed="false" aria-label="Switch to front-facing third-person view (V)"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h5l2-3h4l2 3h5v14H3z"/><rect x="9" y="10" width="6" height="6"/></svg></span><span id="viewLabel">Front view</span><kbd>V</kbd></button>
     </div>
     <div id="equipmentStrip" class="equipment-strip"></div>
+    <div id="heldFishBar" class="held-fish-bar hidden"><div role="status" aria-live="polite"><span class="eyebrow">SHOWING YOUR CATCH</span><strong id="heldFishName"></strong><small id="heldFishWeight"></small></div><button id="putAwayBtn" class="ghost-btn">Put away <kbd>X</kbd></button></div>
     <div id="biteIndicator">!</div><div id="crosshair"></div>
     <div id="prompt" class="prompt">Hold click to cast. Turn around to visit the village.</div>
     <div id="castMeter" class="cast-meter hidden"><div class="cast-label"><span>CAST POWER <b id="castPowerValue">0%</b></span><span id="castLuck" class="negative">LUCK -10%</span></div><div class="cast-track"><div id="castFill"></div></div></div>
@@ -51,7 +54,7 @@
     <button id="portBtn" class="shop-btn port hidden">Boat Shop &amp; Voyages <b>E</b></button>
     <div id="lockHint" class="lock-hint hidden">Click to look around</div>
     <div id="stick" class="stick hidden"><div class="stick-knob"></div></div>
-    <div class="controls-hint"><span>WASD walk · Shift jog</span><span>Mouse look</span><span>Hold &amp; release to cast</span><span>Space hook / tension</span><span>E interact</span></div>
+    <div class="controls-hint"><span>WASD walk · Shift jog</span><span>Mouse look</span><span>Hold &amp; release to cast</span><span>Space hook / tension</span><span>E interact</span><span>B fish bag · V front view</span></div>
     <div id="voyageHUD" class="voyage-hud hidden"><span class="eyebrow">OUT ON THE WATER</span><h2 id="voyageName"></h2><p id="voyageDetail"></p><div class="voyage-track"><div id="voyageFill"></div></div><button id="skipVoyage" class="ghost-btn">Skip crossing →</button></div>
     <div id="arrivalBanner" class="arrival-banner hidden"><span class="eyebrow">LAND AHOY</span><h2 id="arrivalName"></h2><p id="arrivalDesc"></p></div>
   </div>
@@ -64,6 +67,13 @@
     </div>
   </div>
   <div id="marketOverlay" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="marketTitle"><div class="shop-card"><div class="shop-head market-head"><h2 id="marketTitle">Fish Market</h2><div class="shop-coins">COINS <span id="marketCoins">0</span></div><button id="marketClose" class="shop-close" aria-label="Close market">✕</button></div><p id="marketNote" class="panel-note">Complete an island’s fish index to earn +5% sale coins forever. Selling never erases discoveries.</p><div id="marketBody" class="shop-body"></div></div></div>
+
+  <div id="fishBagOverlay" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="fishBagTitle">
+    <div class="shop-card fish-bag-card"><div class="shop-head"><div><span class="eyebrow">YOUR LANDED CATCHES</span><h2 id="fishBagTitle">Your fish bag</h2></div><span id="fishBagCount" class="fish-bag-count">0 fish</span><button id="fishBagClose" class="shop-close" aria-label="Close fish bag">✕</button></div>
+      <p class="panel-note">Pick a fish to hold in front of you. It stays in your bag until sold. <b>Front view / V</b> shows your character holding it. Put it away to fish again.</p>
+      <div id="fishBagBody" class="shop-body"></div>
+    </div>
+  </div>
 
   <div id="chartOverlay" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="chartTitle">
     <div class="expedition-card"><div class="shop-head"><div><span class="eyebrow">THE REEL DEAL ARCHIPELAGO</span><h2 id="chartTitle">Choose your next horizon.</h2></div><button id="chartClose" class="shop-close" aria-label="Close sea chart">✕</button></div>
@@ -87,9 +97,9 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
   <aside id="logDrawer" class="drawer hidden" aria-label="Catch log"><div class="drawer-head"><h3>Catch Log</h3><div class="drawer-actions"><button id="resetBtn" class="ghost-btn">Reset</button><button id="closeLog" aria-label="Close catch log">✕</button></div></div><div id="logList"><p class="empty">No fish yet. Cast your line!</p></div><div class="drawer-foot" id="logSummary"></div></aside>
   <div id="startOverlay" class="start-overlay">
-    <div class="start-card"><span class="update-badge">THE ARCHIPELAGO UPDATE</span><div class="start-art" id="startArt"></div><h2>REEL DEAL <span>3D</span></h2><p class="start-lead">A little boat. A bigger world.</p><p>Six cube-built islands. One hundred and twenty secrets beneath the surface. Your next great catch is out there.</p><div class="start-features"><span>06 <small>ISLANDS</small></span><span>120 <small>FISH</small></span><span>72 <small>GEAR TIERS</small></span></div><ul><li><b>WASD</b> to walk · mouse to look</li><li><b>Hold &amp; release</b> to cast · Space to hook</li><li><b>Green</b> reels in · avoid red tension</li><li><b>Catch</b> to level up · sell to buy gear &amp; boats</li><li><b>E</b> at stalls · <b>M</b> chart · <b>F</b> index · <b>I</b> tackle</li></ul><button id="startBtn" class="primary-btn big">Let’s go fishing →</button><p class="tiny">Progress saves automatically on this device.</p></div>
+    <div class="start-card"><span class="update-badge">THE ARCHIPELAGO UPDATE</span><div class="start-art" id="startArt"></div><h2>REEL DEAL <span>3D</span></h2><p class="start-lead">A little boat. A bigger world.</p><p>Six cube-built islands. One hundred and twenty secrets beneath the surface. Your next great catch is out there.</p><div class="start-features"><span>06 <small>ISLANDS</small></span><span>120 <small>FISH</small></span><span>72 <small>GEAR TIERS</small></span></div><ul><li><b>WASD</b> to walk · mouse to look</li><li><b>Hold &amp; release</b> to cast · Space to hook</li><li><b>Green</b> reels in · avoid red tension</li><li><b>Catch</b> to level up · sell to buy gear &amp; boats</li><li><b>E</b> at stalls · <b>M</b> chart · <b>F</b> index · <b>I</b> tackle</li><li><b>B</b> fish bag · <b>V</b> front view · <b>X</b> put fish away</li></ul><button id="startBtn" class="primary-btn big">Let’s go fishing →</button><p class="tiny">Progress saves automatically on this device.</p></div>
   </div>
 </div>
-<script type="module" src="main.js?v=33"></script>
+<script type="module" src="main.js?v=34"></script>
 </body>
 </html>

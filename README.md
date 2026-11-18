@@ -1,7 +1,7 @@
 # Reel Deal 3D — The Archipelago
 
-A first-person, cube-built fishing adventure. **Six explorable islands, 120 fish,
-three 24-tier gear ladders, six boats, and a persistent fish index.** Walk the docks
+A cube-built fishing adventure with first-person and front-facing third-person views.
+**Six explorable islands, 120 fish, three 24-tier gear ladders, six boats, and a persistent fish index.** Walk the docks
 and villages, sell your catches, earn island licenses, and sail to better waters.
 
 Everything in the world is made from cuboids: islands, trees, fish, boats, vendors,
@@ -272,6 +272,33 @@ Fish already in your bag receive the boost when sold, including the fish that
 completes an island. Existing wallet coins are not multiplied or retroactively paid.
 Shop prices, fish eligibility, XP and the cast-luck/reeling rules are unchanged.
 
+## Hold your catch and front view · v34
+
+Open the **Fish bag (B)** from anywhere to see each **unsold, landed fish**, including
+its species, rarity and actual weight. Choose **Hold** to close the bag and hold that
+fish in front of you. This is separate from the tackle bag (I) and fish index (F):
+sold fish and undiscovered species are not selectable.
+
+Press **V**, or the **Front view** button, to see your character **from the front**.
+Press the same key/button again to return to first person. The character is a very
+simple cuboid angler with a cap, vest, arms and legs, a small walk animation, and a
+two-handed fish-holding pose. **Your body, hands and sleeves are never rendered in
+first person**—only the rod, or the held fish. No character assets are downloaded.
+
+- **X / Put away** stows the fish without removing it from your bag. Put it away
+  before casting again. Touch look-drags never accidentally stow or cast it.
+- Holding is display-only: no extra XP, coins, discoveries, weight changes or sale
+  charges. Larger fish display larger, but giants are scaled to fit the screen.
+- Selling the held specimen (including Sell All) clears the display. Selling a
+  different fish does not change what is held, even for identical duplicates.
+- Walking and fishing work in either view. The front camera is separate from the
+  player’s aim, so it never reverses casts or changes bait luck, reach or reeling.
+  Finish an active cast/fight before switching views or opening the fish bag.
+- The camera follows the player and shortens its distance near island obstacles.
+  Voyages temporarily use the boat camera, then restore your chosen view and fish.
+- Reloading returns to first person with the fish put away; the actual bag and all
+  earned progress remain saved. There is **no save-key change or migration**.
+
 ## Controls
 
 | Action | Desktop | Touch |
@@ -286,6 +313,9 @@ Shop prices, fish eligibility, XP and the cast-luck/reeling rules are unchanged.
 | Sea chart / boats | M | Sea chart button |
 | Fish index | F | Fish index button |
 | Owned tackle | I | Tackle bag button |
+| Fish bag / choose a catch to hold | B | Fish bag button, then Hold |
+| Front-facing third person / first person | V (toggle) | Front view / First person button |
+| Put held fish away | X | Put away button |
 | Close panel / release cursor | Escape | Close button / backdrop |
 
 If pointer lock is unavailable, **drag with the mouse to look**; this still supports a
@@ -338,11 +368,11 @@ Use a **Static Site**—no server or build is necessary:
 Alternatively, a Node Web Service can use `npm install` / `npm start`; `serve.js` honors
 Render's `PORT`. Static hosting avoids the need for a running Node process.
 
-For other static hosts, deploy `index.html`, `style.css`, `main.js`, **all four `.mjs`
+For other static hosts, deploy `index.html`, `style.css`, `main.js`, **all five `.mjs`
 modules**, and `vendor/`. Every browser-facing path is relative and every dependency is
 local. `.mjs` must be served as JavaScript (already handled by `serve.js`).
 
-Cache stamps are currently **`v=33`** in the HTML and module imports. Bump the corresponding
+Cache stamps are currently **`v=34`** in the HTML and module imports. Bump the corresponding
 stamps when changing a cached module. Render's blueprint also sends `Cache-Control: no-cache`.
 
 ## Testing
@@ -364,6 +394,8 @@ XP balance tests cover all rarity/size/island rewards, unchanged starter XP, exa
 discovery rounding, repeat-catch budgets for every arrival/local bait at low/mid/full
 power, and audit agreement with the actual picker. They also check exact saved XP
 and licenses at all 99 levels, the unchanged v8 key, and frozen v6 XP reconstruction.
+Player-view tests cover bounded display sizing for every species, every camera
+heading, obstacle clearance, and portrait framing without changing fish/aim data.
 Economy tests also compare prices to published baselines, enforce every next-voyage
 boat premium against all local stock, and verify that ownership and coins are preserved.
 
@@ -390,7 +422,12 @@ adds a last-species unlock, pre-existing bag bonuses, exact single/bulk payouts,
 global stacking, save/reload persistence, reset, and responsive reward UI checks.
 `tests/xp-browser.cjs` verifies exact awarded/displayed/saved XP, rarity/weight
 improvements, the one-time discovery bonus, no XP from sales or duplicate landings,
-all five catch-triggered island unlocks, the level-99 cap, and mobile mythic payouts:
+all five catch-triggered island unlocks, the level-99 cap, and mobile mythic payouts.
+`tests/player-view-browser.cjs` checks real/empty bags, keyboard focus and input
+isolation, selecting individual specimens, identical-fish sales, resource disposal,
+actual character render visibility, all 120 fish shapes in both views at desktop and
+phone sizes, a real third-person cast/hook/reel/catch, travel/reload/reset, and touch
+look/joystick/Put away controls:
 
 ```sh
 # Use an installed Chromium/Chrome:
@@ -408,7 +445,8 @@ required to run or deploy the game.
 
 | File | Purpose |
 | --- | --- |
-| `main.js` | Fishing, input, UI, shops, collection, voyage playback, saves |
+| `main.js` | Fishing, input, UI, shops, carried catches, collection, voyage playback, saves |
+| `player-view.mjs` | Basic cuboid player, front camera framing and bounded held-fish sizing |
 | `game-data.mjs` | 120 species, 72 gear tiers, fish pools, prices and weight rolls |
 | `archipelago.mjs` | Island / boat definitions, XP and travel requirements |
 | `world.mjs` | Merged cube terrain and props, collision, distant-island LOD, sea routing |

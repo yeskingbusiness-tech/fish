@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ISLANDS, BOATS } from './archipelago.mjs?v=33';
+import { ISLANDS, BOATS } from './archipelago.mjs?v=34';
 
 const UNIT = new THREE.BoxGeometry(1, 1, 1);
 const scratch = new THREE.Object3D();
@@ -407,5 +407,6 @@ export function createWorld(scene){
     }
     tempColor.setHex(zone===5?0xe6deff:0xffefd0);sun.material.color.lerp(tempColor,dt*1.2);
   }
-  return { root,water,waterUniforms,stalls,islands,groundAt,surfaceAt,inWater,dockPoint,route,update,setBoat,get boat(){return boat;} };
+  return { root,water,waterUniforms,stalls,islands,groundAt,surfaceAt,inWater,dockPoint,route,update,setBoat,
+    cameraBlockers:ISLANDS.map(i=>colliders.filter(b=>b.zone===i.id)),get boat(){return boat;} };
 }

@@ -13,11 +13,12 @@ const hexc  = c => '#' + c.toString(16).padStart(6,'0');
 const fmt   = n => n.toLocaleString('en-US');
 
 import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow, sortFishIndex, castLuckModifier, effectiveLuck,
-  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=33';
+  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=34';
 import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, hasIslandLicense, travelRequirement,
-  ISLAND_COLLECTION_BONUS, islandCollectionProgress, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=33';
-import { createWorld } from './world.mjs?v=33';
-import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=33';
+  ISLAND_COLLECTION_BONUS, islandCollectionProgress, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=34';
+import { createWorld } from './world.mjs?v=34';
+import { createPlayerModel, heldFishSpan, frontViewPose } from './player-view.mjs?v=34';
+import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=34';
 
 const pickSpecies = () => drawSpecies(G.zone, G.gear.bait, Math.random, G.castPower);
 const rollWeight = sp => drawWeight(sp, G.gear.bait, Math.random, G.castPower);
@@ -158,6 +159,8 @@ const PORTRAIT = () => innerHeight > innerWidth;
 const camera = new THREE.PerspectiveCamera(PORTRAIT() ? 72 : 58, innerWidth/innerHeight, 0.1, 1400);
 camera.rotation.order = 'YXZ';
 camera.position.set(0, 2.77, 5.0);
+// Keep fishing aim at the player's eyes; the front camera is presentation only.
+const frontCamera = new THREE.PerspectiveCamera(PORTRAIT() ? 60 : 52, innerWidth/innerHeight, 0.1, 1400);
 
 // Lights (no shadows)
 scene.add(new THREE.HemisphereLight(0xd8f4ff, 0x4a8a6a, 1.15));
@@ -264,19 +267,23 @@ const gripMat = mat(0x27343c);
   rodRig.add(box(0.05, 0.05, 0.06, gripMat, 0, 0.46, 0.09));
 }
 const tipJoint = new THREE.Group();
+tipJoint.name = 'rod-bend';
 tipJoint.position.y = 0.9;
 rodRig.add(tipJoint);
 tipJoint.add(box(0.04, 0.62, 0.04, rodMat, 0, 0.31, 0));
 tipJoint.add(box(0.08, 0.08, 0.08, mat(0xef4056), 0, 0.66, 0));
 const rodTipObj = new THREE.Object3D();
+rodTipObj.name = 'rod-tip';
 rodTipObj.position.y = 0.66;
 tipJoint.add(rodTipObj);
 
-// hands
-const skin = mat(0xf0bd92);
-rodRig.add(box(0.12, 0.13, 0.16, skin, 0.005, 0.1, 0.03));
-rodRig.add(box(0.1, 0.11, 0.14, skin, 0.0, 0.26, 0.03));
-rodRig.add(box(0.14, 0.16, 0.14, mat(0x2f5d78), 0, -0.02, 0.02));
+// No first-person hands or sleeves. The entire character lives in this
+// separate root, which is visible only through the front third-person camera.
+const playerModel = createPlayerModel(THREE, rodRig);
+scene.add(playerModel.root);
+const heldFishRig = new THREE.Group();
+heldFishRig.name = 'held-fish';heldFishRig.visible = false;
+camera.add(heldFishRig);
 
 const rodDir = new THREE.Vector3();
 const UP = new THREE.Vector3(0,1,0);
@@ -305,7 +312,7 @@ scene.add(aimMarker);
 const G = {
   state:'menu',                       // menu | aim | charging | casting | waiting | bite | reeling | caught
   score:0, caught:0, best:null,
-  yaw:0, pitch:-0.12,
+  yaw:0, pitch:-0.12, thirdPerson:false, // view preference is transient, not a save migration
   power:0, powerDir:1, castPower:0.5, // live charge vs. released cast snapshot (not saved)
   tension:15, progress:0, fishStrength:0.3,
   surgeTimer:0, surgeDur:0, yankTimer:0, yank:0, yankDur:0, reelHeld:false,
@@ -323,14 +330,19 @@ const G = {
 };
 const EYE = 1.62;
 let shopOpen = false, shopTab = 'rods', marketOpen = false;
-let shopKind = 'rod', kitOpen = false, chartOpen = false, indexOpen = false;
+let shopKind = 'rod', kitOpen = false, chartOpen = false, indexOpen = false, fishBagOpen = false;
 let selectedIsland = 0, indexIsland = -1, fleetTab = false, voyage = null;
 let nearbyStall = null;
-const uiBusy = () => shopOpen || marketOpen || chartOpen || indexOpen || drawerOpen;
+const uiBusy = () => shopOpen || marketOpen || chartOpen || indexOpen || fishBagOpen || drawerOpen;
 const level = () => levelForXp(G.xp);
 const hasLicense = target => hasIslandLicense(target,G.xp,G.licenses);
 
 const bag = G.bag;
+// Keep the actual bag object, not an index: selling another fish cannot change
+// which specimen is being held, including identical species/weight duplicates.
+let heldCatch = null, carriedModel = null;
+const activeCamera = () => G.thirdPerson && !voyage && G.state !== 'menu' ? frontCamera : camera;
+const activeRodTip = () => activeCamera() === frontCamera ? playerModel.rodTip : rodTipObj;
 const bobberPos = new THREE.Vector3(0, 0.1, -6);
 const rodTipWorld = new THREE.Vector3();
 const castFrom = new THREE.Vector3();
@@ -387,6 +399,8 @@ function updateStats(){
   const pool = eligibleSpecies(G.zone, G.gear.bait);
   $('equipmentStrip').innerHTML = `<span>${RODS[G.gear.rod].name}</span><span>${LINES[G.gear.line].name}</span><span class="${pool.length?'':'wrong-bait'}">${BAITS[G.gear.bait].name}${pool.length?'':' · no local bites'}</span><span>${bag.length} fish in bag</span>`;
   $('boatCoins').textContent = fmt(G.coins) + 'c';
+  if(heldCatch && !bag.includes(heldCatch)) stowFish();
+  updateCarryUI();
 }
 function renderLog(){
   if(!log.length){ logList.innerHTML = '<p class="empty">No fish yet. Cast your line!</p>'; logSummary.textContent = ''; return; }
@@ -446,6 +460,9 @@ function setState(s){
   if(s === 'casting'){ promptEl.style.display = ''; setPrompt('Splash!', 'waiting'); }
   if(s === 'caught') promptEl.style.display = 'none';
   if(s === 'charging') promptEl.style.display = 'none';
+  if(s === 'aim' && heldCatch) hidePrompt();
+  updateCarryUI();
+  updatePlayerView();
 }
 
 // ---------- Walking ----------
@@ -486,6 +503,7 @@ function landingPoint(power, out){
 function inWater(p){ return world.inWater(p); }
 function startCharge(){
   if(G.state !== 'aim' || uiBusy()) return;
+  if(heldCatch){showToast('Put away your fish before casting — use X or Put away.');return;}
   if(!eligibleSpecies(G.zone,G.gear.bait).length){ showToast('No local fish take this bait. Open your tackle bag (I) to switch.',true); return; }
   ensureAudio();
   setState('charging');
@@ -495,7 +513,7 @@ function startCharge(){
 function releaseCast(){
   if(G.state !== 'charging') return;
   const power = clamp(G.power,0,1);
-  rodTipObj.getWorldPosition(castFrom);
+  activeRodTip().getWorldPosition(castFrom);
   if(!landingPoint(power, castTo)){
     showToast('Aim at the water to cast.', true);
     aimMarker.visible = true;
@@ -530,10 +548,13 @@ function triggerBite(){
   sfx.bite();
   spawnSplash(bobberPos, 8, 0.5);
 }
+function disposeFishModel(model){
+  if(!model)return;
+  const materials=new Set();model.traverse(o=>{if(o.isMesh)materials.add(o.material);});
+  materials.forEach(m=>m.dispose());model.removeFromParent(); // UNIT geometry is shared.
+}
 function disposeHookedFish(){
-  if(!hookedFish)return;
-  const materials=new Set();hookedFish.traverse(o=>{if(o.isMesh)materials.add(o.material);});
-  materials.forEach(m=>m.dispose());scene.remove(hookedFish);hookedFish=null;
+  disposeFishModel(hookedFish);hookedFish=null;
 }
 function makeFish3D(sp, scale){
   const g = new THREE.Group();
@@ -555,6 +576,90 @@ function makeFish3D(sp, scale){
   if(/Marlin|Gar|Pike|Sturgeon/.test(sp.name))g.add(box(.4,.18,.22,bodyMat,length/2+.13,0,0));
   g.userData={tail};g.scale.setScalar(scale*sp.size);return g;
 }
+// ---------- Fish bag, carried catches and front-facing third person ----------
+function updateCarryUI(){
+  $('bagCount').textContent=fmt(bag.length);
+  $('fishBagCount').textContent=`${fmt(bag.length)} fish`;
+  $('heldFishBar').classList.toggle('hidden',!heldCatch||!!voyage||G.state==='menu');
+  $('heldFishName').textContent=heldCatch?heldCatch.sp.name:'';
+  $('heldFishWeight').textContent=heldCatch?`${Number(heldCatch.weight).toFixed(1)} lb · still in your bag`:'';
+  $('viewLabel').textContent=G.thirdPerson?'First person':'Front view';
+  $('viewBtn').setAttribute('aria-pressed',String(G.thirdPerson));
+  $('viewBtn').setAttribute('aria-label',G.thirdPerson?'Switch to first-person view (V)':'Switch to front-facing third-person view (V)');
+  $('viewBtn').disabled=G.state!=='aim'||uiBusy()||!!voyage;
+  $('putAwayBtn').disabled=G.state!=='aim'||uiBusy()||!!voyage;
+  $('app').classList.toggle('front-view',G.thirdPerson&&!voyage&&G.state!=='menu');
+  $('app').classList.toggle('carrying-fish',!!heldCatch);
+  updateLockHint();
+}
+function updatePlayerView(moving=false){
+  const third=activeCamera()===frontCamera, ground=G.camY-EYE;
+  playerModel.root.visible=third;
+  rodRig.visible=!third&&!heldCatch&&!voyage;
+  heldFishRig.visible=!!heldCatch&&!voyage&&G.state!=='menu';
+  playerModel.pose({x:G.px,z:G.pz,ground,yaw:G.yaw,pitch:G.pitch,time:G.time,stride:G.bob,moving,
+    holding:!!heldCatch,rodRotation:rodRig.quaternion,bend:tipJoint.rotation.x});
+  if(third){
+    const p=frontViewPose({x:G.px,z:G.pz,ground,yaw:G.yaw,pitch:G.pitch,aspect:frontCamera.aspect},world.cameraBlockers[G.zone]);
+    frontCamera.position.set(p.x,p.y,p.z);frontCamera.lookAt(p.targetX,p.targetY,p.targetZ);
+  }
+  if(heldCatch){
+    const parent=third?playerModel.fishMount:camera;
+    if(heldFishRig.parent!==parent)parent.add(heldFishRig);
+    heldFishRig.position.set(0,third?0:-.12,third?0:-1.8);
+    heldFishRig.scale.setScalar(third?1:PORTRAIT()?.6:.85);
+    heldFishRig.rotation.set(0,0,Math.sin(G.time*1.7)*.018);
+    carriedModel.userData.tail.rotation.y=Math.sin(G.time*3)*.12;
+  }
+}
+function toggleView(){
+  if(uiBusy()||voyage||G.state!=='aim')return false;
+  G.thirdPerson=!G.thirdPerson;
+  clearInput();setState('aim');$('viewBtn').blur();
+  return true;
+}
+function openFishBag(){
+  if(uiBusy()||G.state!=='aim'||voyage){if(G.state!=='aim')showToast('Finish your cast before opening your fish bag.');return;}
+  fishBagOpen=true;$('fishBagOverlay').classList.remove('hidden');
+  renderFishBag();updateCarryUI();focusPanel('fishBagClose');
+}
+function closeFishBag(){
+  if(!fishBagOpen)return;
+  fishBagOpen=false;$('fishBagOverlay').classList.add('hidden');resumeWorld();
+}
+function renderFishBag(){
+  $('fishBagCount').textContent=`${fmt(bag.length)} fish`;
+  $('fishBagBody').innerHTML=bag.length?bag.map((e,i)=>{
+    const held=e===heldCatch;
+    return `<article class="carry-row ${held?'selected':''}">
+      <div class="carry-icon">${fishSVG(e.sp)}</div>
+      <div class="carry-copy"><span class="carry-rarity ${e.sp.rarity}">${RARITY[e.sp.rarity].label}</span><b>${e.sp.name}</b><small>${Number(e.weight).toFixed(1)} lb · ${ISLANDS[e.sp.island].short}</small></div>
+      <button class="buy-btn" data-hold-fish="${i}" aria-pressed="${held}" aria-label="${held?'Put away':'Hold'} ${e.sp.name}, ${Number(e.weight).toFixed(1)} pounds">${held?'Put away':'Hold'}</button>
+    </article>`;
+  }).join(''):'<div class="fish-bag-empty"><span aria-hidden="true">▥</span><h3>No fish in your bag yet.</h3><p>Land a catch, then come back to hold it up.<br>Sold fish stay in your index, not in your bag.</p></div>';
+}
+function stowFish(){
+  if(!heldCatch)return false;
+  disposeFishModel(carriedModel);carriedModel=null;heldCatch=null;heldFishRig.visible=false;
+  $('putAwayBtn').blur();
+  updateCarryUI();updatePlayerView();
+  if(G.state==='aim'&&!uiBusy())setState('aim');
+  return true;
+}
+function holdFish(index){
+  if(!fishBagOpen||G.state!=='aim'||voyage||!Number.isInteger(index)||!bag[index])return false;
+  const entry=bag[index];
+  if(heldCatch===entry){stowFish();closeFishBag();return true;}
+  stowFish();
+  const model=makeFish3D(entry.sp,1),bounds=new THREE.Box3().setFromObject(model),size=new THREE.Vector3();
+  bounds.getSize(size);
+  model.scale.multiplyScalar(heldFishSpan(entry.sp,entry.weight)/Math.max(.01,size.x));
+  bounds.setFromObject(model);model.position.sub(bounds.getCenter(new THREE.Vector3()));
+  carriedModel=model;heldCatch=entry;heldFishRig.add(model);
+  closeFishBag();updateCarryUI();updatePlayerView();
+  return true;
+}
+
 // The whole difficulty model lives here: how nasty the fish is (demand)
 // versus how much your rod + line help (supply). The ratio sets both how
 // fast the needle moves and how narrow the safe band is.
@@ -1146,7 +1251,7 @@ function requestLock(){
 }
 function updateLockHint(){
   const show = !pointerLocked && supportsLock && !lockFallback && G.state !== 'menu'
-    && !uiBusy() && !voyage && catchModal.classList.contains('hidden');
+    && !G.thirdPerson && !heldCatch && !uiBusy() && !voyage && catchModal.classList.contains('hidden');
   lockHint.classList.toggle('hidden', !show);
 }
 function releasePointer(){
@@ -1188,7 +1293,8 @@ canvas.addEventListener('pointerdown', e => {
   fishingPointer=e.pointerId;
   dragging=!pointerLocked;lastX=e.clientX;lastY=e.clientY;touchDrag=0;
   try{canvas.setPointerCapture(e.pointerId);}catch(err){}
-  handlePress();
+  // A look-drag while showing a fish must not put it away or start a cast.
+  if(!heldCatch || G.state!=='aim')handlePress();
 });
 addEventListener('pointerup', e => {
   if(fishingPointer!==e.pointerId)return;
@@ -1212,6 +1318,7 @@ function handleRelease(){
 }
 addEventListener('keydown', e => {
   if(e.code==='Escape'){
+    if(fishBagOpen){closeFishBag();return;}
     if(shopOpen){closeShop();return;}
     if(marketOpen){closeMarket();resumeWorld();return;}
     if(chartOpen){closeChart();return;}
@@ -1219,7 +1326,7 @@ addEventListener('keydown', e => {
     if(drawerOpen){logDrawer.classList.add('hidden');drawerOpen=false;resumeWorld();return;}
   }
   if(e.code==='Tab'&&uiBusy()){
-    const panel=shopOpen?shopOverlay:marketOpen?marketOverlayEl:chartOpen?$('chartOverlay'):indexOpen?$('indexOverlay'):logDrawer;
+    const panel=fishBagOpen?$('fishBagOverlay'):shopOpen?shopOverlay:marketOpen?marketOverlayEl:chartOpen?$('chartOverlay'):indexOpen?$('indexOverlay'):logDrawer;
     const focusable=Array.from(panel.querySelectorAll('button:not(:disabled),select,summary')).filter(n=>n.getClientRects().length);
     const first=focusable[0],last=focusable[focusable.length-1];
     if(e.shiftKey&&document.activeElement===first){last?.focus();e.preventDefault();}
@@ -1229,6 +1336,9 @@ addEventListener('keydown', e => {
   if(e.code==='KeyM'&&!e.repeat){if(chartOpen)closeChart();else openChart();return;}
   if(e.code==='KeyF'&&!e.repeat){if(indexOpen)closeIndex();else openIndex();return;}
   if(e.code==='KeyI'&&!e.repeat){if(kitOpen)closeShop();else openKit();return;}
+  if(e.code==='KeyB'&&!e.repeat){e.preventDefault();if(fishBagOpen)closeFishBag();else openFishBag();return;}
+  if(e.code==='KeyV'&&!e.repeat){e.preventDefault();toggleView();return;}
+  if(e.code==='KeyX'&&!e.repeat){if(G.state==='aim'&&!uiBusy()&&!voyage)stowFish();return;}
   if(e.code==='KeyE'&&!e.repeat&&G.state==='aim'){
     if(shopOpen)closeShop();
     else if(marketOpen)closeMarket();
@@ -1330,6 +1440,12 @@ $('indexOverlay').addEventListener('click',e=>{if(e.target===$('indexOverlay'))c
 $('indexIslands').addEventListener('click',e=>{const b=e.target.closest('[data-index-island]');if(b){indexIsland=Number(b.dataset.indexIsland);renderIndex();$('fishGrid').scrollTop=0;}});
 $('indexFilter').addEventListener('change',renderIndex);
 $('kitBtn').addEventListener('click',openKit);
+$('bagBtn').addEventListener('click',openFishBag);
+$('fishBagClose').addEventListener('click',closeFishBag);
+$('fishBagOverlay').addEventListener('click',e=>{if(e.target===$('fishBagOverlay'))closeFishBag();});
+$('fishBagBody').addEventListener('click',e=>{const b=e.target.closest('[data-hold-fish]');if(b)holdFish(Number(b.dataset.holdFish));});
+$('viewBtn').addEventListener('click',toggleView);
+$('putAwayBtn').addEventListener('click',()=>{if(G.state==='aim'&&!uiBusy()&&!voyage)stowFish();});
 
 // ---- touch joystick ----
 function moveStick(dx, dy){
@@ -1362,6 +1478,7 @@ stickEl.addEventListener('pointerup', endStick);
 stickEl.addEventListener('pointercancel', endStick);
 $('resetBtn').addEventListener('click',()=>{
   if(!confirm('Start over? This erases all coins, levels, boats, gear and fish discoveries on this device.'))return;
+  stowFish();G.thirdPerson=false;
   const fresh=normalizeSave({version:SAVE_VERSION});const {bag:emptyBag,log:emptyLog,...state}=fresh;
   Object.assign(G,state);bag.length=0;log.length=0;G.castPower=0.5;G.power=0;
   logDrawer.classList.add('hidden');drawerOpen=false;world.setBoat(0);spawnAtIsland(0);
@@ -1378,7 +1495,11 @@ addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.fov = PORTRAIT() ? 72 : 58;
   camera.updateProjectionMatrix();
+  frontCamera.aspect = camera.aspect;
+  frontCamera.fov = PORTRAIT() ? 60 : 52;
+  frontCamera.updateProjectionMatrix();
   placeRodForAspect();
+  updatePlayerView();
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
   renderer.setSize(innerWidth, innerHeight);
 });
@@ -1471,8 +1592,6 @@ function tick(){
   if(idle&&G.nearShop)shopBtnEl.innerHTML=nearbyStall.name+' <b>E</b>';
   stickEl.classList.toggle('hidden',!(isTouch&&idle));
   if(voyage)tickVoyage(dt);
-
-  world.update(G.time, dt, G.zone, camera, voyage);
 
   // ---- state machine / timers ----
   if(G.state === 'menu'){
@@ -1643,7 +1762,8 @@ function tick(){
   if(rodDir.lengthSq() < 0.01) rodDir.copy(rodTarget);
   rodRig.quaternion.setFromUnitVectors(UP, rodDir.normalize());
   tipJoint.rotation.x = -bend;
-  rodTipObj.getWorldPosition(rodTipWorld);
+  updatePlayerView(moving);
+  activeRodTip().getWorldPosition(rodTipWorld);
 
   // ---- line ----
   if(G.state === 'casting' || G.state === 'waiting' || G.state === 'bite' || G.state === 'reeling'){
@@ -1662,8 +1782,9 @@ function tick(){
     bobber.rotation.y = Math.sin(G.time * 1.6) * 0.2;
   }
 
+  world.update(G.time, dt, G.zone, activeCamera(), voyage);
   updateParticles(dt);
-  renderer.render(scene, camera);
+  renderer.render(scene, activeCamera());
 }
 
 // ---------- boot ----------
@@ -1683,6 +1804,8 @@ window.__reelDeal = window.__reelLife = {
   G, SPECIES, RODS, LINES, BAITS, ISLANDS, BOATS, RARITY, RARITY_ORDER,
   renderer, scene, camera, world, bobber, bobberPos, water, rodRig, aimMarker, bag,
   get shopOpen(){return shopOpen;},get chartOpen(){return chartOpen;},get indexOpen(){return indexOpen;},get voyage(){return voyage;},
+  get fishBagOpen(){return fishBagOpen;},get heldCatch(){return heldCatch;},get carriedModel(){return carriedModel;},
+  playerModel,frontCamera,heldFishRig,activeCamera,activeRodTip,toggleView,openFishBag,closeFishBag,holdFish,stowFish,renderFishBag,updatePlayerView,
   openShop,closeShop,openKit,openMarket,closeMarket,buyGear,sellAll,sellFish,
   openChart,closeChart,renderChart,buyBoat,sailTo,finishVoyage,openIndex,closeIndex,renderIndex,
   renderShop,renderMarket,fightSetup,pickSpecies,paintTensionBand,eligibleSpecies,

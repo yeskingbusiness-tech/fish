@@ -404,6 +404,7 @@ fs.mkdirSync(shots,{recursive:true});
     await mobile.close();console.log('PASS: mobile drag-look, joystick, index, chart, boat shop, bait stats and cast-luck meter');
     await require('./collection-browser.cjs')(browser,URL,shots);
     await require('./xp-browser.cjs')(browser,URL,shots);
+    await require('./player-view-browser.cjs')(browser,URL,shots);
     console.log('Renderer:',await page.evaluate(()=>({calls:__reelDeal.renderer.info.render.calls,triangles:__reelDeal.renderer.info.render.triangles})));
     assert.deepEqual(errors,[],'No browser errors allowed');
     console.log('ALL BROWSER CHECKS PASSED');
