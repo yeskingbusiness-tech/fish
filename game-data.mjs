@@ -257,11 +257,14 @@ const BAIT_WINDOW = [
 ];
 const BAITS = BAIT_NAMES.map(([name, color], i) => {
   const [lo, hi] = BAIT_WINDOW[i];
+  // One extra percentage point per rung widens every old luck gap by one point.
+  // Luck is a relative modifier, not a catch probability: 113% is not a guarantee.
+  const luckPercent = Math.round(90 * Math.pow(i / (BAIT_NAMES.length - 1), 1.2)) + i;
   return {
     id:'bait' + i, name, color, cost: BAIT_COST[i], lo, hi,
     // Species-size eligibility uses maxW, not a minimum specimen weight.
     minSize: Math.round(0.9 * Math.pow(1.30, i) - 0.9),
-    luck: +(0.9 * Math.pow(i / (BAIT_NAMES.length - 1), 1.2)).toFixed(2),
+    luck: luckPercent / 100,
     // A separate, gentle weight bonus: +0.5 percentage points per upgrade.
     // This is the upper bound on the rolled-weight boost, not a higher maxW.
     weightBonus: +(i * 0.005).toFixed(3),

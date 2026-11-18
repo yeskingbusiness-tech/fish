@@ -13,10 +13,10 @@ const hexc  = c => '#' + c.toString(16).padStart(6,'0');
 const fmt   = n => n.toLocaleString('en-US');
 
 import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow,
-  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=28';
-import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, hasIslandLicense, travelRequirement } from './archipelago.mjs?v=28';
-import { createWorld } from './world.mjs?v=28';
-import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=28';
+  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=29';
+import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, hasIslandLicense, travelRequirement } from './archipelago.mjs?v=29';
+import { createWorld } from './world.mjs?v=29';
+import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=29';
 
 const pickSpecies = () => drawSpecies(G.zone, G.gear.bait);
 const rollWeight = sp => drawWeight(sp, G.gear.bait);
@@ -815,7 +815,7 @@ function renderShop(){
   $('shopTitle').textContent=kitOpen?'Your tackle bag':{rod:'Rod Works',line:'Line & Spool',bait:'Bait Shack'}[kind];
   $('shopEyebrow').textContent=kitOpen?'OWNED GEAR · EQUIP ANYWHERE':i.name.toUpperCase()+' · LOCAL OUTFITTER';
   $('shopNote').textContent=kitOpen?'Switch to any gear you already own. Earlier bait is useful when revisiting old waters.':`Only tiers ${i.id*4+1}–${i.id*4+4} are sold here. Explore new islands for the next four. Prices below are the exact coins charged.`;
-  if(kind==='bait')$('shopNote').textContent+=' Better bait adds a small weight boost. The bonus tapers near each species’ maximum; individual catches still vary.';
+  if(kind==='bait')$('shopNote').textContent+=' Luck favors rarer eligible fish; it is not a catch percentage. The small weight boost tapers near each species’ maximum.';
   const items=GEAR[kind].list.map((g,index)=>({g,index})).filter(({index})=>kitOpen?G.owned[kind].includes(index):gearIsland(index)===G.zone);
   shopBody.innerHTML=items.map(({g,index})=>{
     let row=gearRow(kind,g,index);

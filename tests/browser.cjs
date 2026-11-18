@@ -23,6 +23,9 @@ fs.mkdirSync(shots,{recursive:true});
     await boot();
     const islandLevels=await page.evaluate(()=>__reelDeal.ISLANDS.map(i=>i.level));
     assert.deepEqual(islandLevels,[1,10,25,45,65,90]);
+    assert.deepEqual(await page.evaluate(()=>__reelDeal.BOATS.map(b=>b.cost)),[0,550,4500,22500,130000,320000]);
+    assert.deepEqual(await page.evaluate(()=>__reelDeal.BAITS.map(b=>Math.round(b.luck*100))),[0,3,7,11,15,19,24,29,33,38,43,48,53,58,64,69,74,80,85,91,96,102,107,113]);
+    assert.equal(await page.evaluate(()=>{const a=__reelDeal;return a.BOATS.slice(1).every(b=>b.cost>=1.25*Math.max(...[a.RODS,a.LINES,a.BAITS].flatMap(list=>list.slice((b.range-1)*4,b.range*4).map(g=>g.cost))));}),true);
     // Book secrecy + modal input isolation.
     await page.keyboard.press('f');
     assert.equal(await page.locator('.fish-entry.undiscovered').count(),120);
@@ -100,7 +103,7 @@ fs.mkdirSync(shots,{recursive:true});
       assert.equal(await page.evaluate(()=>__reelDeal.G.coins),123);
     }
     assert.equal(await page.evaluate(()=>{const a=__reelDeal;a.G.coins=0;a.buyBoat(1);return a.G.coins===0&&a.G.boat===1;}),true);
-    console.log('PASS: all five boat charges, one-coin-short rejection, free re-equips; voyage and reload');
+    console.log('PASS: all five boat premiums and exact charges, one-coin-short rejection, free re-equips; voyage and reload');
 
     // All 18 separate vendors display exactly their four local tiers.
     for(let zone=0;zone<6;zone++)for(const kind of ['rod','line','bait']){
@@ -112,7 +115,12 @@ fs.mkdirSync(shots,{recursive:true});
         assert.match(await page.locator('#shopNote').textContent(),/small weight boost/);
         for(const tier of rows){
           const label=await page.evaluate(tier=>{const b=__reelDeal.BAITS[tier];return b.weightBonus?`WEIGHT UP TO +${(b.weightBonus*100).toLocaleString('en-US')}%`:'STANDARD WEIGHT';},tier);
-          assert.ok((await page.locator(`#shopBody [data-tier="${tier}"] .rod-info`).textContent()).includes(label));
+          const info=await page.locator(`#shopBody [data-tier="${tier}"] .rod-info`).textContent();
+          assert.ok(info.includes(label));
+          const luck=await page.evaluate(tier=>Math.round(__reelDeal.BAITS[tier].luck*100),tier);
+          assert.ok(info.includes(`LUCK +${luck}%`));
+          const delta=await page.evaluate(tier=>{const a=__reelDeal;return tier>a.G.gear.bait?Math.round((a.BAITS[tier].luck-a.BAITS[a.G.gear.bait].luck)*100):null;},tier);
+          if(delta!==null)assert.ok((await page.locator(`#shopBody [data-tier="${tier}"] .gear-delta`).textContent()).includes(`+${delta}% luck`));
         }
       }
       const wrong=((zone+1)%6)*4+2;
@@ -209,7 +217,7 @@ fs.mkdirSync(shots,{recursive:true});
     });
     assert.deepEqual(hookWeights,[1.1,1.2,1.1]);
     assert.equal(await page.evaluate(()=>__reelDeal.G.caught),1,'hook tests must not award extra catches');
-    console.log('PASS: all 24 displayed bait bonuses; actual hooks get heavier with better bait and reset on re-equip');
+    console.log('PASS: all 24 bait luck/weight stats and upgrade gaps; actual hooks get heavier and reset on re-equip');
 
     // v7 earned licenses remain usable below the new level, without changing XP or coins.
     await page.evaluate(()=>{const a=__reelDeal;localStorage.clear();localStorage.setItem('reel-deal-save-v7',JSON.stringify({version:7,coins:54321,xp:a.xpForLevel(22),caught:42,zone:3,visited:[0,1,2,3],boat:3,ownedBoats:[0,3],owned:{rod:[0,12],line:[0,12],bait:[0,11]},gear:{rod:12,line:12,bait:11}}));});

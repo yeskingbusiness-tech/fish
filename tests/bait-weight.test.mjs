@@ -4,8 +4,8 @@ import { SPECIES, BAITS, rollWeight, eligibleSpecies, pickSpecies } from '../gam
 import { SAVE_VERSION, normalizeSave } from '../save-state.mjs';
 
 const clamp = (n,lo,hi) => Math.max(lo,Math.min(hi,n));
-// The published pre-bonus weight curve, with its existing luck bias preserved.
-const previousWeight = (sp,bait,q) => clamp(sp.minW+(sp.maxW-sp.minW)*Math.pow(q,1/(1+BAITS[bait].luck*1.8)),sp.minW,sp.maxW);
+// Current luck-based roll, before applying the independent weight bonus.
+const unboostedWeight = (sp,bait,q) => clamp(sp.minW+(sp.maxW-sp.minW)*Math.pow(q,1/(1+BAITS[bait].luck*1.8)),sp.minW,sp.maxW);
 
 test('bait weight bonuses grow gently and strictly by half a percentage point per tier', () => {
   assert.equal(BAITS[0].weightBonus,0);
@@ -18,7 +18,7 @@ test('bait weight bonuses grow gently and strictly by half a percentage point pe
 
 test('starter weights stay unchanged and each roll still consumes exactly one random draw', () => {
   for(const sp of SPECIES)for(const q of [0,.01,.1,.5,.9,.99,1]){
-    for(const bait of [0,-1,999])assert.equal(rollWeight(sp,bait,()=>q),previousWeight(sp,0,q));
+    for(const bait of [0,-1,999])assert.equal(rollWeight(sp,bait,()=>q),unboostedWeight(sp,0,q));
     for(let bait=0;bait<BAITS.length;bait++){
       let calls=0;
       rollWeight(sp,bait,()=>{calls++;return q;});
@@ -31,9 +31,9 @@ test('all species and tiers get a bounded weight boost without exceeding their n
   for(const sp of SPECIES)for(const q of [0,.001,.01,.1,.25,.5,.75,.9,.99,.999,1]){
     let last=0;
     for(let bait=0;bait<BAITS.length;bait++){
-      const weight=rollWeight(sp,bait,()=>q),old=previousWeight(sp,bait,q);
+      const weight=rollWeight(sp,bait,()=>q),old=unboostedWeight(sp,bait,q);
       assert.ok(Number.isFinite(weight)&&weight>=sp.minW&&weight<=sp.maxW,`${sp.name}: invalid weight`);
-      assert.ok(weight>=old-1e-9,'no pre-existing bait can get a lighter weight distribution');
+      assert.ok(weight>=old-1e-9,'the weight bonus must never reduce a luck-based roll');
       assert.ok(weight<=old*(1+BAITS[bait].weightBonus)+1e-9,'the displayed maximum bonus must be truthful');
       assert.ok(weight>=last,'a higher tier cannot roll lighter at the same quantile');
       if(q<1){

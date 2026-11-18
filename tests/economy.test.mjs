@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { RODS, LINES, BAITS } from '../game-data.mjs';
-import { BOATS } from '../archipelago.mjs';
+import { BOATS, ISLANDS, localGearPriceCeiling } from '../archipelago.mjs';
 import { normalizeSave } from '../save-state.mjs';
 import { expectedCatchIncome, gearEconomyRows, boatEconomyRows } from '../scripts/economy.mjs';
 
@@ -57,14 +57,30 @@ test('every gear purchase is bounded by income from fish catchable before buying
   assert.ok(end.rodCatches>15 && end.baitCatches>20,'endgame should not become pocket change');
 });
 
+test('every next-island boat costs more than all departure-island gear, with at least a 25% premium', () => {
+  const previousBoats=[0,350,3000,15500,90000,225000];
+  assert.deepEqual(BOATS.map(b=>b.cost),[0,550,4500,22500,130000,320000]);
+  for(const island of ISLANDS){
+    const prices=[RODS,LINES,BAITS].flatMap(list=>list.filter((_,tier)=>Math.floor(tier/4)===island.id).map(item=>item.cost));
+    assert.equal(localGearPriceCeiling(island.id),Math.max(...prices));
+    const next=BOATS[island.id+1];
+    if(!next)continue; // No outgoing island beyond Moontide.
+    for(const price of prices)assert.ok(next.cost>price,`${next.name} must exceed every local item`);
+    assert.ok(next.cost>=Math.max(...prices)*1.25);
+    assert.ok(next.cost>previousBoats[next.id]);
+    assert.ok(Number.isSafeInteger(next.cost));
+  }
+  for(const invalid of [-1,6,NaN,'0'])assert.equal(localGearPriceCeiling(invalid),0);
+});
+
 test('boats scale in departure-island catch effort, with no income-from-locked-fish assumptions', () => {
   const rows=boatEconomyRows();
-  assert.ok(rows[0].catches>=7.5 && rows[0].catches<=9);
+  assert.ok(rows[0].catches>=11.5 && rows[0].catches<=13);
   for(let i=1;i<rows.length;i++){
     const increase=rows[i].catches-rows[i-1].catches;
-    assert.ok(increase>=4 && increase<=9,`${rows[i].boat}: uneven boat savings goal`);
+    assert.ok(increase>=6 && increase<=10,`${rows[i].boat}: uneven boat savings goal`);
   }
-  assert.ok(rows.at(-1).catches<=35);
+  assert.ok(rows.at(-1).catches>=43 && rows.at(-1).catches<=45);
 });
 
 test('the price update never recharges owned gear or rewrites saved coins and progress', () => {

@@ -41,22 +41,28 @@ once you have an appropriate boat. The sea chart shows the exact missing require
 
 **Wider island milestones · v27:** licenses now require levels **1 / 10 / 25 / 45 /
 65 / 90**, with gaps of **9 / 15 / 20 / 20 / 25 levels**. Every gap is larger than the
-previous 4 / 7 / 10 / 13 / 15. Boat licenses use the same milestones. XP rewards,
-the XP curve, gear prices and boat prices have not changed. Existing earned licenses
+previous 4 / 7 / 10 / 13 / 15. Boat licenses use the same milestones. This level-gate
+update did not change XP rewards, the XP curve or shop prices. Existing earned licenses
 are retained, even for destinations not yet visited; only future unlocks use the new gates.
 
 ### Boats and travel
 
-| Boat | Level | Price | Farthest destination |
-| --- | ---: | ---: | --- |
-| Harbor Skiff | 1 | Free | Home harbor |
-| Pinewood Dinghy | 10 | 350c | Pinewater |
-| Sunrunner | 25 | 3,000c | Sunscar |
-| Frostbreaker | 45 | 15,500c | Frostfall |
-| Cinderwake | 65 | 90,000c | Emberforge |
-| Astral Voyager | 90 | 225,000c | Moontide |
+| Boat | Level | Priciest departure gear | Boat price | Farthest destination |
+| --- | ---: | ---: | ---: | --- |
+| Harbor Skiff | 1 | — | Free | Home harbor |
+| Pinewood Dinghy | 10 | Reedhaven · 360c | 550c | Pinewater |
+| Sunrunner | 25 | Pinewater · 2,500c | 4,500c | Sunscar |
+| Frostbreaker | 45 | Sunscar · 17,000c | 22,500c | Frostfall |
+| Cinderwake | 65 | Frostfall · 70,000c | 130,000c | Emberforge |
+| Astral Voyager | 90 | Emberforge · 147,000c | 320,000c | Moontide |
 
-These are saving goals of roughly **8 / 14 / 21 / 27 / 33 landed-and-sold fish**
+**Next-voyage premium · v29:** each next-island boat costs **at least 25% more than
+any rod, line or bait sold on the island you are leaving**. The price floor is derived
+from the actual local stock, not an unrelated fixed minimum. The remaining premium
+keeps later saving goals progressive. Prices remain fixed for everyone, and an owned
+boat never needs to be bought again. The starter skiff stays free.
+
+These are saving goals of roughly **12 / 21 / 29 / 36 / 44 landed-and-sold fish**
 using the **departure island's top local bait**. Boats are not priced against the
 better fish that remain locked on their destination island.
 
@@ -87,6 +93,20 @@ Some collection entries reward revisiting an island with a different bait. For e
 Pinewater's Golden Koi requires a legendary-capable bait from a later island; Sunscar's
 American Eel takes an earlier uncommon-capable bait. Keep your old tackle!
 
+### Clearer bait luck upgrades · v29
+
+Every upgrade's luck gap is **one percentage point larger** than before: early bait
+now goes **0% → 3% → 7% → 11%** instead of 0% → 2% → 5% → 8%. Later gaps rise smoothly
+to 5–6 points, with Moonbait reaching a **+113% luck bonus**. All paid bait has more
+luck, while starter worms are unchanged. The shop and tackle bag show the actual
+bonus and the difference from your equipped bait.
+
+Luck is a **relative weighting modifier**, not a literal catch percentage or a
+guaranteed rare fish. It favors rarer fish only within the bait's existing eligible
+pool; island, rarity and species-size restrictions do not change. Its existing bite
+speed and weight-bias effects still apply. The separate half-point-per-tier weight
+bonus, gear prices, island levels and already-owned items are unchanged.
+
 ### Slightly heavier catches · v28
 
 Every bait upgrade adds **0.5 percentage points** to its maximum rolled-weight bonus:
@@ -102,7 +122,8 @@ maximum possible weight, not a guaranteed minimum catch weight.
 
 Only **new catches with the equipped bait** receive the boost. Switching back to a
 lower tier lowers the bonus immediately; already-caught fish, saved records and coins
-are not rewritten. Island/bait exclusivity, prices, and sale/XP formulas are unchanged.
+are not rewritten. The weight update did not change island/bait exclusivity, prices,
+or sale/XP formulas.
 Heavier catches naturally earn a little more through the existing formulas. The income
 audit includes the new weights and still passes the established saving-goal limits.
 
@@ -227,7 +248,7 @@ For other static hosts, deploy `index.html`, `style.css`, `main.js`, **all four 
 modules**, and `vendor/`. Every browser-facing path is relative and every dependency is
 local. `.mjs` must be served as JavaScript (already handled by `serve.js`).
 
-Cache stamps are currently **`v=28`** in the HTML and module imports. Bump the corresponding
+Cache stamps are currently **`v=29`** in the HTML and module imports. Bump the corresponding
 stamps when changing a cached module. Render's blueprint also sends `Cache-Control: no-cache`.
 
 ## Testing
@@ -237,11 +258,14 @@ gear locations, smooth price growth, catch-income budgets, increasing island sal
 values, XP thresholds, wider level gaps, matching boat licenses, both travel gates,
 retained v7 access, one-time save migration, persistent discoveries, and malformed
 save handling. Weight tests cover every species and bait tier, bounded bonuses,
-strictly heavier averages after display rounding, and unchanged saved catches. The economy tests also compare every paid price to the
-published v25 baseline and verify that price changes preserve owned items and coins.
+strictly heavier averages after display rounding, and unchanged saved catches. Luck
+tests check every widened gap, improved rare-fish weighting and the actual picker.
+Economy tests also compare prices to published baselines, enforce every next-voyage
+boat premium against all local stock, and verify that ownership and coins are preserved.
 
 `npm run economy` prints the deterministic income estimates and saving goals for
-every gear tier and boat, using fixed weight quantiles rather than lucky random runs.
+every gear tier and boat, including the local gear ceiling and boat premium, using
+fixed weight quantiles rather than lucky random runs.
 
 Optional browser tests exercise all **69 paid gear purchases and five boat purchases**,
 including one-coin-short rejection, displayed-versus-charged prices and free re-equips.

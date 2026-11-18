@@ -5,7 +5,7 @@
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { RODS, LINES, BAITS, RARITY, eligibleSpecies, fishValue, rollWeight } from '../game-data.mjs';
-import { ISLANDS, BOATS, gearIsland } from '../archipelago.mjs';
+import { ISLANDS, BOATS, gearIsland, localGearPriceCeiling } from '../archipelago.mjs';
 
 const cache = new Map();
 export function expectedCatchIncome(island, baitIndex, samples = 1024){
@@ -45,7 +45,8 @@ export function boatEconomyRows(){
   return BOATS.slice(1).map(boat => {
     const departure = boat.range - 1;
     const income = expectedCatchIncome(departure, departure * 4 + 3);
-    return { boat:boat.name, departure:ISLANDS[departure].short, cost:boat.cost, income, catches:boat.cost / income };
+    const gearCeiling = localGearPriceCeiling(departure);
+    return { boat:boat.name, departure:ISLANDS[departure].short, gearCeiling, premium:boat.cost / gearCeiling - 1, cost:boat.cost, income, catches:boat.cost / income };
   });
 }
 function report(){
@@ -57,10 +58,11 @@ function report(){
   })));
   console.log('Boats: income from the departure island\'s best local bait, never destination fish.');
   console.table(boatEconomyRows().map(r => ({
-    boat:r.boat, leaving:r.departure, cost:r.cost,
+    boat:r.boat, leaving:r.departure, 'local gear max':r.gearCeiling, cost:r.cost,
+    'above local gear':(r.premium * 100).toFixed(1) + '%',
     'coins/catch':r.income.toFixed(1), 'landed catches':r.catches.toFixed(1),
   })));
   console.log('These are expected landed-and-sold catches, not guarantees or catch attempts.');
-  console.log('Prices, sale/XP formulas and existing ownership are unchanged; bait weight bonuses are included.');
+  console.log('Boat prices must exceed local gear by at least 25%; current bait luck and weight bonuses are included.');
 }
 if(process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) report();
