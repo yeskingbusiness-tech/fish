@@ -1,26 +1,34 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { SPECIES, BAITS, RARITY, sortFishIndex, castLuckModifier, effectiveLuck, eligibleSpecies, pickSpecies, rollWeight } from '../game-data.mjs';
+import { normalizeSave, SAVE_VERSION } from '../save-state.mjs';
 import { expectedCatchIncome } from '../scripts/economy.mjs';
 
 const close = (actual,expected) => assert.ok(Math.abs(actual-expected)<1e-10,`${actual} != ${expected}`);
 const chance = (sp,bait,luck) => sp.weight*Math.pow(1+luck*2,RARITY[sp.rarity].tier-bait.lo);
 
-test('the index groups islands, then sorts common to mythic with stable original numbers', () => {
+test('the index numbers run 001–120 in island/rarity order without reordering the spawn roster', () => {
   const original=SPECIES.map(sp=>[sp.id,sp.number,sp.island,sp.rarity]);
   const sorted=sortFishIndex();
   assert.notEqual(sorted,SPECIES);assert.equal(sorted.length,120);
   assert.equal(new Set(sorted.map(sp=>sp.id)).size,120);
+  assert.deepEqual(sorted.map(sp=>sp.number),Array.from({length:120},(_,i)=>i+1));
   for(let i=1;i<sorted.length;i++){
     const a=sorted[i-1],b=sorted[i];
     assert.ok(a.island<=b.island);
     if(a.island===b.island){
       assert.ok(RARITY[a.rarity].tier<=RARITY[b.rarity].tier);
-      if(a.rarity===b.rarity)assert.ok(a.number<b.number);
+      if(a.rarity===b.rarity)assert.ok(SPECIES.indexOf(a)<SPECIES.indexOf(b),'rarity ties keep the original roster order');
     }
   }
-  for(let island=0;island<6;island++)assert.equal(sorted.slice(island*20,island*20+20).every(sp=>sp.island===island),true);
-  assert.deepEqual(SPECIES.map(sp=>[sp.id,sp.number,sp.island,sp.rarity]),original,'index sorting must not renumber or mutate the species data');
+  for(let island=0;island<6;island++){
+    const local=sortFishIndex(SPECIES.filter(sp=>sp.island===island));
+    assert.deepEqual(local.map(sp=>sp.number),Array.from({length:20},(_,i)=>island*20+i+1));
+  }
+  assert.equal(SPECIES[13].id,'yellow-bass');assert.equal(SPECIES[13].number,10);
+  assert.equal(SPECIES[9].id,'brown-bullhead');assert.equal(SPECIES[9].number,15);
+  assert.deepEqual(SPECIES.map(sp=>[sp.id,sp.number,sp.island,sp.rarity]),original,'rendering must not mutate the roster or change its assigned numbers');
   assert.deepEqual(sortFishIndex([...SPECIES].reverse()),sorted,'ties use stable entry numbers, not input order');
 });
 
@@ -34,6 +42,27 @@ test('island/discovery filters preserve index ordering without dropping or renum
     assert.deepEqual(input.map(sp=>sp.number),numbers);
   }
   assert.deepEqual(sortFishIndex([]),[]);
+});
+
+test('renumbering keeps all saved discoveries and catches attached to the same species', () => {
+  const discoveries=Object.fromEntries(SPECIES.map((sp,i)=>[sp.id,{count:i+1,best:sp.maxW,first:'2026-11-13'}]));
+  const fish=SPECIES.map(sp=>({n:sp.name,w:sp.minW}));
+  const old={version:SAVE_VERSION,coins:4321,xp:1234,caught:7260,discoveries,bag:fish,log:fish,best:{name:'Yellow Bass',weight:'2.8'}};
+  const restored=normalizeSave(old);
+  assert.deepEqual(restored.discoveries,discoveries);
+  assert.deepEqual(restored.best,old.best);
+  for(const key of ['coins','xp','caught'])assert.equal(restored[key],old[key]);
+  for(const key of ['bag','log']){
+    assert.deepEqual(restored[key].map(e=>[e.sp.id,e.sp.name,e.weight]),SPECIES.map(sp=>[sp.id,sp.name,sp.minW]));
+    assert.equal(restored[key].find(e=>e.sp.id==='yellow-bass').sp.number,10);
+    assert.equal(restored[key].find(e=>e.sp.id==='brown-bullhead').sp.number,15);
+  }
+});
+
+test('the published fish roster matches the index numbers, rarity order and weight ranges', () => {
+  const roster=readFileSync(new URL('../FISH_ROSTER.md',import.meta.url),'utf8');
+  const rows=roster.split('\n').filter(line=>/^\| \d{3} \|/.test(line));
+  assert.deepEqual(rows,sortFishIndex().map(sp=>`| ${String(sp.number).padStart(3,'0')} | ${sp.name} | ${sp.rarity} | ${sp.minW}–${sp.maxW} lb |`));
 });
 
 test('cast luck is linear from minus ten to plus ten points, with a neutral halfway default', () => {

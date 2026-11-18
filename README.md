@@ -197,8 +197,11 @@ The level meter and next island milestone are always visible. Total XP for level
 
 The **fish index (F)** contains all 120 numbered entries. Entries stay grouped by
 island and sort **Common → Uncommon → Rare → Epic → Legendary → Mythic** within
-each island, including when filters are applied. Original entry numbers and saved
-discoveries are unchanged; tied rarities keep their original number order.
+each island, including when filters are applied. **Entry numbers follow this same
+order, #001–#120:** Reedhaven has #001–#020, Pinewater #021–#040, and so on.
+Numbers stay fixed when filtering; tied rarities keep their original roster order.
+Only the displayed numbers change—species identities, saved discoveries, catch
+counts and personal-best weights stay attached to the same fish.
 
 - Undiscovered fish have an **opaque dark silhouette and `???`**, with no species name,
   colors, rarity, description, tooltip, or accessible-label spoiler in the entry markup.
@@ -279,7 +282,7 @@ For other static hosts, deploy `index.html`, `style.css`, `main.js`, **all four 
 modules**, and `vendor/`. Every browser-facing path is relative and every dependency is
 local. `.mjs` must be served as JavaScript (already handled by `serve.js`).
 
-Cache stamps are currently **`v=30`** in the HTML and module imports. Bump the corresponding
+Cache stamps are currently **`v=31`** in the HTML and module imports. Bump the corresponding
 stamps when changing a cached module. Render's blueprint also sends `Cache-Control: no-cache`.
 
 ## Testing
@@ -292,7 +295,9 @@ save handling. Weight tests cover every species and bait tier, bounded bonuses,
 strictly heavier averages after display rounding, and unchanged saved catches. Luck
 tests check every widened gap, improved rare-fish weighting and the actual picker.
 Cast/index tests cover the −10/0/+10 luck scale, strict pools at every power,
-cast-adjusted weights/income, and non-mutating island/rarity ordering across filters.
+cast-adjusted weights/income, and consecutive #001–#120 island/rarity numbering.
+They also verify fixed numbers across filters, roster-document parity, and unchanged
+saved discoveries and catches after renumbering.
 Economy tests also compare prices to published baselines, enforce every next-voyage
 boat premium against all local stock, and verify that ownership and coins are preserved.
 

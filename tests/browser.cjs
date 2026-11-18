@@ -33,12 +33,14 @@ fs.mkdirSync(shots,{recursive:true});
     assert.equal(await page.evaluate(()=>{const html=document.querySelector('#fishGrid').innerHTML;return window.__reelDeal.SPECIES.some(s=>html.includes(s.name));}),false);
     // Stable island-first, common-to-mythic ordering for every filter and discovery state.
     const indexOrder=await page.evaluate(()=>{const a=__reelDeal;return [...a.SPECIES].sort((a,b)=>a.island-b.island||__reelDeal.RARITY[a.rarity].tier-__reelDeal.RARITY[b.rarity].tier||a.number-b.number).map(sp=>({number:sp.number,island:sp.island}));});
+    assert.deepEqual(indexOrder.map(sp=>sp.number),Array.from({length:120},(_,i)=>i+1));
     async function checkIndexOrder(island,filter,found=[]){
       await page.locator(`[data-index-island="${island}"]`).click();
       await page.selectOption('#indexFilter',filter);
       const actual=await page.locator('.fish-entry .entry-top>span:first-child').allTextContents();
       const expected=indexOrder.filter(sp=>(island<0||sp.island===island)&&(filter==='all'||(filter==='found'?found.includes(sp.number):!found.includes(sp.number)))).map(sp=>sp.number);
-      assert.deepEqual(actual.map(n=>Number(n.replace('#',''))),expected);
+      assert.deepEqual(actual,expected.map(n=>'#'+String(n).padStart(3,'0')));
+      if(filter==='all')assert.deepEqual(expected,Array.from({length:island<0?120:20},(_,i)=>(island<0?0:island*20)+i+1));
     }
     for(let island=-1;island<6;island++)await checkIndexOrder(island,'all');
     const foundNumbers=indexOrder.filter(sp=>sp.number%3===0).map(sp=>sp.number);
@@ -48,7 +50,7 @@ fs.mkdirSync(shots,{recursive:true});
     await page.evaluate(()=>{__reelDeal.G.discoveries={};__reelDeal.renderIndex();});
     await checkIndexOrder(-1,'all');
     assert.equal(await page.locator('.fish-entry.undiscovered').count(),120);
-    console.log('PASS: island/rarity index order across all filters; stable numbers; unknown names stay hidden');
+    console.log('PASS: consecutive #001–#120 index numbers in island/rarity order; filters retain numbers; unknown names stay hidden');
 
     const pos=await page.evaluate(()=>[__reelDeal.G.px,__reelDeal.G.pz]);
     await page.keyboard.down('w');await page.waitForTimeout(180);await page.keyboard.up('w');await page.keyboard.press('Space');

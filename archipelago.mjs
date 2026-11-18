@@ -1,4 +1,4 @@
-import { RODS, LINES, BAITS } from './game-data.mjs?v=30';
+import { RODS, LINES, BAITS } from './game-data.mjs?v=31';
 
 // The archipelago is deliberately data-driven: six islands, twenty species and
 // four gear tiers per island. No distance roll can bypass an island's fish pool.

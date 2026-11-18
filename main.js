@@ -13,10 +13,10 @@ const hexc  = c => '#' + c.toString(16).padStart(6,'0');
 const fmt   = n => n.toLocaleString('en-US');
 
 import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow, sortFishIndex, castLuckModifier, effectiveLuck,
-  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=30';
-import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, hasIslandLicense, travelRequirement } from './archipelago.mjs?v=30';
-import { createWorld } from './world.mjs?v=30';
-import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=30';
+  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=31';
+import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, hasIslandLicense, travelRequirement } from './archipelago.mjs?v=31';
+import { createWorld } from './world.mjs?v=31';
+import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=31';
 
 const pickSpecies = () => drawSpecies(G.zone, G.gear.bait, Math.random, G.castPower);
 const rollWeight = sp => drawWeight(sp, G.gear.bait, Math.random, G.castPower);

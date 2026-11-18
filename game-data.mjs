@@ -179,6 +179,9 @@ const SPECIES = FISH_TABLE.map(([name, color, rarity, dist, sf, pattern, desc], 
     weight: rar.spawn,
   };
 });
+// Assign field-guide numbers once, in island/rarity order, without reordering
+// the spawn roster or changing species IDs. Filters keep these global 001–120 labels.
+sortFishIndex().forEach((sp, index) => { sp.number = index + 1; });
 
 // ---------- Gear ----------
 // Three ladders of 24 tiers each. Stats follow smooth curves. Names, colours
@@ -300,7 +303,8 @@ function eligibleSpecies(island, baitIndex){
   return SPECIES.filter(s => s.island === island &&
     RARITY[s.rarity].tier >= bait.lo && RARITY[s.rarity].tier <= bait.hi && s.maxW >= bait.minSize);
 }
-// The index uses a sorted copy; roster numbers, spawn order and save IDs stay stable.
+// Sort a copy: spawn order and save IDs never change. Original roster numbers
+// break rarity ties at initialization; the assigned index numbers keep that order.
 function sortFishIndex(items = SPECIES){
   return [...items].sort((a,b) => a.island - b.island ||
     RARITY[a.rarity].tier - RARITY[b.rarity].tier || a.number - b.number);
