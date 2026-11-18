@@ -13,11 +13,11 @@ const hexc  = c => '#' + c.toString(16).padStart(6,'0');
 const fmt   = n => n.toLocaleString('en-US');
 
 import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow, sortFishIndex, castLuckModifier, effectiveLuck,
-  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=32';
+  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=33';
 import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, hasIslandLicense, travelRequirement,
-  ISLAND_COLLECTION_BONUS, islandCollectionProgress, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=32';
-import { createWorld } from './world.mjs?v=32';
-import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=32';
+  ISLAND_COLLECTION_BONUS, islandCollectionProgress, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=33';
+import { createWorld } from './world.mjs?v=33';
+import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=33';
 
 const pickSpecies = () => drawSpecies(G.zone, G.gear.bait, Math.random, G.castPower);
 const rollWeight = sp => drawWeight(sp, G.gear.bait, Math.random, G.castPower);
@@ -623,7 +623,7 @@ function catchFish(){
   $('newDiscovery').classList.toggle('hidden',!isNew);
   $('catchLevel').classList.toggle('hidden',level()===oldLevel);
   const unlocked=lockedBefore.filter(i=>hasLicense(i.id));
-  $('catchLevel').textContent=level()>oldLevel ? `LEVEL ${level()}!${unlocked.length?' · '+unlocked.map(i=>i.short).join(', ')+' license unlocked':' · one step closer to the next island'}`:'';
+  $('catchLevel').textContent=level()>oldLevel ? `LEVEL ${level()}!${unlocked.length?' · '+unlocked.map(i=>i.short).join(', ')+' license unlocked':level()===99?' · maximum level reached':lockedBefore.length?' · one step closer to the next island':' · all island licenses unlocked'}`:'';
   const isBest = !G.best || parseFloat(weight) > parseFloat(G.best.weight);
   if(!G.best || parseFloat(weight) > parseFloat(G.best.weight)) G.best = { name:sp.name, weight };
   log.unshift({ sp, weight });
@@ -636,7 +636,7 @@ function catchFish(){
   $('catchIcon').innerHTML = fishSVG(sp);
   $('catchName').textContent = sp.name;
   $('catchWeight').textContent = weight + ' lbs';
-  $('catchPoints').innerHTML = '+' + earnedXP + ' XP' + (isNew?' · discovery bonus':'') + '<span class="catch-value">WORTH ' + fmt(value) + 'c AT THE MARKET</span>';
+  $('catchPoints').innerHTML = '+' + fmt(earnedXP) + ' XP' + (isNew?' · 50% discovery bonus':'') + '<span class="catch-value">WORTH ' + fmt(value) + 'c AT THE MARKET</span>';
   $('catchDesc').textContent = sp.desc;
   catchModal.querySelector('.modal-card').className = 'modal-card ' + sp.rarity;
   catchModal.classList.remove('hidden');
@@ -1686,7 +1686,7 @@ window.__reelDeal = window.__reelLife = {
   openShop,closeShop,openKit,openMarket,closeMarket,buyGear,sellAll,sellFish,
   openChart,closeChart,renderChart,buyBoat,sailTo,finishVoyage,openIndex,closeIndex,renderIndex,
   renderShop,renderMarket,fightSetup,pickSpecies,paintTensionBand,eligibleSpecies,
-  updateStats,fishValue,rollWeight,xpForLevel,level,hasLicense,saveGame,levelProgress,
+  updateStats,fishValue,rollWeight,catchXP,xpForLevel,level,hasLicense,saveGame,levelProgress,
   castLuckModifier,effectiveLuck,updateCastMeter,
   saleValue,bagTotal,collectionCoinBonus,islandCollectionProgress,fishSaleValue,sortFishIndex,
   walkable,groundAt,landBobber,triggerBite,hookFish,catchFish,SHOP_POS,MARKET_POS,

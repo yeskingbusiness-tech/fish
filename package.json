@@ -1,6 +1,6 @@
 {
   "name": "reel-deal-3d",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "private": true,
   "description": "Reel Deal 3D — six cube-built fishing islands, boats and a 120-species field guide",
   "engines": { "node": ">=18" },
@@ -9,6 +9,7 @@
     "dev": "node serve.js",
     "test": "node --test tests/*.test.mjs",
     "test:browser": "node tests/browser.cjs",
-    "economy": "node scripts/economy.mjs"
+    "economy": "node scripts/economy.mjs",
+    "progression": "node scripts/progression.mjs"
   }
 }

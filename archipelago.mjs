@@ -1,4 +1,4 @@
-import { SPECIES, RODS, LINES, BAITS, fishValue } from './game-data.mjs?v=32';
+import { SPECIES, RODS, LINES, BAITS, fishValue } from './game-data.mjs?v=33';
 
 // The archipelago is deliberately data-driven: six islands, twenty species and
 // four gear tiers per island. No distance roll can bypass an island's fish pool.
@@ -98,7 +98,24 @@ export function levelProgress(xp){
   const start = xpForLevel(level), next = xpForLevel(level + 1);
   return { level, current:xp - start, needed:next - start, ratio:level === MAX_LEVEL ? 1 : (xp - start) / (next - start) };
 }
+// Repeat-catch rewards must keep pace with the wider island level gaps, not
+// merely add a few XP per island. Rarity is worth a substantial step on its own.
+// Audited using actual local bait pools and weight rolls (npm run progression).
+export const CATCH_XP_BY_RARITY = Object.freeze({
+  common:20, uncommon:28, rare:42, epic:64, legendary:100, mythic:155,
+});
+export const ISLAND_XP_MULTIPLIERS = Object.freeze([1,4,5,6,7,9]);
 export function catchXP(sp, weight, isNew = false){
+  const ratio = Number(weight) / sp.maxW;
+  const size = Number.isFinite(ratio) ? Math.max(0,Math.min(1,ratio)) : 0;
+  const base = CATCH_XP_BY_RARITY[sp.rarity] * ISLAND_XP_MULTIPLIERS[sp.island];
+  // Bigger specimens earn more; the same +50% first-discovery reward still applies.
+  // Add the size XP before rounding, preserving starter-common rewards exactly.
+  return Math.round((base + base * 0.4 * size) * (isNew ? 1.5 : 1));
+}
+// Frozen pre-v33 reward model. Only legacy v6 save inference and balance reports
+// use this: increasing future catch rewards must not rewrite an old save's XP.
+export function legacyCatchXP(sp, weight, isNew = false){
   const tiers = { common:0, uncommon:1, rare:2, epic:3, legendary:4, mythic:5 };
   const base = 20 + sp.island * 22 + tiers[sp.rarity] * 6 + 8 * Math.min(1, weight / sp.maxW);
   return Math.round(base * (isNew ? 1.5 : 1));

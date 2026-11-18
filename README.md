@@ -188,12 +188,48 @@ existing ownership unchanged.** Old purchases are never charged again; re-equipp
 boats remains free. Displayed prices are the exact prices charged, and unaffordable
 buttons show the shortage. Run `npm run economy` for the full tier-by-tier income audit.
 
-### XP and the field guide
+### Catch XP that keeps pace · v33
 
-Every landed fish awards XP, with more for later-island fish, higher rarity, and larger
-specimens. A **new species awards a 50% discovery XP bonus**. Selling does not award XP.
-The level meter and next island milestone are always visible. Total XP for level `L` is
-`90 × (L−1) + 22 × (L−1)²`; levels cap at 99. The final island requires level 90.
+Better fish now award **substantially more XP**, instead of only six extra XP per
+rarity step and 22 per island. Base rewards for **Common / Uncommon / Rare / Epic /
+Legendary / Mythic** are **20 / 28 / 42 / 64 / 100 / 155 XP**, multiplied by each
+island's reward scale: **1× / 4× / 5× / 6× / 7× / 9×**.
+
+Specimen size adds up to **40%** of that scaled base (`weight / species maximum`,
+capped at one). A **new species adds a 50% discovery bonus**, with a single rounding
+to whole XP after all bonuses. Common starter rewards are unchanged; every other
+fish earns at least as much as before. Rarer and larger fish are more rewarding,
+and better bait improves average XP through its real eligible pool and weight rolls.
+
+Pinewater repeat catches now average about **177 XP with arrival bait** and **247 XP
+with its best local bait**, up from 56–61. From **level 15 to 25**, that is roughly
+**37–53 landed repeat catches**, before any new discoveries.
+
+| Fishing island | Level stretch | Previous repeat catches, arrival / top local bait | New repeat catches, arrival / top local bait |
+| --- | --- | ---: | ---: |
+| Reedhaven | 1 → 10 | 101.0 / 81.8 | 98.4 / 70.2 |
+| Pinewater | 10 → 25 | 218.0 / 199.7 | 69.3 / 49.5 |
+| Sunscar | 25 → 45 | 372.7 / 358.9 | 90.1 / 69.8 |
+| Frostfall | 45 → 65 | 427.8 / 417.5 | 65.9 / 53.0 |
+| Emberforge | 65 → 90 | 605.9 / 603.9 | 67.3 / 65.8 |
+| Moontide | 90 → 99 | 227.6 / 227.2 | 20.8 / 20.6 |
+
+These are rounded **expected successful landings**, not attempts, guarantees or minutes.
+The audit uses actual bait eligibility, rarity odds and 1,024 weight quantiles with
+one-decimal gameplay weights at **50% cast charge**. Arrival means the previous
+island's best bait (starter worms in Reedhaven); local means the current island's
+best bait. No destination fish, inaccessible Golden Koi, or repeated discovery
+bonuses are used to make the estimates look faster. Run `npm run progression` for
+the full comparison and Pinewater's remaining level-15-to-25 budget by bait.
+
+**Only new landings receive the new rewards.** Existing XP, levels, earned licenses,
+coins, gear, boat prices, and collection bonuses are not rewritten. The save key
+stays v8; legacy v6 XP inference keeps its original reward calculation. Island gates
+remain **1 / 10 / 25 / 45 / 65 / 90**, not closer together. Total XP for level `L` is
+still `90 × (L−1) + 22 × (L−1)²`, and levels cap at 99. Selling never awards XP.
+The level meter and next island milestone remain visible.
+
+### The field guide
 
 The **fish index (F)** contains all 120 numbered entries. Entries stay grouped by
 island and sort **Common → Uncommon → Rare → Epic → Legendary → Mythic** within
@@ -306,7 +342,7 @@ For other static hosts, deploy `index.html`, `style.css`, `main.js`, **all four 
 modules**, and `vendor/`. Every browser-facing path is relative and every dependency is
 local. `.mjs` must be served as JavaScript (already handled by `serve.js`).
 
-Cache stamps are currently **`v=32`** in the HTML and module imports. Bump the corresponding
+Cache stamps are currently **`v=33`** in the HTML and module imports. Bump the corresponding
 stamps when changing a cached module. Render's blueprint also sends `Cache-Control: no-cache`.
 
 ## Testing
@@ -324,6 +360,10 @@ They also verify fixed numbers across filters, roster-document parity, and uncha
 saved discoveries and catches after renumbering. Collection reward tests cover
 all 64 completed-island combinations, distinct-species requirements, +5% to +30%
 sale values, duplicate protection, invalid records, existing saves and reset behavior.
+XP balance tests cover all rarity/size/island rewards, unchanged starter XP, exact
+discovery rounding, repeat-catch budgets for every arrival/local bait at low/mid/full
+power, and audit agreement with the actual picker. They also check exact saved XP
+and licenses at all 99 levels, the unchanged v8 key, and frozen v6 XP reconstruction.
 Economy tests also compare prices to published baselines, enforce every next-voyage
 boat premium against all local stock, and verify that ownership and coins are preserved.
 
@@ -333,6 +373,12 @@ fixed weight quantiles rather than lucky random runs. These targets assume neutr
 50% cast power and **no collection rewards**; earning a completion bonus improves
 income without raising prices. `expectedCatchIncome` also accepts cast power for targeted audits.
 
+`npm run progression` audits XP at the same weight precision and cast power. It
+compares old/new repeat-catch effort for all six level stretches, including level
+90 → 99, and reports Pinewater 15 → 25 for arrival bait and all four local tiers.
+`expectedCatchXP` accepts `samples`, `castPower`, and `legacy` options for targeted
+checks. No new-species bonuses are included in these pacing budgets.
+
 Optional browser tests exercise all **69 paid gear purchases and five boat purchases**,
 including one-coin-short rejection, displayed-versus-charged prices and free re-equips.
 They also cover all five new level boundaries, retained old-save access, displayed
@@ -341,7 +387,10 @@ locked cast-luck snapshots, identical green reeling rates at every cast power, a
 yellow stalls. The real cast/hook/tension/catch/sale loop, all 30 sailing routes,
 old-save boot, and mobile controls are also covered. `tests/collection-browser.cjs`
 adds a last-species unlock, pre-existing bag bonuses, exact single/bulk payouts,
-global stacking, save/reload persistence, reset, and responsive reward UI checks:
+global stacking, save/reload persistence, reset, and responsive reward UI checks.
+`tests/xp-browser.cjs` verifies exact awarded/displayed/saved XP, rarity/weight
+improvements, the one-time discovery bonus, no XP from sales or duplicate landings,
+all five catch-triggered island unlocks, the level-99 cap, and mobile mythic payouts:
 
 ```sh
 # Use an installed Chromium/Chrome:
@@ -368,6 +417,7 @@ required to run or deploy the game.
 | `serve.js`, `render.yaml` | Zero-dependency local server / static hosting blueprint |
 | `tests/` | Pure logic, economy and optional browser regression suites |
 | `scripts/economy.mjs` | Deterministic tier/boat pricing audit (`npm run economy`) |
+| `scripts/progression.mjs` | Eligible-pool XP pacing audit (`npm run progression`) |
 
 The world uses merged vertex-colored cuboids, instanced particles, simple lighting,
 no shadow pass and reduced-detail distant islands. Resolution adapts on slow devices.

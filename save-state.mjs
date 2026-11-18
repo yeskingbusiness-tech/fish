@@ -1,5 +1,5 @@
-import { SPECIES, RODS, LINES, BAITS } from './game-data.mjs?v=32';
-import { BOATS, ISLANDS, gearIsland, xpForLevel, levelForXp, catchXP, hasIslandLicense } from './archipelago.mjs?v=32';
+import { SPECIES, RODS, LINES, BAITS } from './game-data.mjs?v=33';
+import { BOATS, ISLANDS, gearIsland, xpForLevel, levelForXp, legacyCatchXP, hasIslandLicense } from './archipelago.mjs?v=33';
 
 export const SAVE_VERSION = 8;
 export const SAVE_KEY = 'reel-deal-save-v8';
@@ -57,7 +57,8 @@ export function normalizeSave(d={}, legacy=false){
   let xp=integer(d.xp),ownedBoats=ids(d.ownedBoats,BOATS.length),boat=ownedBoats.includes(d.boat)?d.boat:0;
   if(legacy){
     const rank=Math.max(...Object.values(owned).flat().map(gearIsland));
-    const loggedXp=log.reduce((a,e)=>a+catchXP(e.sp,e.weight),0);
+    // New catch rewards must not retroactively inflate old v6 XP or licenses.
+    const loggedXp=log.reduce((a,e)=>a+legacyCatchXP(e.sp,e.weight),0);
     xp=Math.max(caught*28,loggedXp,xpForLevel(PREVIOUS_ISLAND_LEVELS[rank]));
     ownedBoats=[...new Set([0,rank])]; boat=rank;
   }
