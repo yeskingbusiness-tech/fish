@@ -31,6 +31,25 @@ fs.mkdirSync(shots,{recursive:true});
     assert.equal(await page.locator('.fish-entry.undiscovered').count(),120);
     assert.equal(await page.locator('.fish-entry.discovered').count(),0);
     assert.equal(await page.evaluate(()=>{const html=document.querySelector('#fishGrid').innerHTML;return window.__reelDeal.SPECIES.some(s=>html.includes(s.name));}),false);
+    // Stable island-first, common-to-mythic ordering for every filter and discovery state.
+    const indexOrder=await page.evaluate(()=>{const a=__reelDeal;return [...a.SPECIES].sort((a,b)=>a.island-b.island||__reelDeal.RARITY[a.rarity].tier-__reelDeal.RARITY[b.rarity].tier||a.number-b.number).map(sp=>({number:sp.number,island:sp.island}));});
+    async function checkIndexOrder(island,filter,found=[]){
+      await page.locator(`[data-index-island="${island}"]`).click();
+      await page.selectOption('#indexFilter',filter);
+      const actual=await page.locator('.fish-entry .entry-top>span:first-child').allTextContents();
+      const expected=indexOrder.filter(sp=>(island<0||sp.island===island)&&(filter==='all'||(filter==='found'?found.includes(sp.number):!found.includes(sp.number)))).map(sp=>sp.number);
+      assert.deepEqual(actual.map(n=>Number(n.replace('#',''))),expected);
+    }
+    for(let island=-1;island<6;island++)await checkIndexOrder(island,'all');
+    const foundNumbers=indexOrder.filter(sp=>sp.number%3===0).map(sp=>sp.number);
+    await page.evaluate(numbers=>{const a=__reelDeal;a.G.discoveries=Object.fromEntries(a.SPECIES.filter(sp=>numbers.includes(sp.number)).map(sp=>[sp.id,{count:1,best:sp.minW,first:''}]));a.renderIndex();},foundNumbers);
+    for(let island=-1;island<6;island++)for(const filter of ['all','found','missing'])await checkIndexOrder(island,filter,foundNumbers);
+    assert.equal(await page.evaluate(()=>{const html=[...document.querySelectorAll('.fish-entry.undiscovered')].map(e=>e.outerHTML).join('');return __reelDeal.SPECIES.some(sp=>html.includes(sp.name));}),false);
+    await page.evaluate(()=>{__reelDeal.G.discoveries={};__reelDeal.renderIndex();});
+    await checkIndexOrder(-1,'all');
+    assert.equal(await page.locator('.fish-entry.undiscovered').count(),120);
+    console.log('PASS: island/rarity index order across all filters; stable numbers; unknown names stay hidden');
+
     const pos=await page.evaluate(()=>[__reelDeal.G.px,__reelDeal.G.pz]);
     await page.keyboard.down('w');await page.waitForTimeout(180);await page.keyboard.up('w');await page.keyboard.press('Space');
     assert.deepEqual(await page.evaluate(()=>[__reelDeal.G.px,__reelDeal.G.pz]),pos);
@@ -171,6 +190,71 @@ fs.mkdirSync(shots,{recursive:true});
     });assert.deepEqual(routes,[]);
     console.log('PASS: all island docks and stalls reachable; no walking over water');
 
+    // Valid low/mid/full releases lock the advertised luck even if the live meter changes later.
+    const castResults=[];
+    for(const rod of [0,23])for(const power of [0,.5,1]){
+      const released=await page.evaluate(({rod,power})=>{
+        const a=__reelDeal;a.closeShop();a.closeChart();a.closeIndex();a.spawnAtIsland(0);
+        a.G.pz=-1.5;a.G.yaw=0;a.G.pitch=-.1;
+        a.camera.position.set(a.G.px,a.G.camY,a.G.pz);a.camera.rotation.set(-.1,0,0,'YXZ');
+        if(!a.walkable(a.G.px,a.G.pz))throw Error('Cast test must stand on the pier');
+        a.G.gear={rod,line:rod,bait:0};a.G.state='aim';a.startCharge();a.G.power=power;a.updateCastMeter();
+        const label=document.getElementById('castLuck').textContent;
+        a.releaseCast();
+        if(a.G.state!=='casting')throw Error('Test cast failed to reach water');
+        const captured=a.G.castPower;
+        a.G.power=1-power; // Should not change this released cast's luck.
+        a.G.castT=1; // Skip only the flight animation, not release/landing/hook logic.
+        return {label,captured};
+      },{rod,power});
+      assert.equal(released.captured,power);
+      assert.equal(released.label,power===0?'LUCK -10%':power===1?'LUCK +10%':'LUCK 0%');
+      await page.waitForFunction(()=>__reelDeal.G.state==='waiting');
+      assert.ok((await page.locator('#prompt').textContent()).includes(released.label));
+      const result=await page.evaluate(async()=>{
+        const a=__reelDeal,random=Math.random;
+        try{
+          Math.random=()=>.5;a.landBobber();const wait=a.G.waitTimer;
+          const expectedWait=4.1*(1-(a.BAITS[a.G.gear.bait].luck+(a.G.castPower*2-1)*.1)*.45);
+          if(Math.abs(wait-expectedWait)>1e-10)throw Error('Bite wait ignored the released cast luck');
+          a.triggerBite();let calls=0;Math.random=()=>calls++===0?0:.5;a.hookFish();
+          const weight=a.G.fishWeight,power=a.G.castPower,distance=a.G.castDist;
+          Math.random=()=>.5;
+          a.G.surgeTimer=99;a.G.surgeDur=0;a.G.yankTimer=99;a.G.yankDur=0;a.G.reelHeld=false;
+          async function measure(tension,duration){
+            a.G.tension=tension;
+            const time=a.G.time,progress=a.G.progress,start=performance.now();
+            return new Promise((resolve,reject)=>{
+              function frame(){
+                if(a.G.state!=='reeling'||performance.now()-start>10000){reject(Error('Reel-rate test ended unexpectedly'));return;}
+                if(a.G.time-time>=duration){resolve({rate:(a.G.progress-progress)/(a.G.time-time),delta:a.G.progress-progress});return;}
+                a.G.tension=tension;requestAnimationFrame(frame);
+              }requestAnimationFrame(frame);
+            });
+          }
+          const green=await measure(45,.3),yellow=await measure(85,.2);
+          return {weight,power,distance,rate:green.rate,expected:17*a.RODS[a.G.gear.rod].reel,yellow:yellow.delta};
+        }finally{Math.random=random;a.G.state='aim';a.G.reelHeld=false;}
+      });
+      assert.equal(result.power,power);
+      assert.equal(result.weight,power===0?1:power===.5?1.1:1.2);
+      assert.ok(Math.abs(result.rate-result.expected)<1e-7,'green progress must not depend on cast power/distance');
+      assert.equal(result.yellow,0,'yellow must still make no progress');
+      castResults.push({rod,...result});
+    }
+    for(const rod of [0,23]){
+      const results=castResults.filter(r=>r.rod===rod);
+      assert.ok(results[0].distance<results[1].distance&&results[1].distance<results[2].distance);
+    }
+    assert.equal(await page.evaluate(()=>{
+      const a=__reelDeal;a.G.castPower=1;a.G.px=0;a.G.pz=30;a.G.yaw=0;
+      a.camera.position.set(0,a.G.camY,30);a.camera.rotation.set(-.1,0,0,'YXZ');
+      a.G.state='aim';a.startCharge();a.G.power=0;a.releaseCast();
+      return a.G.state==='aim'&&a.G.castPower===1;
+    }),true,'an invalid cast must not overwrite the last valid snapshot');
+    await page.evaluate(()=>{__reelDeal.G.castPower=.5;});
+    console.log('PASS: -10/0/+10 cast luck, snapshot isolation, failed casts; identical green reel rate and yellow stalls at every distance');
+
     // Genuine casting + hooking + tension minigame (no direct catch award).
     await page.evaluate(()=>{const a=__reelDeal;a.closeShop();a.closeChart();a.spawnAtIsland(0);a.G.xp=0;a.G.coins=0;a.G.caught=0;a.G.discoveries={};a.bag.length=0;a.G.gear={rod:0,line:0,bait:0};a.G.owned={rod:[0],line:[0],bait:[0]};a.G.state='aim';a.updateStats();});
     await page.waitForTimeout(150);await page.keyboard.down('Space');await page.waitForFunction(()=>__reelDeal.G.power>.62,null,{timeout:15000});await page.keyboard.up('Space');
@@ -307,8 +391,14 @@ fs.mkdirSync(shots,{recursive:true});
     await mp.evaluate(()=>{const a=__reelDeal,s=a.world.stalls.find(s=>s.zone===0&&s.kind==='bait');a.G.px=s.x;a.G.pz=s.z-3.8;a.openShop('bait');});
     assert.match(await mp.locator('#shopBody [data-tier="1"] .rod-info').textContent(),/WEIGHT UP TO \+0\.5%/);
     assert.equal(await mp.locator('#shopBody').evaluate(e=>e.scrollWidth<=e.clientWidth+1),true);
-    await mp.screenshot({path:`${shots}/mobile-bait.png`});
-    await mobile.close();console.log('PASS: mobile drag-look, joystick, index, chart, boat shop and bait weight stats');
+    await mp.screenshot({path:`${shots}/mobile-bait.png`});await mp.click('#shopClose');
+    await mp.evaluate(()=>{const a=__reelDeal;a.spawnAtIsland(0);a.G.state='aim';a.startCharge();a.G.power=.75;a.G.powerDir=0;a.updateCastMeter();});
+    assert.equal(await mp.locator('#castMeter').isVisible(),true);
+    assert.equal(await mp.locator('#castLuck').textContent(),'LUCK +5%');
+    assert.equal(await mp.locator('#castPowerValue').textContent(),'75%');
+    assert.equal(await mp.locator('#castMeter').evaluate(e=>{const b=e.getBoundingClientRect();return b.left>=0&&b.right<=innerWidth&&e.scrollWidth<=e.clientWidth;}),true);
+    await mp.screenshot({path:`${shots}/mobile-cast-meter.png`});
+    await mobile.close();console.log('PASS: mobile drag-look, joystick, index, chart, boat shop, bait stats and cast-luck meter');
     console.log('Renderer:',await page.evaluate(()=>({calls:__reelDeal.renderer.info.render.calls,triangles:__reelDeal.renderer.info.render.triangles})));
     assert.deepEqual(errors,[],'No browser errors allowed');
     console.log('ALL BROWSER CHECKS PASSED');

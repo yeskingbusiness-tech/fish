@@ -288,8 +288,8 @@ function fishValue(sp, weight){
   return Math.max(6, Math.round(RARITY[sp.rarity].value * (0.5 + 0.5 * rel) * bulk * (1 + sp.island * 0.15)));
 }
 
-// The bait decides everything: each bait has a rarity window [lo, hi] and it
-// physically cannot hook outside it, no matter the luck.
+// Bait/island gates define eligibility; cast luck only reweights that same pool.
+// No luck value can hook a fish outside the bait's strict rarity/size window.
 function baitWindow(i){
   const b = BAITS[i] || BAITS[0];
   return [b.lo, b.hi];
@@ -300,18 +300,34 @@ function eligibleSpecies(island, baitIndex){
   return SPECIES.filter(s => s.island === island &&
     RARITY[s.rarity].tier >= bait.lo && RARITY[s.rarity].tier <= bait.hi && s.maxW >= bait.minSize);
 }
-function pickSpecies(island, baitIndex, random = Math.random){
+// The index uses a sorted copy; roster numbers, spawn order and save IDs stay stable.
+function sortFishIndex(items = SPECIES){
+  return [...items].sort((a,b) => a.island - b.island ||
+    RARITY[a.rarity].tier - RARITY[b.rarity].tier || a.number - b.number);
+}
+// Charge adds percentage points to bait luck: -10 at minimum, 0 at halfway, +10 at full.
+// A neutral default preserves callers that are not resolving a player's cast.
+function castLuckModifier(power = 0.5){
+  const charge = Number.isFinite(power) ? clamp(power, 0, 1) : 0.5;
+  return (charge * 2 - 1) * 0.1;
+}
+function effectiveLuck(baitIndex = 0, castPower = 0.5){
+  return (BAITS[baitIndex] || BAITS[0]).luck + castLuckModifier(castPower);
+}
+function pickSpecies(island, baitIndex, random = Math.random, castPower = 0.5){
   const bait = BAITS[baitIndex];
   const list = eligibleSpecies(island, baitIndex);
   if(!list.length) return null; // never silently give a fish outside the island/bait window
-  const weights = list.map(s => s.weight * Math.pow(1 + bait.luck * 2, RARITY[s.rarity].tier - bait.lo));
+  const luck = effectiveLuck(baitIndex, castPower);
+  const weights = list.map(s => s.weight * Math.pow(1 + luck * 2, RARITY[s.rarity].tier - bait.lo));
   let r = random() * weights.reduce((a, b) => a + b, 0);
   for(let i = 0; i < list.length; i++) { r -= weights[i]; if(r <= 0) return list[i]; }
   return list[list.length - 1];
 }
-function rollWeight(sp, baitIndex = 0, random = Math.random){
+function rollWeight(sp, baitIndex = 0, random = Math.random, castPower = 0.5){
   const bait = BAITS[baitIndex] || BAITS[0];
-  const t = Math.pow(random(), 1 / (1 + bait.luck * 1.8));
+  const luck = effectiveLuck(baitIndex, castPower);
+  const t = Math.pow(random(), 1 / (1 + luck * 1.8));
   const weight = clamp(sp.minW + (sp.maxW - sp.minW) * t, sp.minW, sp.maxW);
   if(!bait.weightBonus || weight === sp.maxW) return weight;
   const bonus = weight * bait.weightBonus, room = sp.maxW - weight;
@@ -322,4 +338,4 @@ function rollWeight(sp, baitIndex = 0, random = Math.random){
 }
 
 
-export { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow, eligibleSpecies, pickSpecies, rollWeight };
+export { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow, eligibleSpecies, sortFishIndex, castLuckModifier, effectiveLuck, pickSpecies, rollWeight };

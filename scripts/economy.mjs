@@ -4,21 +4,22 @@
 // decimal just as they are in hookFish(); market values include that rounding.
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
-import { RODS, LINES, BAITS, RARITY, eligibleSpecies, fishValue, rollWeight } from '../game-data.mjs';
+import { RODS, LINES, BAITS, RARITY, eligibleSpecies, effectiveLuck, fishValue, rollWeight } from '../game-data.mjs';
 import { ISLANDS, BOATS, gearIsland, localGearPriceCeiling } from '../archipelago.mjs';
 
 const cache = new Map();
-export function expectedCatchIncome(island, baitIndex, samples = 1024){
-  const key = `${island}:${baitIndex}:${samples}`;
+export function expectedCatchIncome(island, baitIndex, samples = 1024, castPower = 0.5){
+  const key = `${island}:${baitIndex}:${samples}:${castPower}`;
   if(cache.has(key)) return cache.get(key);
   const bait = BAITS[baitIndex], pool = eligibleSpecies(island, baitIndex);
   if(!bait || !pool.length) return 0;
+  const luck = effectiveLuck(baitIndex, castPower);
   let chanceTotal = 0, saleTotal = 0;
   for(const sp of pool){
-    const chance = sp.weight * Math.pow(1 + bait.luck * 2, RARITY[sp.rarity].tier - bait.lo);
+    const chance = sp.weight * Math.pow(1 + luck * 2, RARITY[sp.rarity].tier - bait.lo);
     let sales = 0;
     for(let q = 0; q < samples; q++){
-      const weight = +rollWeight(sp, baitIndex, () => (q + 0.5) / samples).toFixed(1);
+      const weight = +rollWeight(sp, baitIndex, () => (q + 0.5) / samples, castPower).toFixed(1);
       sales += fishValue(sp, weight);
     }
     chanceTotal += chance;
@@ -50,6 +51,7 @@ export function boatEconomyRows(){
   });
 }
 function report(){
+  console.log('Saving goals assume a neutral 50% cast. Low/full charge applies -10/+10 luck points.');
   console.log('Gear: income from the previous bait in the shop\'s own island.');
   console.table(gearEconomyRows().map(r => ({
     tier:r.tier, island:r.island, 'coins/catch':r.income.toFixed(1),

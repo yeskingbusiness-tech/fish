@@ -12,14 +12,14 @@ const rand  = (a,b) => a + Math.random() * (b-a);
 const hexc  = c => '#' + c.toString(16).padStart(6,'0');
 const fmt   = n => n.toLocaleString('en-US');
 
-import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow,
-  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=29';
-import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, hasIslandLicense, travelRequirement } from './archipelago.mjs?v=29';
-import { createWorld } from './world.mjs?v=29';
-import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=29';
+import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow, sortFishIndex, castLuckModifier, effectiveLuck,
+  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=30';
+import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, hasIslandLicense, travelRequirement } from './archipelago.mjs?v=30';
+import { createWorld } from './world.mjs?v=30';
+import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=30';
 
-const pickSpecies = () => drawSpecies(G.zone, G.gear.bait);
-const rollWeight = sp => drawWeight(sp, G.gear.bait);
+const pickSpecies = () => drawSpecies(G.zone, G.gear.bait, Math.random, G.castPower);
+const rollWeight = sp => drawWeight(sp, G.gear.bait, Math.random, G.castPower);
 
 // ---------- Pixel-art fish (UI icons) ----------
 const FISH_BASE = [
@@ -303,7 +303,7 @@ const G = {
   state:'menu',                       // menu | aim | charging | casting | waiting | bite | reeling | caught
   score:0, caught:0, best:null,
   yaw:0, pitch:-0.12,
-  power:0, powerDir:1,
+  power:0, powerDir:1, castPower:0.5, // live charge vs. released cast snapshot (not saved)
   tension:15, progress:0, fishStrength:0.3,
   surgeTimer:0, surgeDur:0, yankTimer:0, yank:0, yankDur:0, reelHeld:false,
   time:0, rodSwing:0, bobDip:0,
@@ -434,7 +434,7 @@ function setState(s){
       : '<b>WASD</b> to walk · mouse to look · <b>hold CLICK</b> to cast');
     bobber.visible = false; line.visible = false;
   }
-  if(s === 'waiting'){ promptEl.style.display = ''; setPrompt(isTouch ? 'Waiting for a bite… <b>tap</b> to reel in early' : 'Waiting for a bite… <b>click</b> to reel in early', 'waiting'); }
+  if(s === 'waiting'){ promptEl.style.display = ''; setPrompt(`<b>${castLuckLabel(G.castPower)}</b> · Waiting… ${isTouch?'tap':'click'} to reel in early`, 'waiting'); }
   if(s === 'bite'){ promptEl.style.display = ''; setPrompt('BITE! <b>CLICK / SPACE</b> NOW!', 'bite'); biteEl.classList.add('show'); }
   if(s === 'reeling') promptEl.style.display = 'none';
   if(s === 'casting'){ promptEl.style.display = ''; setPrompt('Splash!', 'waiting'); }
@@ -447,6 +447,17 @@ function groundAt(x,z){ return world.groundAt(x,z,G.zone); }
 const walkable = (x,z) => groundAt(x,z) !== null;
 
 // ---------- Casting ----------
+function castLuckLabel(power){
+  const percent = Math.round(castLuckModifier(power) * 1000) / 10 || 0;
+  return `LUCK ${percent > 0 ? '+' : ''}${fmt(percent)}%`;
+}
+function updateCastMeter(){
+  castFill.style.width = (G.power * 100) + '%';
+  $('castPowerValue').textContent = Math.round(G.power * 100) + '%';
+  $('castLuck').textContent = castLuckLabel(G.power);
+  $('castLuck').classList.toggle('positive',G.power>0.5);
+  $('castLuck').classList.toggle('negative',G.power<0.5);
+}
 function landingPoint(power, out){
   camera.getWorldDirection(camFwd);
   camFwd.y = 0;
@@ -473,10 +484,11 @@ function startCharge(){
   ensureAudio();
   setState('charging');
   G.power = 0; G.powerDir = 1;
+  updateCastMeter();
 }
 function releaseCast(){
   if(G.state !== 'charging') return;
-  const power = G.power;
+  const power = clamp(G.power,0,1);
   rodTipObj.getWorldPosition(castFrom);
   if(!landingPoint(power, castTo)){
     showToast('Aim at the water to cast.', true);
@@ -484,6 +496,7 @@ function releaseCast(){
     setState('aim');
     return;
   }
+  G.castPower = power; // A valid release locks luck for this cast; later meter changes cannot alter it.
   G.castT = 0;
   G.castDur = 0.42 + castTo.distanceTo(castFrom) * 0.022;
   bobberPos.copy(castFrom);
@@ -501,7 +514,7 @@ function landBobber(){
   spawnRipple(bobberPos);
   sfx.splash();
   G.castDist = Math.hypot(bobberPos.x - camera.position.x, bobberPos.z - camera.position.z);
-  const luck = BAITS[G.gear.bait].luck;
+  const luck = effectiveLuck(G.gear.bait,G.castPower);
   G.waitTimer = rand(2.4, 5.8) * (1 - luck * 0.45);
   setState('waiting');
 }
@@ -977,12 +990,12 @@ function renderIndex(){
   $('collectionTotal').textContent=`${found} / 120`;
   $('collectionFill').style.width=(found/120*100)+'%';
   $('indexIslands').innerHTML=[{id:-1,short:'All waters'},...ISLANDS].map(i=>`<button class="island-filter ${i.id===indexIsland?'active':''}" data-index-island="${i.id}">${i.short}</button>`).join('');
-  const pool=SPECIES.filter(sp=>indexIsland<0||sp.island===indexIsland);
+  const pool=sortFishIndex(SPECIES.filter(sp=>indexIsland<0||sp.island===indexIsland));
   const filter=$('indexFilter').value;
   const list=pool.filter(sp=>filter==='all'||(filter==='found'?!!G.discoveries[sp.id]:!G.discoveries[sp.id]));
   const count=pool.filter(sp=>G.discoveries[sp.id]).length;
   $('indexIslandCount').textContent=`${count} / ${pool.length} in these waters`;
-  $('indexHint').textContent=indexIsland<0?'An unknown shape. A story still to be caught.':ISLANDS[indexIsland].tagline;
+  $('indexHint').textContent=indexIsland<0?'By island, then rarity · common → mythic.':ISLANDS[indexIsland].short+' · common → mythic.';
   $('fishGrid').innerHTML=list.length?list.map(sp=>{
     const r=G.discoveries[sp.id];
     // Unknown entries contain no species name, color, rarity, description,
@@ -1324,7 +1337,7 @@ stickEl.addEventListener('pointercancel', endStick);
 $('resetBtn').addEventListener('click',()=>{
   if(!confirm('Start over? This erases all coins, levels, boats, gear and fish discoveries on this device.'))return;
   const fresh=normalizeSave({version:SAVE_VERSION});const {bag:emptyBag,log:emptyLog,...state}=fresh;
-  Object.assign(G,state);bag.length=0;log.length=0;
+  Object.assign(G,state);bag.length=0;log.length=0;G.castPower=0.5;G.power=0;
   logDrawer.classList.add('hidden');drawerOpen=false;world.setBoat(0);spawnAtIsland(0);
   applyGear();renderLog();saveGame();resumeWorld();showToast('A fresh adventure. Tight lines!');
 });
@@ -1445,7 +1458,7 @@ function tick(){
     G.power += G.powerDir * Math.min(rawDt,.15) * 1.15;
     if(G.power >= 1){ G.power = 1; G.powerDir = -1; }
     if(G.power <= 0){ G.power = 0; G.powerDir = 1; }
-    castFill.style.width = (G.power * 100) + '%';
+    updateCastMeter();
     const ok = landingPoint(G.power, tmpV);
     aimMarker.visible = ok;
     if(ok){
@@ -1520,7 +1533,7 @@ function tick(){
     G.tension = clamp(G.tension + rate * dt, 0, 100);
     const inSafe = G.tension >= G.bandLo && G.tension <= G.bandHi;
 
-    // green only: it reels itself, 15% slower than the old manual crank
+    // Green progress depends on reel speed only, NEVER cast charge or distance.
     if(inSafe){
       G.progress += dt * 20 * 0.85 * r2.reel;
       if(Math.random() < dt * 10) sfx.reelTick();
@@ -1648,6 +1661,7 @@ window.__reelDeal = window.__reelLife = {
   openChart,closeChart,renderChart,buyBoat,sailTo,finishVoyage,openIndex,closeIndex,renderIndex,
   renderShop,renderMarket,fightSetup,pickSpecies,paintTensionBand,eligibleSpecies,
   updateStats,fishValue,rollWeight,xpForLevel,level,hasLicense,saveGame,levelProgress,
+  castLuckModifier,effectiveLuck,updateCastMeter,
   walkable,groundAt,landBobber,triggerBite,hookFish,catchFish,SHOP_POS,MARKET_POS,
   startCharge,releaseCast,landingPoint,inWater,spawnAtIsland,nearestVendor
 };

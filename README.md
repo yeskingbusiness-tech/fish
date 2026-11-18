@@ -74,10 +74,10 @@ places you safely on the destination's fishing pier. Water is not walkable.
 
 ### Fish selection and gear
 
-**Current island + equipped bait** determine the fish pool. Cast distance never
-selects a species, and fishing from one island cannot summon another island's fish.
-Every bait keeps its strict rarity window and minimum species-size filter. Luck
-weights the rarer species inside that valid pool; it never bypasses the limits.
+**Current island + equipped bait** determine the eligible fish pool. Cast charge
+adjusts luck within that pool; it never unlocks another island's fish or bypasses
+the bait's rarity window and minimum species-size filter. Longer rods do not add
+extra eligibility or luck beyond the same charge-based bonus.
 
 The local bait shop and tackle bag show how many local species each bait can attract.
 If a bait has no valid fish here, casting is blocked with an explanation—there is no
@@ -92,6 +92,34 @@ and the previous island's top bait works when arriving on the next island.
 Some collection entries reward revisiting an island with a different bait. For example,
 Pinewater's Golden Koi requires a legendary-capable bait from a later island; Sunscar's
 American Eel takes an earlier uncommon-capable bait. Keep your old tackle!
+
+### Cast power and luck · v30
+
+Charge now contributes **−10 to +10 percentage points** to equipped bait luck:
+
+| Released cast power | Luck adjustment |
+| --- | ---: |
+| Minimum · 0% | −10 points |
+| 25% | −5 points |
+| Halfway · 50% | No adjustment |
+| 75% | +5 points |
+| Full · 100% | +10 points |
+
+The change is linear, additive and capped: +30% bait luck becomes +20% at minimum
+charge or +40% at full charge. Even starter bait responds (−10% to +10% effective
+luck); these are weighting bonuses, **not catch probabilities**. The live charge
+meter shows the modifier, and a successful release locks it until the next cast.
+Failed casts never replace it, and the modifier is not stored as a permanent upgrade.
+
+Effective luck controls the existing eligible-fish rarity weights, specimen-weight
+bias and bite wait. It does not change species eligibility, the separate bait weight
+bonus, prices, or saves. Each rod has the same −10/+10 limits; absolute metres do not
+stack another bonus on top. The economy audit uses neutral 50% charge by default.
+
+**Reeling progress has no cast-power or distance factor.** For the same rod and time
+spent in green, minimum- and full-power casts reel at exactly the same rate. Fish
+strength, weight and player control can still make individual fights feel different.
+The bobber's outward flight time still reflects how far it travels.
 
 ### Clearer bait luck upgrades · v29
 
@@ -167,7 +195,10 @@ specimens. A **new species awards a 50% discovery XP bonus**. Selling does not a
 The level meter and next island milestone are always visible. Total XP for level `L` is
 `90 × (L−1) + 22 × (L−1)²`; levels cap at 99. The final island requires level 90.
 
-The **fish index (F)** contains all 120 numbered entries:
+The **fish index (F)** contains all 120 numbered entries. Entries stay grouped by
+island and sort **Common → Uncommon → Rare → Epic → Legendary → Mythic** within
+each island, including when filters are applied. Original entry numbers and saved
+discoveries are unchanged; tied rarities keep their original number order.
 
 - Undiscovered fish have an **opaque dark silhouette and `???`**, with no species name,
   colors, rarity, description, tooltip, or accessible-label spoiler in the entry markup.
@@ -248,7 +279,7 @@ For other static hosts, deploy `index.html`, `style.css`, `main.js`, **all four 
 modules**, and `vendor/`. Every browser-facing path is relative and every dependency is
 local. `.mjs` must be served as JavaScript (already handled by `serve.js`).
 
-Cache stamps are currently **`v=29`** in the HTML and module imports. Bump the corresponding
+Cache stamps are currently **`v=30`** in the HTML and module imports. Bump the corresponding
 stamps when changing a cached module. Render's blueprint also sends `Cache-Control: no-cache`.
 
 ## Testing
@@ -260,18 +291,23 @@ retained v7 access, one-time save migration, persistent discoveries, and malform
 save handling. Weight tests cover every species and bait tier, bounded bonuses,
 strictly heavier averages after display rounding, and unchanged saved catches. Luck
 tests check every widened gap, improved rare-fish weighting and the actual picker.
+Cast/index tests cover the −10/0/+10 luck scale, strict pools at every power,
+cast-adjusted weights/income, and non-mutating island/rarity ordering across filters.
 Economy tests also compare prices to published baselines, enforce every next-voyage
 boat premium against all local stock, and verify that ownership and coins are preserved.
 
 `npm run economy` prints the deterministic income estimates and saving goals for
 every gear tier and boat, including the local gear ceiling and boat premium, using
-fixed weight quantiles rather than lucky random runs.
+fixed weight quantiles rather than lucky random runs. These targets assume neutral
+50% cast power; `expectedCatchIncome` also accepts cast power for targeted audits.
 
 Optional browser tests exercise all **69 paid gear purchases and five boat purchases**,
 including one-coin-short rejection, displayed-versus-charged prices and free re-equips.
 They also cover all five new level boundaries, retained old-save access, displayed
-bait bonuses and actual equipped-bait hook weights, the real cast/hook/tension/catch/sale
-loop, all 30 sailing routes, old-save boot, and mobile controls:
+bait bonuses and actual equipped-bait hook weights, index order across all filters,
+locked cast-luck snapshots, identical green reeling rates at every cast power, and
+yellow stalls. The real cast/hook/tension/catch/sale loop, all 30 sailing routes,
+old-save boot, and mobile controls are also covered:
 
 ```sh
 # Use an installed Chromium/Chrome:
