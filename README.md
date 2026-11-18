@@ -79,7 +79,7 @@ adjusts luck within that pool; it never unlocks another island's fish or bypasse
 the bait's rarity window and minimum species-size filter. Longer rods do not add
 extra eligibility or luck beyond the same charge-based bonus.
 
-The local bait shop and tackle bag show how many local species each bait can attract.
+The local bait shop and Bag → Bait show how many local species each bait can attract.
 If a bait has no valid fish here, casting is blocked with an explanation—there is no
 silent fallback to an incorrect species. Every local bait has at least one local fish,
 and the previous island's top bait works when arriving on the next island.
@@ -87,7 +87,7 @@ and the previous island's top bait works when arriving on the next island.
 - **Rods:** cast reach, reel speed, and control. Bamboo Pole → Mythril Rod.
 - **Lines:** weight rating and reduced strain. Cotton Twine → 1900lb Mythril.
 - **Bait:** rarity window, minimum species size, luck, and a gentle weight bonus. Garden Worm → Moonbait.
-- **Tackle bag (I):** equip any already-owned tier from anywhere. It cannot buy remote stock.
+- **Bag → Rods / Lines / Bait (I):** equip any already-owned tier from anywhere for free. The bag cannot buy stock; visit a local vendor for new gear.
 
 Some collection entries reward revisiting an island with a different bait. For example,
 Pinewater's Golden Koi requires a legendary-capable bait from a later island; Sunscar's
@@ -126,7 +126,7 @@ The bobber's outward flight time still reflects how far it travels.
 Every upgrade's luck gap is **one percentage point larger** than before: early bait
 now goes **0% → 3% → 7% → 11%** instead of 0% → 2% → 5% → 8%. Later gaps rise smoothly
 to 5–6 points, with Moonbait reaching a **+113% luck bonus**. All paid bait has more
-luck, while starter worms are unchanged. The shop and tackle bag show the actual
+luck, while starter worms are unchanged. The shop and Bag → Bait show the actual
 bonus and the difference from your equipped bait.
 
 Luck is a **relative weighting modifier**, not a literal catch percentage or a
@@ -140,7 +140,7 @@ bonus, gear prices, island levels and already-owned items are unchanged.
 Every bait upgrade adds **0.5 percentage points** to its maximum rolled-weight bonus:
 Garden Worm **0%**, Bread Ball **up to +0.5%**, Salmon Egg **up to +3.5%**, and Moonbait
 **up to +11.5%**. This is a small extra benefit on top of bait's existing luck-based
-weight bias. The bait shop and tackle bag show the bonus and upgrade comparison.
+weight bias. The bait shop and Bag → Bait show the bonus and upgrade comparison.
 
 The bonus tapers as a fish approaches its species' natural maximum, rather than
 clamping many rolls into identical maximum-size trophies. Fish stay within their
@@ -272,12 +272,40 @@ Fish already in your bag receive the boost when sold, including the fish that
 completes an island. Existing wallet coins are not multiplied or retroactively paid.
 Shop prices, fish eligibility, XP and the cast-luck/reeling rules are unchanged.
 
+## Quieter interface · v35
+
+- **One Bag:** the **Fish · Rods · Lines · Bait** tabs replace the two separate bags.
+  **B** opens Fish (or closes the bag); **I** opens your last gear tab. In the Fish
+  tab, I switches to gear; in a gear tab, I closes the bag. All owned tiers remain
+  freely equippable, including earlier bait. Purchases still require local vendors.
+- **Essential HUD:** coins, level and XP stay visible. Total catches and your best
+  fish's name/weight live in **Catch Log**, including lifetime records older than
+  the latest 200 log entries. The large logo appears only on the title screen.
+  The island card, sea chart, fish index and camera navigation keep their layout.
+- **Contextual instructions:** nearby stalls show their interaction button; open
+  water offers a cast hint; waiting, bites, charging and reeling show only their
+  relevant controls. A held fish shows its own Put away action instead. Full
+  desktop/touch controls are in **Help (?)**, not a permanent row of labels.
+- **Compact catch strip:** for example, **Rainbow Trout · 3.6 lb — Put away**.
+  Holding, front view, fish values and saved progress are unchanged.
+- **Hide HUD (H):** frame a screenshot first, then hide the entire interface. A
+  brief restoration hint disappears after two seconds. **Tap/click anywhere,
+  press H or Escape** to bring it back. That first action only restores the UI;
+  it cannot cast or move the player. Movement/look and other actions are blocked
+  while hidden, but the world keeps animating. This mode is not saved on reload.
+
+Bag and Help support Tab focus trapping and Escape/backdrop closing. Bag tabs
+also support Left/Right (including wraparound), Home and End. Opening a panel
+clears movement, joystick and fishing input. Help and Hide HUD, like the Bag,
+are idle-only: finish the current cast, catch or voyage first. No economy, XP,
+fish-pool, island-gate or save-format changes are part of this UI update.
+
 ## Hold your catch and front view · v34
 
-Open the **Fish bag (B)** from anywhere to see each **unsold, landed fish**, including
+Open **Bag → Fish (B)** from anywhere to see each **unsold, landed fish**, including
 its species, rarity and actual weight. Choose **Hold** to close the bag and hold that
-fish in front of you. This is separate from the tackle bag (I) and fish index (F):
-sold fish and undiscovered species are not selectable.
+fish in front of you. Fish and owned tackle now share one bag; the lifetime fish
+index (F) is separate. Sold fish and undiscovered species are not selectable.
 
 Press **V**, or the **Front view** button, to see your character **from the front**.
 Press the same key/button again to return to first person. The character is a very
@@ -293,7 +321,7 @@ first person**—only the rod, or the held fish. No character assets are downloa
   different fish does not change what is held, even for identical duplicates.
 - Walking and fishing work in either view. The front camera is separate from the
   player’s aim, so it never reverses casts or changes bait luck, reach or reeling.
-  Finish an active cast/fight before switching views or opening the fish bag.
+  Finish an active cast/fight before switching views or opening the bag.
 - The camera follows the player and shortens its distance near island obstacles.
   Voyages temporarily use the boat camera, then restore your chosen view and fish.
 - Reloading returns to first person with the fish put away; the actual bag and all
@@ -312,10 +340,12 @@ first person**—only the rod, or the held fish. No character assets are downloa
 | Interact at a stall | E or its on-screen button | Tap its button |
 | Sea chart / boats | M | Sea chart button |
 | Fish index | F | Fish index button |
-| Owned tackle | I | Tackle bag button |
-| Fish bag / choose a catch to hold | B | Fish bag button, then Hold |
+| Bag / choose a catch to hold | B | Bag → Fish → Hold |
+| Owned tackle | I (last gear tab) | Bag → Rods / Lines / Bait |
 | Front-facing third person / first person | V (toggle) | Front view / First person button |
 | Put held fish away | X | Put away button |
+| Full controls / Help | ? | Help button |
+| Hide / restore HUD | H; Escape or click to restore | Hide HUD; tap anywhere to restore |
 | Close panel / release cursor | Escape | Close button / backdrop |
 
 If pointer lock is unavailable, **drag with the mouse to look**; this still supports a
@@ -372,7 +402,7 @@ For other static hosts, deploy `index.html`, `style.css`, `main.js`, **all five 
 modules**, and `vendor/`. Every browser-facing path is relative and every dependency is
 local. `.mjs` must be served as JavaScript (already handled by `serve.js`).
 
-Cache stamps are currently **`v=34`** in the HTML and module imports. Bump the corresponding
+Cache stamps are currently **`v=35`** in the HTML and module imports. Bump the corresponding
 stamps when changing a cached module. Render's blueprint also sends `Cache-Control: no-cache`.
 
 ## Testing
@@ -396,6 +426,8 @@ power, and audit agreement with the actual picker. They also check exact saved X
 and licenses at all 99 levels, the unchanged v8 key, and frozen v6 XP reconstruction.
 Player-view tests cover bounded display sizing for every species, every camera
 heading, obstacle clearance, and portrait framing without changing fish/aim data.
+UI-rule tests check the single bag tab order, roving-key behavior, contextual hint
+priority, correct desktop/touch controls and the complete Help reference.
 Economy tests also compare prices to published baselines, enforce every next-voyage
 boat premium against all local stock, and verify that ownership and coins are preserved.
 
@@ -427,7 +459,12 @@ all five catch-triggered island unlocks, the level-99 cap, and mobile mythic pay
 isolation, selecting individual specimens, identical-fish sales, resource disposal,
 actual character render visibility, all 120 fish shapes in both views at desktop and
 phone sizes, a real third-person cast/hook/reel/catch, travel/reload/reset, and touch
-look/joystick/Put away controls:
+look/joystick/Put away controls. `tests/ui-browser.cjs` covers the unified bag,
+all three remote re-equip paths, purchase/ownership guards, B/I aliases, accessible
+tabs and Help, native Space activation, pointer/keyboard/joystick isolation,
+contextual fishing/vendor hints, lifetime Catch Log records, clean screenshot mode
+and safe click/tap/H/Escape restoration. It also checks reload/reset, all 24 owned
+gear tiers, and scrolling/layout at desktop, phone and short-landscape sizes:
 
 ```sh
 # Use an installed Chromium/Chrome:
@@ -446,12 +483,13 @@ required to run or deploy the game.
 | File | Purpose |
 | --- | --- |
 | `main.js` | Fishing, input, UI, shops, carried catches, collection, voyage playback, saves |
+| `ui-state.mjs` | Pure bag-tab navigation, contextual hint rules and Help controls |
 | `player-view.mjs` | Basic cuboid player, front camera framing and bounded held-fish sizing |
 | `game-data.mjs` | 120 species, 72 gear tiers, fish pools, prices and weight rolls |
 | `archipelago.mjs` | Island / boat definitions, XP and travel requirements |
 | `world.mjs` | Merged cube terrain and props, collision, distant-island LOD, sea routing |
 | `save-state.mjs` | Validated save normalization and legacy migration |
-| `index.html`, `style.css` | Responsive HUD, chart, index and shop panels |
+| `index.html`, `style.css` | Responsive HUD, unified Bag, Help, chart, index and shop panels |
 | `serve.js`, `render.yaml` | Zero-dependency local server / static hosting blueprint |
 | `tests/` | Pure logic, economy and optional browser regression suites |
 | `scripts/economy.mjs` | Deterministic tier/boat pricing audit (`npm run economy`) |

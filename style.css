@@ -384,7 +384,7 @@ button:disabled{cursor:not-allowed}.primary-btn:disabled{background:#c8d1ca;colo
 .nav-btn:disabled{opacity:.58;cursor:default;transform:none}
 .nav-btn[aria-pressed="true"]{background:#dce9d8;border-color:#467b67}
 .front-view #crosshair,.carrying-fish #crosshair{display:none}
-.fish-bag-count{font:11px 'Courier New',monospace;color:var(--ink-soft);white-space:nowrap}
+.bag-fish-count{font:11px 'Courier New',monospace;color:var(--ink-soft);white-space:nowrap}
 .carry-row{display:flex;align-items:center;gap:16px;padding:14px;border:1px solid #c4cbb8;background:#f8f5e6;flex-shrink:0}
 .carry-row.selected{background:#e5eddf;border-color:#588a70}
 .carry-icon{width:70px;flex:0 0 70px}.carry-icon svg{width:100%;height:auto;display:block}
@@ -392,11 +392,43 @@ button:disabled{cursor:not-allowed}.primary-btn:disabled{background:#c8d1ca;colo
 .carry-rarity{font:700 8px 'Courier New',monospace;letter-spacing:1px;color:#63836f}.carry-rarity.rare{color:#537b9e}.carry-rarity.epic{color:#976783}.carry-rarity.legendary{color:#9b762e}.carry-rarity.mythic{color:#8066a7}
 .carry-row .buy-btn{min-height:44px;flex-shrink:0}
 .fish-bag-empty{text-align:center;padding:32px 15px;color:var(--ink-soft)}.fish-bag-empty>span{font:40px 'Courier New',monospace;color:#719180}.fish-bag-empty h3{font:bold 17px 'Courier New',monospace;margin:14px 0 10px}.fish-bag-empty p{font-size:11px;line-height:1.8}
-.held-fish-bar{position:absolute;left:50%;bottom:78px;transform:translateX(-50%);display:flex;align-items:center;gap:20px;width:min(460px,90vw);padding:13px 16px;background:#f5efdef5;border:2px solid var(--ink);box-shadow:var(--hard-sm);pointer-events:auto}
-.held-fish-bar>div{display:grid;gap:5px;min-width:0;flex:1}.held-fish-bar .eyebrow{font-size:8px;letter-spacing:1px;color:#64856d}.held-fish-bar strong{font:bold 14px/1.3 'Courier New',monospace;overflow-wrap:anywhere}.held-fish-bar small{font:9px/1.5 'Courier New',monospace;color:var(--ink-soft)}
-.held-fish-bar button{min-height:44px;border:1px solid #8aa591;background:#e0ead5;font:700 10px 'Courier New',monospace;padding:10px}.held-fish-bar kbd{margin-left:5px;font:9px monospace;color:var(--ink-soft)}
+.held-fish-bar{position:absolute;left:50%;bottom:80px;transform:translateX(-50%);display:flex;align-items:center;gap:12px;width:max-content;max-width:calc(100vw - 40px);padding:4px 6px 4px 12px;background:#f5efdef5;border:1px solid var(--ink);box-shadow:var(--hard-sm);pointer-events:auto}
+.held-fish-bar>p{min-width:0;flex:1;font:12px/1.5 'Courier New',monospace;color:var(--ink-soft);overflow-wrap:anywhere}.held-fish-bar strong{font-weight:700;color:var(--ink)}.held-fish-bar #heldFishWeight{white-space:nowrap}
+.held-fish-bar button{min-height:36px;border:1px solid #8aa591;background:#e0ead5;font:700 10px 'Courier New',monospace;padding:8px 10px}.held-fish-bar kbd{margin-left:5px;font:9px monospace;color:var(--ink-soft)}
+.carrying-fish .shop-btn{bottom:146px}
 .voyaging .held-fish-bar{display:none!important}
-@media(max-width:760px){.carry-row{gap:11px;padding:12px}.carry-icon{width:48px;flex-basis:48px}.carry-copy b{font-size:12px}.carry-copy small{font-size:9px}.fish-bag-count{font-size:9px}.held-fish-bar{left:auto;right:12px;bottom:82px;transform:none;width:calc(100vw - 128px);max-width:340px;padding:10px;gap:8px}.held-fish-bar strong{font-size:11px}.held-fish-bar small{font-size:8px}.held-fish-bar .eyebrow{font-size:6px;letter-spacing:.5px}.held-fish-bar button{font-size:9px;padding:9px 7px}.held-fish-bar kbd{display:none}}
-@media(max-height:590px){.hud-actions{gap:4px}.nav-btn{padding-top:6px;padding-bottom:6px}.held-fish-bar{bottom:18px}.front-view .prompt{bottom:65px}}
+@media(max-width:760px){.carry-row{gap:11px;padding:12px}.carry-icon{width:48px;flex-basis:48px}.carry-copy b{font-size:12px}.carry-copy small{font-size:9px}.bag-fish-count{font-size:9px}.held-fish-bar{left:auto;right:12px;bottom:82px;transform:none;width:calc(100vw - 128px);max-width:340px;padding:4px 5px 4px 10px;gap:8px}.held-fish-bar>p{font-size:11px}.held-fish-bar button{min-height:44px;font-size:9px;padding:8px}.held-fish-bar kbd{display:none}.carrying-fish .shop-btn{bottom:154px}}
+
+@media(max-height:590px){.hud-actions{gap:4px}.nav-btn{padding-top:6px;padding-bottom:6px}.held-fish-bar{bottom:18px}.front-view .prompt{bottom:65px}.carrying-fish .shop-btn{bottom:106px}}
 
 @media(max-height:590px){.carrying-fish .controls-hint,.carrying-fish .equipment-strip{display:none}}
+
+/* A quieter HUD: one bag, contextual controls and a clean screenshot view. */
+#scene:focus{outline:none}
+.hud-tools{display:flex;align-items:flex-start;gap:6px;pointer-events:auto}
+.hud-tool{display:flex;align-items:center;gap:7px;min-height:40px;padding:8px 11px;border:1px solid #829d91;background:#f5efdee8;color:var(--ink);font:700 11px 'Courier New',monospace;box-shadow:2px 2px #193d4533;cursor:pointer;white-space:nowrap}
+.hud-tool>span{display:grid;place-items:center;width:17px;height:17px;border:1px solid #9bb1a1;font-size:11px}.hud-tool kbd{font:9px monospace;color:var(--ink-soft)}
+.hud-tool:hover:enabled{background:#fffaf0}.hud-tool:disabled{opacity:.55;cursor:default}
+.hud-tool:focus-visible,.shop-close:focus-visible{outline:2px solid #397966;outline-offset:3px}
+.cast-instruction{font:10px 'Courier New',monospace;text-align:center;color:var(--ink-soft);margin-top:7px}
+.reel-hint{line-height:1.6}.reel-hint>span{font-size:.9em}
+.bag-card,.help-card{max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px);overflow:hidden}
+.bag-tabs{flex-shrink:0}.bag-tabs .tab{min-height:44px}
+.bag-tabs .tab:focus-visible{outline:2px solid #dfba73;outline-offset:-5px}
+.bag-card .rod-card{flex-shrink:0}
+.bag-card .shop-close,.help-card .shop-close{width:40px;height:40px}
+#bagBody:focus-visible,#helpBody:focus-visible{outline:2px solid #829d91;outline-offset:-4px}
+.help-body{padding:18px 20px;overflow-y:auto;overscroll-behavior:contain;min-height:0;font-size:11px;line-height:1.7;color:var(--ink-soft);font-weight:500}
+.help-intro{padding:12px;background:#e7efde;border:1px solid #bfd0b9;margin-bottom:12px}.help-intro b{color:#357356}
+.help-controls>div{display:grid;grid-template-columns:1fr 1.6fr;gap:14px;padding:10px 0;border-bottom:1px solid #d9decc}
+.help-controls dt{font-weight:700;color:var(--ink)}.help-controls dd{font:11px/1.6 'Courier New',monospace}
+.help-note{margin-top:14px;font-size:10px}
+.log-records{display:grid;grid-template-columns:1fr 1.6fr;gap:12px;padding:16px 14px;border-bottom:1px solid #cbd2bc;flex-shrink:0;background:#efe8d4}
+.log-records dt{font:8px 'Courier New',monospace;letter-spacing:1px;color:var(--ink-soft);margin-bottom:7px}
+.log-records dd{font:700 18px 'Courier New',monospace;overflow-wrap:anywhere}.log-records .best-fish-name{font:10px/1.5 'Courier New',monospace;color:var(--ink-soft);margin-top:5px}
+#logList{min-height:0}.drawer-head,.drawer-foot{flex-shrink:0}
+.hud-hidden #hud,.hud-hidden #toast{visibility:hidden!important}
+.restore-hud{position:absolute;inset:0;z-index:50;width:100%;height:100%;border:0;padding:0;background:transparent;outline:none;touch-action:none;cursor:default;color:var(--cream)}
+.hud-restore-hint{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);max-width:90vw;padding:12px 16px;background:#193d45eb;border:1px solid #adbfaf;font:11px/1.6 'Courier New',monospace;text-align:center}
+@media(max-width:760px){.hud-tool{font-size:10px;gap:5px;min-height:35px;padding:7px 8px}.hud-tool kbd{display:none}.hud-tool>span{width:14px;height:14px;font-size:10px}.bag-card,.help-card{max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px)}.help-body{padding:12px 15px}.help-controls>div{gap:10px}.help-controls dd{font-size:10px}.help-note{font-size:10px}}
+@media(pointer:coarse){.hud-tool,.bag-card .shop-close,.help-card .shop-close,.held-fish-bar button{min-height:44px}.bag-card .shop-close,.help-card .shop-close{width:44px}}

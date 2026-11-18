@@ -1,5 +1,5 @@
-import { SPECIES, RODS, LINES, BAITS } from './game-data.mjs?v=34';
-import { BOATS, ISLANDS, gearIsland, xpForLevel, levelForXp, legacyCatchXP, hasIslandLicense } from './archipelago.mjs?v=34';
+import { SPECIES, RODS, LINES, BAITS } from './game-data.mjs?v=35';
+import { BOATS, ISLANDS, gearIsland, xpForLevel, levelForXp, legacyCatchXP, hasIslandLicense } from './archipelago.mjs?v=35';
 
 export const SAVE_VERSION = 8;
 export const SAVE_KEY = 'reel-deal-save-v8';

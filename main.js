@@ -13,12 +13,13 @@ const hexc  = c => '#' + c.toString(16).padStart(6,'0');
 const fmt   = n => n.toLocaleString('en-US');
 
 import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow, sortFishIndex, castLuckModifier, effectiveLuck,
-  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=34';
+  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=35';
 import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, hasIslandLicense, travelRequirement,
-  ISLAND_COLLECTION_BONUS, islandCollectionProgress, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=34';
-import { createWorld } from './world.mjs?v=34';
-import { createPlayerModel, heldFishSpan, frontViewPose } from './player-view.mjs?v=34';
-import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=34';
+  ISLAND_COLLECTION_BONUS, islandCollectionProgress, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=35';
+import { createWorld } from './world.mjs?v=35';
+import { createPlayerModel, heldFishSpan, frontViewPose } from './player-view.mjs?v=35';
+import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=35';
+import { BAG_TABS, bagGearKind, nextBagTab, contextualHint, HELP_CONTROLS } from './ui-state.mjs?v=35';
 
 const pickSpecies = () => drawSpecies(G.zone, G.gear.bait, Math.random, G.castPower);
 const rollWeight = sp => drawWeight(sp, G.gear.bait, Math.random, G.castPower);
@@ -329,11 +330,12 @@ const G = {
   bandLo:22, bandHi:70, demand:0.4, supply:1, over:0, fishWeight:1, castDist:10, rateMul:1
 };
 const EYE = 1.62;
-let shopOpen = false, shopTab = 'rods', marketOpen = false;
-let shopKind = 'rod', kitOpen = false, chartOpen = false, indexOpen = false, fishBagOpen = false;
+let shopOpen = false, marketOpen = false, shopKind = 'rod';
+let chartOpen = false, indexOpen = false, bagOpen = false, helpOpen = false, hudHidden = false;
+let bagTab = 'fish', lastGearTab = 'rods';
 let selectedIsland = 0, indexIsland = -1, fleetTab = false, voyage = null;
 let nearbyStall = null;
-const uiBusy = () => shopOpen || marketOpen || chartOpen || indexOpen || fishBagOpen || drawerOpen;
+const uiBusy = () => shopOpen || marketOpen || chartOpen || indexOpen || bagOpen || helpOpen || hudHidden || drawerOpen;
 const level = () => levelForXp(G.xp);
 const hasLicense = target => hasIslandLicense(target,G.xp,G.licenses);
 
@@ -361,14 +363,24 @@ const reelFishName = $('reelFishName'), reelPct = $('reelPct'), catchModal = $('
 const toastEl = $('toast'), logDrawer = $('logDrawer'), logList = $('logList'), logSummary = $('logSummary');
 const lockHint = $('lockHint'), shopBtnEl = $('shopBtn'), shopOverlay = $('shopOverlay'), shopBody = $('shopBody');
 const marketBtnEl = $('marketBtn'), marketOverlayEl = $('marketOverlay'), marketBody = $('marketBody');
+const bagOverlay = $('bagOverlay'), bagBody = $('bagBody'), helpOverlay = $('helpOverlay');
 const reelWarn = $('reelWarn'), stickEl = $('stick'), stickKnob = document.querySelector('.stick-knob');
 let drawerOpen = false;
 const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
 
 function hidePrompt(){ promptEl.style.display = 'none'; }
-function setPrompt(html, mode=''){
-  promptEl.innerHTML = html;
-  promptEl.className = 'prompt' + (mode ? ' ' + mode : '');
+const hintTarget = new THREE.Vector3();
+function updateContextHint(moving=false){
+  updateLockHint();
+  const blocked=uiBusy()||!!voyage||!catchModal.classList.contains('hidden')||!lockHint.classList.contains('hidden');
+  const canCast=!blocked&&G.state==='aim'&&!heldCatch&&!nearbyStall&&!moving&&landingPoint(.5,hintTarget);
+  const hint=contextualHint({state:G.state,blocked,holding:!!heldCatch,nearVendor:!!nearbyStall,moving,canCast,
+    baitMatches:eligibleSpecies(G.zone,G.gear.bait).length>0,touch:isTouch,luckLabel:castLuckLabel(G.castPower)});
+  if(!hint){hidePrompt();return;}
+  if(promptEl.textContent!==hint.text)promptEl.textContent=hint.text;
+  const cls='prompt'+(hint.mode?' '+hint.mode:'');
+  if(promptEl.className!==cls)promptEl.className=cls;
+  promptEl.style.display='';
 }
 function showToast(msg, bad=false){
   toastEl.textContent = msg;
@@ -382,7 +394,8 @@ function updateStats(){
   const bonus = coinBonus();
   $('coinBonus').textContent = `+${bonus}% SALES`;
   $('coinBonus').classList.toggle('hidden',bonus===0);
-  $('bestNum').textContent = G.best ? G.best.weight + ' lb' : '—';
+  $('bestNum').textContent = G.best ? Number(G.best.weight).toFixed(1) + ' lb' : '—';
+  $('bestFishName').textContent = G.best ? G.best.name : 'No catches yet';
   $('shopCoins').textContent = fmt(G.coins);
   $('marketCoins').textContent = fmt(G.coins);
   const progress = levelProgress(G.xp), zone = ISLANDS[G.zone];
@@ -403,11 +416,11 @@ function updateStats(){
   updateCarryUI();
 }
 function renderLog(){
-  if(!log.length){ logList.innerHTML = '<p class="empty">No fish yet. Cast your line!</p>'; logSummary.textContent = ''; return; }
+  logSummary.textContent=`${fmt(log.length)} recent catches · ${Object.keys(G.discoveries).length}/120 discovered`;
+  if(!log.length){ logList.innerHTML = '<p class="empty">No recent catches. Cast your line!</p>'; return; }
   logList.innerHTML = log.map(e =>
     `<div class="log-item"><span class="e">${fishSVG(e.sp)}</span><div><b>${e.sp.name}</b><small>${e.weight} lbs • ${ISLANDS[e.sp.island].short}</small></div><span class="pts">${fmt(saleValue(e.sp,e.weight))}c</span></div>`
   ).join('');
-  logSummary.textContent=`${G.caught} total catches · showing last ${log.length} · ${Object.keys(G.discoveries).length}/120 discovered`;
 }
 const RED_LO = 8, RED_HI = 92;      // hit either end of the bar and the fish is gone
 
@@ -443,26 +456,14 @@ function loadGame(){
 // ---------- State transitions ----------
 function setState(s){
   G.state = s;
-  biteEl.classList.remove('show');
-  castMeter.classList.toggle('hidden', s !== 'charging');
-  reelUI.classList.toggle('hidden', s !== 'reeling');
-  aimMarker.visible = s === 'charging';
-  if(s === 'aim'){
-    promptEl.style.display = '';
-    setPrompt(isTouch
-      ? 'Joystick to walk · drag to look · <b>hold</b> to cast'
-      : '<b>WASD</b> to walk · mouse to look · <b>hold CLICK</b> to cast');
-    bobber.visible = false; line.visible = false;
-  }
-  if(s === 'waiting'){ promptEl.style.display = ''; setPrompt(`<b>${castLuckLabel(G.castPower)}</b> · Waiting… ${isTouch?'tap':'click'} to reel in early`, 'waiting'); }
-  if(s === 'bite'){ promptEl.style.display = ''; setPrompt('BITE! <b>CLICK / SPACE</b> NOW!', 'bite'); biteEl.classList.add('show'); }
-  if(s === 'reeling') promptEl.style.display = 'none';
-  if(s === 'casting'){ promptEl.style.display = ''; setPrompt('Splash!', 'waiting'); }
-  if(s === 'caught') promptEl.style.display = 'none';
-  if(s === 'charging') promptEl.style.display = 'none';
-  if(s === 'aim' && heldCatch) hidePrompt();
+  biteEl.classList.toggle('show',s==='bite');
+  castMeter.classList.toggle('hidden',s!=='charging');
+  reelUI.classList.toggle('hidden',s!=='reeling');
+  aimMarker.visible=s==='charging';
+  if(s==='aim'){bobber.visible=false;line.visible=false;}
   updateCarryUI();
   updatePlayerView();
+  updateContextHint();
 }
 
 // ---------- Walking ----------
@@ -504,7 +505,7 @@ function inWater(p){ return world.inWater(p); }
 function startCharge(){
   if(G.state !== 'aim' || uiBusy()) return;
   if(heldCatch){showToast('Put away your fish before casting — use X or Put away.');return;}
-  if(!eligibleSpecies(G.zone,G.gear.bait).length){ showToast('No local fish take this bait. Open your tackle bag (I) to switch.',true); return; }
+  if(!eligibleSpecies(G.zone,G.gear.bait).length){ showToast('No local fish take this bait. Use Bag → Bait (I) to switch.',true); return; }
   ensureAudio();
   setState('charging');
   G.power = 0; G.powerDir = 1;
@@ -579,15 +580,18 @@ function makeFish3D(sp, scale){
 // ---------- Fish bag, carried catches and front-facing third person ----------
 function updateCarryUI(){
   $('bagCount').textContent=fmt(bag.length);
-  $('fishBagCount').textContent=`${fmt(bag.length)} fish`;
+  $('bagFishCount').textContent=`${fmt(bag.length)} fish`;
   $('heldFishBar').classList.toggle('hidden',!heldCatch||!!voyage||G.state==='menu');
   $('heldFishName').textContent=heldCatch?heldCatch.sp.name:'';
-  $('heldFishWeight').textContent=heldCatch?`${Number(heldCatch.weight).toFixed(1)} lb · still in your bag`:'';
+  $('heldFishWeight').textContent=heldCatch?`${Number(heldCatch.weight).toFixed(1)} lb`:'';
   $('viewLabel').textContent=G.thirdPerson?'First person':'Front view';
   $('viewBtn').setAttribute('aria-pressed',String(G.thirdPerson));
   $('viewBtn').setAttribute('aria-label',G.thirdPerson?'Switch to first-person view (V)':'Switch to front-facing third-person view (V)');
   $('viewBtn').disabled=G.state!=='aim'||uiBusy()||!!voyage;
   $('putAwayBtn').disabled=G.state!=='aim'||uiBusy()||!!voyage;
+  $('helpBtn').disabled=G.state!=='aim'||uiBusy()||!!voyage;
+  $('hideHudBtn').disabled=G.state!=='aim'||uiBusy()||!!voyage;
+  $('hud').inert=uiBusy()||G.state==='menu'||G.state==='caught';
   $('app').classList.toggle('front-view',G.thirdPerson&&!voyage&&G.state!=='menu');
   $('app').classList.toggle('carrying-fish',!!heldCatch);
   updateLockHint();
@@ -618,18 +622,49 @@ function toggleView(){
   clearInput();setState('aim');$('viewBtn').blur();
   return true;
 }
-function openFishBag(){
-  if(uiBusy()||G.state!=='aim'||voyage){if(G.state!=='aim')showToast('Finish your cast before opening your fish bag.');return;}
-  fishBagOpen=true;$('fishBagOverlay').classList.remove('hidden');
-  renderFishBag();updateCarryUI();focusPanel('fishBagClose');
+function openBag(tab='fish'){
+  if(!BAG_TABS.includes(tab))return false;
+  if(uiBusy()||G.state!=='aim'||voyage){if(G.state!=='aim')showToast('Finish your cast before opening your bag.');return false;}
+  bagOpen=true;bagTab=tab;if(tab!=='fish')lastGearTab=tab;
+  bagOverlay.classList.remove('hidden');renderBag();focusPanel('bagClose');
+  return true;
 }
-function closeFishBag(){
-  if(!fishBagOpen)return;
-  fishBagOpen=false;$('fishBagOverlay').classList.add('hidden');resumeWorld();
+function closeBag(){
+  if(!bagOpen)return;
+  bagOpen=false;bagOverlay.classList.add('hidden');resumeWorld();
+}
+// B opens catches; I remains a quick route to the last owned-gear tab.
+// Both routes use the exact same panel, selection, guards and focus trap.
+function openFishBag(){return openBag('fish');}
+function closeFishBag(){closeBag();}
+function openKit(){return openBag(lastGearTab);}
+function selectBagTab(tab){
+  if(!bagOpen||!BAG_TABS.includes(tab))return false;
+  bagTab=tab;if(tab!=='fish')lastGearTab=tab;
+  renderBag();bagBody.scrollTop=0;
+  return true;
+}
+function renderBag(){
+  if(!bagOpen)return;
+  const hadBodyFocus=bagBody.contains(document.activeElement);
+  $('bagFishCount').textContent=`${fmt(bag.length)} fish`;
+  document.querySelectorAll('[data-bag-tab]').forEach(t=>{
+    const active=t.dataset.bagTab===bagTab;
+    t.classList.toggle('active',active);t.setAttribute('aria-selected',String(active));t.tabIndex=active?0:-1;
+  });
+  bagBody.setAttribute('aria-labelledby','bagTab-'+bagTab);
+  const kind=bagGearKind(bagTab);
+  $('bagNote').textContent=kind
+    ? 'Equip owned tackle for free, wherever you are. Buy new gear at local stalls.'+(kind==='bait'?' Check the local bites below; earlier bait is useful in old waters.':'')
+    : 'Hold a catch without removing it from your bag. Sell fish at the market.';
+  if(kind)bagBody.innerHTML=gearRows(kind,G.owned[kind].slice().sort((a,b)=>a-b));
+  else renderFishBag();
+  // Equipping replaces its row. Keep keyboard focus inside the live panel.
+  if(hadBodyFocus&&!bagBody.contains(document.activeElement))bagBody.focus({preventScroll:true});
 }
 function renderFishBag(){
-  $('fishBagCount').textContent=`${fmt(bag.length)} fish`;
-  $('fishBagBody').innerHTML=bag.length?bag.map((e,i)=>{
+  if(!bagOpen||bagTab!=='fish')return;
+  bagBody.innerHTML=bag.length?bag.map((e,i)=>{
     const held=e===heldCatch;
     return `<article class="carry-row ${held?'selected':''}">
       <div class="carry-icon">${fishSVG(e.sp)}</div>
@@ -647,7 +682,7 @@ function stowFish(){
   return true;
 }
 function holdFish(index){
-  if(!fishBagOpen||G.state!=='aim'||voyage||!Number.isInteger(index)||!bag[index])return false;
+  if(!bagOpen||bagTab!=='fish'||G.state!=='aim'||voyage||!Number.isInteger(index)||!bag[index])return false;
   const entry=bag[index];
   if(heldCatch===entry){stowFish();closeFishBag();return true;}
   stowFish();
@@ -688,7 +723,7 @@ function fightSetup(sp, weight){
 function hookFish(){
   if(G.state !== 'bite') return;
   hookedSpecies = pickSpecies();
-  if(!hookedSpecies){showToast('This bait has no bites here. Switch bait in your tackle bag.',true);setState('aim');return;}
+  if(!hookedSpecies){showToast('This bait has no bites here. Switch bait in Bag → Bait.',true);setState('aim');return;}
   const w = rollWeight(hookedSpecies);
   hookedWeight = +w.toFixed(1);
   disposeHookedFish();
@@ -933,53 +968,53 @@ function gearRow(kind, g, i){
 
 const bagTotal = () => bag.reduce((a,e) => a + saleValue(e.sp,e.weight),0);
 
-function renderShop(){
-  if(!shopOpen) return;
-  $('shopCoins').textContent=fmt(G.coins);
-  document.querySelector('#shopOverlay .shop-tabs').classList.toggle('hidden',!kitOpen);
-  document.querySelectorAll('#shopOverlay .tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===shopTab));
-  const kind=kitOpen?(shopTab==='lines'?'line':shopTab==='bait'?'bait':'rod'):shopKind;
-  const i=ISLANDS[G.zone];
-  $('shopTitle').textContent=kitOpen?'Your tackle bag':{rod:'Rod Works',line:'Line & Spool',bait:'Bait Shack'}[kind];
-  $('shopEyebrow').textContent=kitOpen?'OWNED GEAR · EQUIP ANYWHERE':i.name.toUpperCase()+' · LOCAL OUTFITTER';
-  $('shopNote').textContent=kitOpen?'Switch to any gear you already own. Earlier bait is useful when revisiting old waters.':`Only tiers ${i.id*4+1}–${i.id*4+4} are sold here. Explore new islands for the next four. Prices below are the exact coins charged.`;
-  if(kind==='bait')$('shopNote').textContent+=' Luck favors rarer eligible fish; it is not a catch percentage. The small weight boost tapers near each species’ maximum.';
-  const items=GEAR[kind].list.map((g,index)=>({g,index})).filter(({index})=>kitOpen?G.owned[kind].includes(index):gearIsland(index)===G.zone);
-  shopBody.innerHTML=items.map(({g,index})=>{
-    let row=gearRow(kind,g,index);
+function gearRows(kind,indexes){
+  return indexes.map(index=>{
+    let row=gearRow(kind,GEAR[kind].list[index],index);
     if(kind==='bait'){
       const count=eligibleSpecies(G.zone,index).length;
-      row=row.replace('</b>','</b><small class="local-pool '+(count?'':'no-bites')+'">'+(count?count+' possible species in '+i.short:'NO BITES IN THESE WATERS')+'</small>');
+      row=row.replace('</b>','</b><small class="local-pool '+(count?'':'no-bites')+'">'+(count?count+' possible species in '+ISLANDS[G.zone].short:'NO BITES IN THESE WATERS')+'</small>');
     }
     return row;
   }).join('');
-  if(!kitOpen && G.zone<5)shopBody.innerHTML+=`<div class="next-stock">Next shipment: tiers ${i.id*4+5}–${i.id*4+8} at <b>${ISLANDS[i.id+1].name}</b> · Level ${ISLANDS[i.id+1].level}</div>`;
+}
+function renderShop(){
+  if(!shopOpen)return;
+  $('shopCoins').textContent=fmt(G.coins);
+  const kind=shopKind,i=ISLANDS[G.zone];
+  $('shopTitle').textContent={rod:'Rod Works',line:'Line & Spool',bait:'Bait Shack'}[kind];
+  $('shopEyebrow').textContent=i.name.toUpperCase()+' · LOCAL OUTFITTER';
+  $('shopNote').textContent=`Only tiers ${i.id*4+1}–${i.id*4+4} are sold here. Explore new islands for the next four. Prices below are the exact coins charged.`;
+  if(kind==='bait')$('shopNote').textContent+=' Luck favors rarer eligible fish; it is not a catch percentage. The small weight boost tapers near each species’ maximum.';
+  shopBody.innerHTML=gearRows(kind,GEAR[kind].list.map((g,index)=>index).filter(index=>gearIsland(index)===G.zone));
+  if(G.zone<5)shopBody.innerHTML+=`<div class="next-stock">Next shipment: tiers ${i.id*4+5}–${i.id*4+8} at <b>${ISLANDS[i.id+1].name}</b> · Level ${ISLANDS[i.id+1].level}</div>`;
 }
 function openShop(kind){
   if(uiBusy()||G.state!=='aim')return;
   const nearest=nearestVendor();
   const wanted=typeof kind==='string'?kind:nearest?.kind;
   if(!GEAR[wanted]||!isNearVendor(wanted)){showToast('Walk up to a rod, line or bait stall first.',true);return;}
-  shopKind=wanted;kitOpen=false;shopOpen=true;
+  shopKind=wanted;shopOpen=true;
   shopOverlay.classList.remove('hidden');shopBtnEl.classList.add('hidden');
   renderShop();ensureAudio();focusPanel('shopClose');
 }
 function closeShop(){
   if(!shopOpen)return;
-  shopOpen=false;kitOpen=false;shopOverlay.classList.add('hidden');resumeWorld();
+  shopOpen=false;shopOverlay.classList.add('hidden');resumeWorld();
 }
 
 function buyGear(kind, i){
   const g = GEAR[kind]?.list[i];
-  if(!g || !Number.isInteger(i) || !shopOpen || G.state !== 'aim') return;
-  if(!G.owned[kind].includes(i) && (kitOpen || shopKind !== kind || gearIsland(i) !== G.zone || !hasLicense(G.zone) || !isNearVendor(kind))){
+  const inBag=bagOpen&&bagGearKind(bagTab)===kind,inShop=shopOpen&&shopKind===kind;
+  if(!g||!Number.isInteger(i)||(!inBag&&!inShop)||G.state!=='aim')return;
+  if(!G.owned[kind].includes(i)&&(!inShop||gearIsland(i)!==G.zone||!hasLicense(G.zone)||!isNearVendor(kind))){
     showToast(`Sold at ${ISLANDS[gearIsland(i)].name}'s ${kind} stall.`,true);return;
   }
   if(G.owned[kind].includes(i)){
     if(G.gear[kind] === i) return;
     G.gear[kind] = i;
     applyGear(); sfx.buy(); showToast('Equipped the ' + g.name + '.');
-    saveGame(); updateStats(); renderShop();
+    saveGame(); updateStats(); renderShop(); renderBag();
     return;
   }
   if(G.coins < g.cost){
@@ -990,7 +1025,7 @@ function buyGear(kind, i){
   G.coins -= g.cost;
   G.owned[kind].push(i);
   G.gear[kind] = i;
-  applyGear(); updateStats(); saveGame(); sfx.buy(); renderShop();
+  applyGear(); updateStats(); saveGame(); sfx.buy(); renderShop(); renderBag();
   showToast('Bought the ' + g.name + '!');
 }
 function applyGear(){
@@ -1081,19 +1116,43 @@ function clearInput(){
   dragging=false; fishingPointer=null;
 }
 function focusPanel(id){
-  clearInput(); releasePointer(); hidePrompt(); lockHint.classList.add('hidden');
-  requestAnimationFrame(()=>$(id).focus({preventScroll:true}));
+  clearInput();releasePointer();hidePrompt();updateCarryUI();lockHint.classList.add('hidden');
+  clearTimeout(showToast._t);toastEl.classList.add('hidden');
+  // The panel is already visible. Focus now: a deferred frame can steal focus
+  // back from a tab/content the player has already selected on a slow device.
+  const el=$(id);if(el.getClientRects().length)el.focus({preventScroll:true});
 }
 function resumeWorld(){
   clearInput();
-  if(document.activeElement?.tagName==='BUTTON')document.activeElement.blur();
+  if(!uiBusy())canvas.focus({preventScroll:true});
   if(G.state==='aim')setState('aim');
   updateLockHint();
 }
-function openKit(){
-  if(uiBusy()||G.state!=='aim'){if(G.state!=='aim')showToast('Finish your cast before opening the tackle bag.');return;}
-  kitOpen=true;shopOpen=true;
-  shopOverlay.classList.remove('hidden');renderShop();focusPanel('shopClose');
+// Help is an idle-only panel, just like the bag: it cannot consume a bite,
+// leave a stuck movement key, or take focus away from an active fight.
+function openHelp(){
+  if(uiBusy()||G.state!=='aim'||voyage)return false;
+  helpOpen=true;helpOverlay.classList.remove('hidden');focusPanel('helpClose');
+  return true;
+}
+function closeHelp(){
+  if(!helpOpen)return;
+  helpOpen=false;helpOverlay.classList.add('hidden');resumeWorld();
+}
+let hudHintTimer;
+function setHudHidden(hidden){
+  if(hidden===hudHidden)return true;
+  if(hidden&&(uiBusy()||G.state!=='aim'||voyage))return false;
+  clearInput();releasePointer();clearTimeout(hudHintTimer);
+  hudHidden=hidden;$('app').classList.toggle('hud-hidden',hidden);
+  $('restoreHudBtn').classList.toggle('hidden',!hidden);
+  if(hidden){
+    $('hudRestoreHint').textContent=isTouch?'HUD hidden · Tap anywhere to return':'HUD hidden · Click anywhere or press H / Esc to return';
+    $('hudRestoreHint').classList.remove('hidden');
+    hudHintTimer=setTimeout(()=>$('hudRestoreHint').classList.add('hidden'),2000);
+    updateCarryUI();hidePrompt();$('restoreHudBtn').focus({preventScroll:true});
+  }else resumeWorld();
+  return true;
 }
 
 function unknownFishSVG(){
@@ -1237,7 +1296,7 @@ function finishVoyage(){
   $('arrivalName').textContent=ISLANDS[id].name;$('arrivalDesc').textContent=ISLANDS[id].tagline;
   $('arrivalBanner').classList.remove('hidden');clearTimeout(finishVoyage._t);
   finishVoyage._t=setTimeout(()=>$('arrivalBanner').classList.add('hidden'),3400);
-  if(!eligibleSpecies(id,G.gear.bait).length)showToast('New waters need different bait. Open your tackle bag (I) or visit the Bait Shack.',true);
+  if(!eligibleSpecies(id,G.gear.bait).length)showToast('New waters need different bait. Use Bag → Bait (I) or visit the Bait Shack.',true);
   else showToast('Land ahoy! Turn around to explore the village.');
 }
 
@@ -1250,8 +1309,8 @@ function requestLock(){
   setTimeout(() => { if(!document.pointerLockElement && !everLocked) lockFallback = true; }, 400);
 }
 function updateLockHint(){
-  const show = !pointerLocked && supportsLock && !lockFallback && G.state !== 'menu'
-    && !G.thirdPerson && !heldCatch && !uiBusy() && !voyage && catchModal.classList.contains('hidden');
+  const show = !pointerLocked && supportsLock && !lockFallback && G.state === 'aim'
+    && !G.thirdPerson && !heldCatch && !nearbyStall && !uiBusy() && !voyage && catchModal.classList.contains('hidden');
   lockHint.classList.toggle('hidden', !show);
 }
 function releasePointer(){
@@ -1273,7 +1332,7 @@ function applyLook(dx, dy){
   G.pitch = clamp(G.pitch - dy, -0.62, 0.42);
 }
 canvas.addEventListener('mousemove', e => {
-  if(!pointerLocked) return;
+  if(!pointerLocked||uiBusy()||voyage) return;
   const now = performance.now();
   if(now - lockTime < 180) return;                 // skip the jump on lock
   if(now - lastButtonT < 130) return;              // browsers warp the pointer on click
@@ -1317,26 +1376,41 @@ function handleRelease(){
   else if(G.state === 'reeling') G.reelHeld = false;
 }
 addEventListener('keydown', e => {
+  if(hudHidden){
+    e.preventDefault();
+    if(!e.repeat&&['KeyH','Escape','Space','Enter','NumpadEnter'].includes(e.code))setHudHidden(false);
+    else if(e.code==='Tab')$('restoreHudBtn').focus({preventScroll:true});
+    return; // Restoring the UI is never also a cast, walk, view change or panel action.
+  }
   if(e.code==='Escape'){
-    if(fishBagOpen){closeFishBag();return;}
+    if(bagOpen){closeBag();return;}
+    if(helpOpen){closeHelp();return;}
     if(shopOpen){closeShop();return;}
-    if(marketOpen){closeMarket();resumeWorld();return;}
+    if(marketOpen){closeMarket();return;}
     if(chartOpen){closeChart();return;}
     if(indexOpen){closeIndex();return;}
     if(drawerOpen){logDrawer.classList.add('hidden');drawerOpen=false;resumeWorld();return;}
   }
-  if(e.code==='Tab'&&uiBusy()){
-    const panel=fishBagOpen?$('fishBagOverlay'):shopOpen?shopOverlay:marketOpen?marketOverlayEl:chartOpen?$('chartOverlay'):indexOpen?$('indexOverlay'):logDrawer;
-    const focusable=Array.from(panel.querySelectorAll('button:not(:disabled),select,summary')).filter(n=>n.getClientRects().length);
+  if(e.code==='Tab'&&(uiBusy()||G.state==='caught')){
+    const panel=bagOpen?bagOverlay:helpOpen?helpOverlay:shopOpen?shopOverlay:marketOpen?marketOverlayEl:chartOpen?$('chartOverlay'):indexOpen?$('indexOverlay'):drawerOpen?logDrawer:catchModal;
+    const focusable=Array.from(panel.querySelectorAll('button:not(:disabled),select,summary,[tabindex="0"]')).filter(n=>n.tabIndex>=0&&n.getClientRects().length);
     const first=focusable[0],last=focusable[focusable.length-1];
-    if(e.shiftKey&&document.activeElement===first){last?.focus();e.preventDefault();}
+    if(!panel.contains(document.activeElement)){(e.shiftKey?last:first)?.focus();e.preventDefault();}
+    else if(e.shiftKey&&document.activeElement===first){last?.focus();e.preventDefault();}
     else if(!e.shiftKey&&document.activeElement===last){first?.focus();e.preventDefault();}
     return;
   }
+  if(e.key==='?'&&!e.repeat){e.preventDefault();if(helpOpen)closeHelp();else openHelp();return;}
+  if(e.code==='KeyH'&&!e.repeat){e.preventDefault();setHudHidden(true);return;}
   if(e.code==='KeyM'&&!e.repeat){if(chartOpen)closeChart();else openChart();return;}
   if(e.code==='KeyF'&&!e.repeat){if(indexOpen)closeIndex();else openIndex();return;}
-  if(e.code==='KeyI'&&!e.repeat){if(kitOpen)closeShop();else openKit();return;}
-  if(e.code==='KeyB'&&!e.repeat){e.preventDefault();if(fishBagOpen)closeFishBag();else openFishBag();return;}
+  if(e.code==='KeyI'&&!e.repeat){
+    e.preventDefault();
+    if(bagOpen){if(bagTab==='fish'){selectBagTab(lastGearTab);$('bagTab-'+bagTab).focus();}else closeBag();}
+    else openKit();
+    return;
+  }
+  if(e.code==='KeyB'&&!e.repeat){e.preventDefault();if(bagOpen)closeBag();else openFishBag();return;}
   if(e.code==='KeyV'&&!e.repeat){e.preventDefault();toggleView();return;}
   if(e.code==='KeyX'&&!e.repeat){if(G.state==='aim'&&!uiBusy()&&!voyage)stowFish();return;}
   if(e.code==='KeyE'&&!e.repeat&&G.state==='aim'){
@@ -1355,7 +1429,8 @@ addEventListener('keydown', e => {
   if(uiBusy()||voyage)return;
   if(setKey(e.code,true))e.preventDefault();
   if(e.code==='Space'){
-    e.preventDefault();if(e.repeat||document.activeElement?.tagName==='BUTTON')return;
+    if(document.activeElement?.tagName==='BUTTON')return; // Preserve native Space activation on HUD controls.
+    e.preventDefault();if(e.repeat)return;
     handlePress();
   }
   if((e.code==='Enter'||e.code==='NumpadEnter')&&G.state==='caught')$('continueBtn').click();
@@ -1369,6 +1444,7 @@ addEventListener('blur',()=>{clearInput();if(G.state==='charging')setState('aim'
 // ---------- UI wiring ----------
 $('startArt').innerHTML = ICON.startArt;
 $('soundBtn').innerHTML = ICON.soundOn;
+for(const id of ['marketBtn','portBtn'])$(id).querySelector('b').textContent=isTouch?'Tap':'E';
 
 $('startBtn').addEventListener('click', () => {
   ensureAudio();
@@ -1392,8 +1468,7 @@ $('logBtn').addEventListener('click', () => {
   clearInput();
   const open = logDrawer.classList.toggle('hidden');
   drawerOpen = !open;
-  if(!open){releasePointer();$('closeLog').focus();}
-  updateLockHint();
+  if(!open){renderLog();focusPanel('closeLog');}else resumeWorld();
 });
 $('closeLog').addEventListener('click', () => { logDrawer.classList.add('hidden'); drawerOpen = false; resumeWorld(); });
 
@@ -1401,15 +1476,9 @@ $('closeLog').addEventListener('click', () => { logDrawer.classList.add('hidden'
 shopBtnEl.addEventListener('click', openShop);
 $('shopClose').addEventListener('click', closeShop);
 shopOverlay.addEventListener('click', e => { if(e.target === shopOverlay) closeShop(); });
-document.querySelectorAll('#shopOverlay .tab').forEach(t => t.addEventListener('click', () => {
-  shopTab = t.dataset.tab;
-  renderShop();
-}));
 shopBody.addEventListener('click', e => {
-  const buy = e.target.closest('[data-buy]');
-  if(!buy) return;
-  const kind = shopTab === 'lines' ? 'line' : shopTab === 'bait' ? 'bait' : 'rod';
-  buyGear(kitOpen?kind:shopKind, +buy.dataset.buy);
+  const buy=e.target.closest('[data-buy]');
+  if(buy)buyGear(shopKind,Number(buy.dataset.buy));
 });
 marketBtnEl.addEventListener('click', openMarket);
 $('marketClose').addEventListener('click', closeMarket);
@@ -1439,11 +1508,28 @@ $('indexClose').addEventListener('click',closeIndex);
 $('indexOverlay').addEventListener('click',e=>{if(e.target===$('indexOverlay'))closeIndex();});
 $('indexIslands').addEventListener('click',e=>{const b=e.target.closest('[data-index-island]');if(b){indexIsland=Number(b.dataset.indexIsland);renderIndex();$('fishGrid').scrollTop=0;}});
 $('indexFilter').addEventListener('change',renderIndex);
-$('kitBtn').addEventListener('click',openKit);
 $('bagBtn').addEventListener('click',openFishBag);
-$('fishBagClose').addEventListener('click',closeFishBag);
-$('fishBagOverlay').addEventListener('click',e=>{if(e.target===$('fishBagOverlay'))closeFishBag();});
-$('fishBagBody').addEventListener('click',e=>{const b=e.target.closest('[data-hold-fish]');if(b)holdFish(Number(b.dataset.holdFish));});
+$('bagClose').addEventListener('click',closeBag);
+bagOverlay.addEventListener('click',e=>{if(e.target===bagOverlay)closeBag();});
+$('bagTabs').addEventListener('click',e=>{const t=e.target.closest('[data-bag-tab]');if(t)selectBagTab(t.dataset.bagTab);});
+$('bagTabs').addEventListener('keydown',e=>{
+  const tab=e.target.closest('[data-bag-tab]'),next=tab&&nextBagTab(tab.dataset.bagTab,e.key);
+  if(!next)return;
+  e.preventDefault();e.stopPropagation();selectBagTab(next);$('bagTab-'+next).focus();
+});
+bagBody.addEventListener('click',e=>{
+  const fish=e.target.closest('[data-hold-fish]'),gear=e.target.closest('[data-buy]');
+  if(fish)holdFish(Number(fish.dataset.holdFish));
+  if(gear)buyGear(bagGearKind(bagTab),Number(gear.dataset.buy));
+});
+$('helpPlatform').textContent=isTouch?'TOUCH CONTROLS':'DESKTOP CONTROLS';
+$('helpControls').innerHTML=HELP_CONTROLS.map(c=>`<div><dt>${c.action}</dt><dd>${isTouch?c.touch:c.desktop}</dd></div>`).join('');
+$('helpKeyboardNote').classList.toggle('hidden',isTouch);
+$('helpBtn').addEventListener('click',openHelp);
+$('helpClose').addEventListener('click',closeHelp);
+helpOverlay.addEventListener('click',e=>{if(e.target===helpOverlay)closeHelp();});
+$('hideHudBtn').addEventListener('click',()=>setHudHidden(true));
+$('restoreHudBtn').addEventListener('click',()=>setHudHidden(false));
 $('viewBtn').addEventListener('click',toggleView);
 $('putAwayBtn').addEventListener('click',()=>{if(G.state==='aim'&&!uiBusy()&&!voyage)stowFish();});
 
@@ -1570,7 +1656,6 @@ function tick(){
     G.bob += dt * 11;
     G.walked += spd;
     if(G.walked > 2.6){ G.walked = 0; sfx.step(); }
-    if(G.state === 'aim') hidePrompt();
   }
   const gY = groundAt(G.px, G.pz);
   const eyeTarget = (gY === null ? 1.15 : gY) + EYE;
@@ -1589,9 +1674,10 @@ function tick(){
   shopBtnEl.classList.toggle('hidden',!idle||!G.nearShop);
   marketBtnEl.classList.toggle('hidden',!idle||!G.nearMarket);
   $('portBtn').classList.toggle('hidden',!idle||nearbyStall?.kind!=='port');
-  if(idle&&G.nearShop)shopBtnEl.innerHTML=nearbyStall.name+' <b>E</b>';
+  if(idle&&G.nearShop)shopBtnEl.innerHTML=nearbyStall.name+' <b>'+(isTouch?'Tap':'E')+'</b>';
   stickEl.classList.toggle('hidden',!(isTouch&&idle));
   if(voyage)tickVoyage(dt);
+  updateContextHint(moving);
 
   // ---- state machine / timers ----
   if(G.state === 'menu'){
@@ -1804,7 +1890,9 @@ window.__reelDeal = window.__reelLife = {
   G, SPECIES, RODS, LINES, BAITS, ISLANDS, BOATS, RARITY, RARITY_ORDER,
   renderer, scene, camera, world, bobber, bobberPos, water, rodRig, aimMarker, bag,
   get shopOpen(){return shopOpen;},get chartOpen(){return chartOpen;},get indexOpen(){return indexOpen;},get voyage(){return voyage;},
-  get fishBagOpen(){return fishBagOpen;},get heldCatch(){return heldCatch;},get carriedModel(){return carriedModel;},
+  get bagOpen(){return bagOpen;},get bagTab(){return bagTab;},get helpOpen(){return helpOpen;},get hudHidden(){return hudHidden;},
+  get fishBagOpen(){return bagOpen&&bagTab==='fish';},get heldCatch(){return heldCatch;},get carriedModel(){return carriedModel;},
+  openBag,closeBag,selectBagTab,renderBag,openHelp,closeHelp,setHudHidden,updateContextHint,
   playerModel,frontCamera,heldFishRig,activeCamera,activeRodTip,toggleView,openFishBag,closeFishBag,holdFish,stowFish,renderFishBag,updatePlayerView,
   openShop,closeShop,openKit,openMarket,closeMarket,buyGear,sellAll,sellFish,
   openChart,closeChart,renderChart,buyBoat,sailTo,finishVoyage,openIndex,closeIndex,renderIndex,

@@ -24,12 +24,14 @@ module.exports=async function testPlayerView(browser,url,shots){
     await boot(page);
     assert.deepEqual(await page.evaluate(()=>{const a=__reelDeal;let rods=0;a.rodRig.traverse(o=>{if(o.isMesh)rods++;});window.bodyDraws=0;a.playerModel.root.traverse(o=>{if(o.isMesh)o.onBeforeRender=()=>window.bodyDraws++;});return[a.G.thirdPerson,a.playerModel.root.visible,a.activeCamera()===a.camera,rods];}),[false,false,true,6]);
     await page.waitForTimeout(120);assert.equal(await page.evaluate(()=>window.bodyDraws),0,'first person never draws a body or hands');
-    await page.keyboard.press('b');assert.equal(await page.locator('#fishBagOverlay').isVisible(),true);
-    assert.equal(await page.locator('[data-hold-fish]').count(),0);assert.match(await page.locator('#fishBagBody').textContent(),/No fish in your bag yet/);
+    await page.keyboard.press('b');assert.equal(await page.locator('#bagOverlay').isVisible(),true);
+    assert.equal(await page.locator('[data-hold-fish]').count(),0);assert.match(await page.locator('#bagBody').textContent(),/No fish in your bag yet/);
     const pos=await page.evaluate(()=>[__reelDeal.G.px,__reelDeal.G.pz]);
     // Don't focus Close: Space should still activate a focused button accessibly.
-    await page.locator('#fishBagBody').evaluate(e=>{e.tabIndex=-1;e.focus();});
-    await page.keyboard.down('w');await page.waitForTimeout(120);await page.keyboard.up('w');await page.keyboard.press('Space');await page.keyboard.press('v');
+    await page.locator('#bagBody').focus();
+    await page.keyboard.down('w');await page.waitForTimeout(120);await page.keyboard.up('w');
+    assert.equal(await page.evaluate(()=>document.activeElement.id),'bagBody','deferred initial focus must not steal an explicit panel selection');
+    await page.keyboard.press('Space');assert.equal(await page.evaluate(()=>__reelDeal.bagOpen),true);await page.keyboard.press('v');
     assert.deepEqual(await page.evaluate(()=>[__reelDeal.G.px,__reelDeal.G.pz]),pos);
     assert.deepEqual(await page.evaluate(()=>[__reelDeal.G.state,__reelDeal.G.thirdPerson]),['aim',false]);
     assert.equal(await page.locator('#viewBtn').isDisabled(),true);await page.keyboard.press('Escape');
@@ -42,12 +44,12 @@ module.exports=async function testPlayerView(browser,url,shots){
     await seed(page);
     const original=await page.evaluate(()=>localStorage.getItem('reel-deal-save-v8'));
     await page.click('#bagBtn');assert.equal(await page.locator('[data-hold-fish]').count(),4);
-    await page.locator('#fishBagClose').focus();await page.keyboard.press('Shift+Tab');
+    await page.locator('#bagClose').focus();await page.keyboard.press('Shift+Tab');
     assert.equal(await page.evaluate(()=>document.activeElement.dataset.holdFish),'3');
-    await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement.id),'fishBagClose');
+    await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement.id),'bagClose');
     assert.equal(await page.evaluate(()=>[-1,4,NaN,1.5,'1'].every(i=>__reelDeal.holdFish(i)===false)),true);
     await page.screenshot({path:`${shots}/fish-bag.png`});await page.locator('[data-hold-fish="1"]').click();
-    assert.equal(await page.locator('#fishBagOverlay').isVisible(),false);
+    assert.equal(await page.locator('#bagOverlay').isVisible(),false);
     assert.equal(await page.locator('#heldFishName').textContent(),'Rainbow Trout');
     assert.deepEqual(await page.evaluate(()=>{const a=__reelDeal;window.heldId=a.carriedModel.uuid;return[a.heldCatch===a.bag[1],a.playerModel.root.visible,a.rodRig.visible,a.heldFishRig.parent===a.camera,a.bag.length,a.G.coins];}),[true,false,false,true,4,1234]);
     await page.keyboard.press('Space');assert.equal(await page.evaluate(()=>__reelDeal.G.state),'aim','a held fish must not accidentally start a cast');
@@ -153,7 +155,7 @@ module.exports=async function testPlayerView(browser,url,shots){
   const mp=await mobile.newPage();watch(mp);
   try{
     await boot(mp);await seed(mp);await mp.click('#bagBtn');
-    assert.equal(await mp.locator('.fish-bag-card').evaluate(e=>{const r=e.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight&&e.scrollWidth<=e.clientWidth;}),true);
+    assert.equal(await mp.locator('.bag-card').evaluate(e=>{const r=e.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight&&e.scrollWidth<=e.clientWidth;}),true);
     await mp.screenshot({path:`${shots}/fish-bag-mobile.png`});await mp.locator('[data-hold-fish="3"]').click();
     await mp.screenshot({path:`${shots}/fish-held-first-person-mobile.png`});await mp.click('#viewBtn');await mp.waitForTimeout(150);
     const before=await mp.evaluate(()=>({yaw:__reelDeal.G.yaw,x:__reelDeal.G.px,z:__reelDeal.G.pz,id:__reelDeal.carriedModel.uuid}));
