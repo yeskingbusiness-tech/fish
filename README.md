@@ -199,8 +199,9 @@ The **fish index (F)** contains all 120 numbered entries. Entries stay grouped b
 island and sort **Common → Uncommon → Rare → Epic → Legendary → Mythic** within
 each island, including when filters are applied. **Entry numbers follow this same
 order, #001–#120:** Reedhaven has #001–#020, Pinewater #021–#040, and so on.
-Numbers stay fixed when filtering; tied rarities keep their original roster order.
-Only the displayed numbers change—species identities, saved discoveries, catch
+All old number assignments have been removed: fresh labels are generated only
+after sorting by island, rarity and authored species order. Sorting never reads an
+old label. Numbers stay fixed when filtering; species IDs, saved discoveries, catch
 counts and personal-best weights stay attached to the same fish.
 
 - Undiscovered fish have an **opaque dark silhouette and `???`**, with no species name,
@@ -211,6 +212,29 @@ counts and personal-best weights stay attached to the same fish.
 - Selling fish or trimming the recent catch log **never removes discoveries**.
 
 The full spoiler roster is in **[FISH_ROSTER.md](FISH_ROSTER.md)**.
+
+### Island index completion rewards · v32
+
+Discover **all 20 unique fish from an island** to earn a **permanent +5% coin bonus**
+on **every fish sale at every market**. Each of the six islands contributes once:
+**+5% / +10% / +15% / +20% / +25% / +30%**. Bonuses add together rather than compound.
+Repeated catches and reopening the index cannot award another copy of the same reward.
+Hooking or losing the last missing fish does not count—you must land it.
+
+The final catch shows an unlock banner. The index shows each island's progress,
+checkmarks for completed islands, and your total permanent bonus. The coin HUD and
+market also display the active bonus. Market prices, single sales, Sell All, catch
+values and log values use the same bonus-aware calculation. Coins are rounded per
+fish, so bulk sales pay exactly the sum of the displayed individual prices.
+
+The reward is calculated from **saved lifetime discoveries**, not the contents of
+your bag, recent log, equipped gear or current island. It survives sales, log trimming,
+travel and reloads. Existing saves with complete islands qualify automatically; no
+new save key or reset is needed. An explicit fresh-game reset clears the rewards.
+
+Fish already in your bag receive the boost when sold, including the fish that
+completes an island. Existing wallet coins are not multiplied or retroactively paid.
+Shop prices, fish eligibility, XP and the cast-luck/reeling rules are unchanged.
 
 ## Controls
 
@@ -282,7 +306,7 @@ For other static hosts, deploy `index.html`, `style.css`, `main.js`, **all four 
 modules**, and `vendor/`. Every browser-facing path is relative and every dependency is
 local. `.mjs` must be served as JavaScript (already handled by `serve.js`).
 
-Cache stamps are currently **`v=31`** in the HTML and module imports. Bump the corresponding
+Cache stamps are currently **`v=32`** in the HTML and module imports. Bump the corresponding
 stamps when changing a cached module. Render's blueprint also sends `Cache-Control: no-cache`.
 
 ## Testing
@@ -297,14 +321,17 @@ tests check every widened gap, improved rare-fish weighting and the actual picke
 Cast/index tests cover the −10/0/+10 luck scale, strict pools at every power,
 cast-adjusted weights/income, and consecutive #001–#120 island/rarity numbering.
 They also verify fixed numbers across filters, roster-document parity, and unchanged
-saved discoveries and catches after renumbering.
+saved discoveries and catches after renumbering. Collection reward tests cover
+all 64 completed-island combinations, distinct-species requirements, +5% to +30%
+sale values, duplicate protection, invalid records, existing saves and reset behavior.
 Economy tests also compare prices to published baselines, enforce every next-voyage
 boat premium against all local stock, and verify that ownership and coins are preserved.
 
 `npm run economy` prints the deterministic income estimates and saving goals for
 every gear tier and boat, including the local gear ceiling and boat premium, using
 fixed weight quantiles rather than lucky random runs. These targets assume neutral
-50% cast power; `expectedCatchIncome` also accepts cast power for targeted audits.
+50% cast power and **no collection rewards**; earning a completion bonus improves
+income without raising prices. `expectedCatchIncome` also accepts cast power for targeted audits.
 
 Optional browser tests exercise all **69 paid gear purchases and five boat purchases**,
 including one-coin-short rejection, displayed-versus-charged prices and free re-equips.
@@ -312,7 +339,9 @@ They also cover all five new level boundaries, retained old-save access, display
 bait bonuses and actual equipped-bait hook weights, index order across all filters,
 locked cast-luck snapshots, identical green reeling rates at every cast power, and
 yellow stalls. The real cast/hook/tension/catch/sale loop, all 30 sailing routes,
-old-save boot, and mobile controls are also covered:
+old-save boot, and mobile controls are also covered. `tests/collection-browser.cjs`
+adds a last-species unlock, pre-existing bag bonuses, exact single/bulk payouts,
+global stacking, save/reload persistence, reset, and responsive reward UI checks:
 
 ```sh
 # Use an installed Chromium/Chrome:

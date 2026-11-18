@@ -29,7 +29,17 @@ test('the index numbers run 001–120 in island/rarity order without reordering 
   assert.equal(SPECIES[13].id,'yellow-bass');assert.equal(SPECIES[13].number,10);
   assert.equal(SPECIES[9].id,'brown-bullhead');assert.equal(SPECIES[9].number,15);
   assert.deepEqual(SPECIES.map(sp=>[sp.id,sp.number,sp.island,sp.rarity]),original,'rendering must not mutate the roster or change its assigned numbers');
-  assert.deepEqual(sortFishIndex([...SPECIES].reverse()),sorted,'ties use stable entry numbers, not input order');
+  assert.deepEqual(sortFishIndex([...SPECIES].reverse()),sorted,'ties use authored species order, not input order');
+});
+
+test('fresh index ordering is independent of missing, duplicate or obsolete index numbers', () => {
+  const expected=sortFishIndex().map(sp=>sp.id);
+  const unnumbered=SPECIES.map(({number,...sp})=>sp).reverse();
+  assert.deepEqual(sortFishIndex(unnumbered).map(sp=>sp.id),expected);
+  for(const numbers of [SPECIES.map((_,i)=>120-i),SPECIES.map(()=>1),SPECIES.map((_,i)=>i+1000)]){
+    const old=SPECIES.map((sp,i)=>({...sp,number:numbers[i]})).reverse();
+    assert.deepEqual(sortFishIndex(old).map(sp=>sp.id),expected);
+  }
 });
 
 test('island/discovery filters preserve index ordering without dropping or renumbering fish', () => {

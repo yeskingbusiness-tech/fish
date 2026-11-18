@@ -401,6 +401,7 @@ fs.mkdirSync(shots,{recursive:true});
     assert.equal(await mp.locator('#castMeter').evaluate(e=>{const b=e.getBoundingClientRect();return b.left>=0&&b.right<=innerWidth&&e.scrollWidth<=e.clientWidth;}),true);
     await mp.screenshot({path:`${shots}/mobile-cast-meter.png`});
     await mobile.close();console.log('PASS: mobile drag-look, joystick, index, chart, boat shop, bait stats and cast-luck meter');
+    await require('./collection-browser.cjs')(browser,URL,shots);
     console.log('Renderer:',await page.evaluate(()=>({calls:__reelDeal.renderer.info.render.calls,triangles:__reelDeal.renderer.info.render.triangles})));
     assert.deepEqual(errors,[],'No browser errors allowed');
     console.log('ALL BROWSER CHECKS PASSED');

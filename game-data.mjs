@@ -169,7 +169,7 @@ const SPECIES = FISH_TABLE.map(([name, color, rarity, dist, sf, pattern, desc], 
   const minW = Math.max(0.2, +(maxW * 0.16).toFixed(1));
   return {
     id: name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-    island: Math.floor(index / 20), number: index + 1,
+    island: Math.floor(index / 20),
     name, color, rarity, dist, pattern: ["none", "stripes", "spots", "rainbow", "patches", "scales", "whiskers"][pattern], desc,
     belly: lighten(color, 0.66),
     minW, maxW,
@@ -179,8 +179,10 @@ const SPECIES = FISH_TABLE.map(([name, color, rarity, dist, sf, pattern, desc], 
     weight: rar.spawn,
   };
 });
-// Assign field-guide numbers once, in island/rarity order, without reordering
-// the spawn roster or changing species IDs. Filters keep these global 001–120 labels.
+// Discard the old numbering scheme entirely. Stable species IDs break rarity
+// ties by authored roster position; no previous index label participates in sorting.
+const speciesRosterOrder = new Map(SPECIES.map((sp,index) => [sp.id,index]));
+// The ONLY source of index numbers: assign fresh 001–120 labels after sorting.
 sortFishIndex().forEach((sp, index) => { sp.number = index + 1; });
 
 // ---------- Gear ----------
@@ -303,11 +305,10 @@ function eligibleSpecies(island, baitIndex){
   return SPECIES.filter(s => s.island === island &&
     RARITY[s.rarity].tier >= bait.lo && RARITY[s.rarity].tier <= bait.hi && s.maxW >= bait.minSize);
 }
-// Sort a copy: spawn order and save IDs never change. Original roster numbers
-// break rarity ties at initialization; the assigned index numbers keep that order.
+// Sort a copy without reading index numbers. Spawn order and save IDs never change.
 function sortFishIndex(items = SPECIES){
   return [...items].sort((a,b) => a.island - b.island ||
-    RARITY[a.rarity].tier - RARITY[b.rarity].tier || a.number - b.number);
+    RARITY[a.rarity].tier - RARITY[b.rarity].tier || speciesRosterOrder.get(a.id) - speciesRosterOrder.get(b.id));
 }
 // Charge adds percentage points to bait luck: -10 at minimum, 0 at halfway, +10 at full.
 // A neutral default preserves callers that are not resolving a player's cast.

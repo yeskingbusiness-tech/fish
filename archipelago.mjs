@@ -1,4 +1,4 @@
-import { RODS, LINES, BAITS } from './game-data.mjs?v=31';
+import { SPECIES, RODS, LINES, BAITS, fishValue } from './game-data.mjs?v=32';
 
 // The archipelago is deliberately data-driven: six islands, twenty species and
 // four gear tiers per island. No distance roll can bypass an island's fish pool.
@@ -35,6 +35,29 @@ export const ISLANDS = [
     description:'A quiet sanctuary of amethyst cubes, luminous trees and an ancient moon gate above the farthest water.',
     landmark:'The Moon Gate', stock:'Celestial & mythril', waters:'The final twenty legends' },
 ];
+
+// Lifetime discoveries already persist across sales, travel and reloads. Deriving
+// the reward from them makes it permanent without a repeatable award counter.
+// Existing saves with completed collections receive the same reward automatically.
+const ISLAND_SPECIES = ISLANDS.map(i => SPECIES.filter(sp => sp.island === i.id));
+export const ISLAND_COLLECTION_BONUS = 5;
+export function islandCollectionProgress(discoveries = {}){
+  return ISLAND_SPECIES.map((fish,island) => {
+    const found = fish.reduce((total,sp) => {
+      const count = Number(discoveries?.[sp.id]?.count);
+      return total + (Number.isFinite(count) && count >= 1 ? 1 : 0);
+    },0);
+    return { island, found, total:fish.length, complete:fish.length > 0 && found === fish.length };
+  });
+}
+export function collectionCoinBonus(discoveries = {}){
+  return islandCollectionProgress(discoveries).filter(p => p.complete).length * ISLAND_COLLECTION_BONUS;
+}
+export function fishSaleValue(sp, weight, discoveries = {}){
+  // Round each fish once, so Sell All always equals selling the same fish singly.
+  // Calculate at sale time: already-bagged fish also benefit from newly earned boosts.
+  return Math.round(fishValue(sp,weight) * (100 + collectionCoinBonus(discoveries)) / 100);
+}
 
 export function localGearPriceCeiling(island){
   if(!Number.isInteger(island) || !ISLANDS[island]) return 0;

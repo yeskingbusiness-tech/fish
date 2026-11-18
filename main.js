@@ -13,13 +13,16 @@ const hexc  = c => '#' + c.toString(16).padStart(6,'0');
 const fmt   = n => n.toLocaleString('en-US');
 
 import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow, sortFishIndex, castLuckModifier, effectiveLuck,
-  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=31';
-import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, hasIslandLicense, travelRequirement } from './archipelago.mjs?v=31';
-import { createWorld } from './world.mjs?v=31';
-import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=31';
+  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=32';
+import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, hasIslandLicense, travelRequirement,
+  ISLAND_COLLECTION_BONUS, islandCollectionProgress, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=32';
+import { createWorld } from './world.mjs?v=32';
+import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=32';
 
 const pickSpecies = () => drawSpecies(G.zone, G.gear.bait, Math.random, G.castPower);
 const rollWeight = sp => drawWeight(sp, G.gear.bait, Math.random, G.castPower);
+const coinBonus = () => collectionCoinBonus(G.discoveries);
+const saleValue = (sp,weight) => fishSaleValue(sp,Number(weight),G.discoveries);
 
 // ---------- Pixel-art fish (UI icons) ----------
 const FISH_BASE = [
@@ -364,6 +367,9 @@ function showToast(msg, bad=false){
 function updateStats(){
   $('caughtCount').textContent = fmt(G.caught);
   $('coinCount').textContent = fmt(G.coins);
+  const bonus = coinBonus();
+  $('coinBonus').textContent = `+${bonus}% SALES`;
+  $('coinBonus').classList.toggle('hidden',bonus===0);
   $('bestNum').textContent = G.best ? G.best.weight + ' lb' : '—';
   $('shopCoins').textContent = fmt(G.coins);
   $('marketCoins').textContent = fmt(G.coins);
@@ -385,7 +391,7 @@ function updateStats(){
 function renderLog(){
   if(!log.length){ logList.innerHTML = '<p class="empty">No fish yet. Cast your line!</p>'; logSummary.textContent = ''; return; }
   logList.innerHTML = log.map(e =>
-    `<div class="log-item"><span class="e">${fishSVG(e.sp)}</span><div><b>${e.sp.name}</b><small>${e.weight} lbs • ${ISLANDS[e.sp.island].short}</small></div><span class="pts">${fmt(fishValue(e.sp,Number(e.weight)))}c</span></div>`
+    `<div class="log-item"><span class="e">${fishSVG(e.sp)}</span><div><b>${e.sp.name}</b><small>${e.weight} lbs • ${ISLANDS[e.sp.island].short}</small></div><span class="pts">${fmt(saleValue(e.sp,e.weight))}c</span></div>`
   ).join('');
   logSummary.textContent=`${G.caught} total catches · showing last ${log.length} · ${Object.keys(G.discoveries).length}/120 discovered`;
 }
@@ -602,12 +608,16 @@ function catchFish(){
   if(G.state !== 'reeling' || !hookedSpecies) return;
   const sp = hookedSpecies;
   const weight = (hookedWeight || rollWeight(sp)).toFixed(1);
-  const value = fishValue(sp, parseFloat(weight));
+  const bonusBefore = coinBonus();
   const oldLevel=level(), lockedBefore=ISLANDS.filter(i=>!hasLicense(i.id)), isNew=!G.discoveries[sp.id];
   const earnedXP=catchXP(sp,Number(weight),isNew);
   G.xp+=earnedXP;
   const record=G.discoveries[sp.id]||(G.discoveries[sp.id]={count:0,best:0,first:new Date().toISOString().slice(0,10)});
   record.count++; record.best=Math.max(record.best,Number(weight));
+  const bonus = coinBonus(), value = saleValue(sp,weight);
+  $('collectionReward').classList.toggle('hidden',bonus<=bonusBefore);
+  $('collectionReward').innerHTML = bonus>bonusBefore
+    ? `<strong>${ISLANDS[sp.island].short} index complete!</strong><span>+${ISLAND_COLLECTION_BONUS}% sale coins forever · total +${bonus}%</span>` : '';
   G.score += sp.pts; G.caught++;
   G.caughtAnim=0;
   $('newDiscovery').classList.toggle('hidden',!isNew);
@@ -618,7 +628,7 @@ function catchFish(){
   if(!G.best || parseFloat(weight) > parseFloat(G.best.weight)) G.best = { name:sp.name, weight };
   log.unshift({ sp, weight });
   if(log.length>200) log.length=200;
-  bag.push({ sp, weight, value });
+  bag.push({ sp, weight });
   renderLog(); updateStats(); saveGame();
 
   $('catchRarity').textContent = sp.rarity.toUpperCase() + ' CATCH';
@@ -816,7 +826,7 @@ function gearRow(kind, g, i){
   </div>`;
 }
 
-const bagTotal = () => bag.reduce((a, e) => a + (e.value || fishValue(e.sp, parseFloat(e.weight))), 0);
+const bagTotal = () => bag.reduce((a,e) => a + saleValue(e.sp,e.weight),0);
 
 function renderShop(){
   if(!shopOpen) return;
@@ -890,6 +900,10 @@ function applyGear(){
 function renderMarket(){
   if(!marketOpen) return;
   $('marketCoins').textContent = fmt(G.coins);
+  const bonus = coinBonus();
+  $('marketNote').textContent = bonus
+    ? `Permanent index bonus: +${bonus}% on all fish sales. Every price below includes it. Selling keeps your discoveries and bonus.`
+    : `Complete an island’s fish index to earn +${ISLAND_COLLECTION_BONUS}% sale coins forever. Selling never erases discoveries.`;
   const body = $('marketBody');
   if(!bag.length){
     body.innerHTML = '<p class="shop-empty">Your catch bag is empty.<br>Catch something, then bring it here.</p>';
@@ -900,7 +914,7 @@ function renderMarket(){
     bag.map((e, i) => `<div class="sell-row">
       <div class="e">${fishSVG(e.sp)}</div>
       <div><b>${e.sp.name}</b><small>${e.weight} lbs · ${RARITY[e.sp.rarity].label}</small></div>
-      <div class="val">${fmt(e.value || fishValue(e.sp, parseFloat(e.weight)))}c</div>
+      <div class="val">${fmt(saleValue(e.sp,e.weight))}c</div>
       <button class="buy-btn" data-sell="${i}">Sell</button>
     </div>`).join('') +
     `<button class="sell-all" id="sellAll">SELL ALL · ${fmt(bagTotal())}c</button>`;
@@ -928,7 +942,7 @@ function sellFish(i){
   if(!marketOpen || !isNearVendor('market') || !Number.isInteger(i))return;
   const e = bag[i];
   if(!e) return;
-  const v = e.value || fishValue(e.sp, parseFloat(e.weight));
+  const v = saleValue(e.sp,e.weight);
   bag.splice(i, 1);
   G.coins += v;
   sfx.coin(); updateStats(); saveGame(); renderMarket();
@@ -987,9 +1001,21 @@ function openIndex(){
 function closeIndex(){indexOpen=false;$('indexOverlay').classList.add('hidden');resumeWorld();}
 function renderIndex(){
   const found=Object.keys(G.discoveries).length;
+  const collections=islandCollectionProgress(G.discoveries), bonus=coinBonus();
   $('collectionTotal').textContent=`${found} / 120`;
   $('collectionFill').style.width=(found/120*100)+'%';
-  $('indexIslands').innerHTML=[{id:-1,short:'All waters'},...ISLANDS].map(i=>`<button class="island-filter ${i.id===indexIsland?'active':''}" data-index-island="${i.id}">${i.short}</button>`).join('');
+  $('indexIslands').innerHTML=[{id:-1,short:'All waters'},...ISLANDS].map(i=>{
+    const complete=collections[i.id]?.complete;
+    return `<button class="island-filter ${i.id===indexIsland?'active':''} ${complete?'complete':''}" data-index-island="${i.id}" aria-label="${i.short}${complete?', index complete, +'+ISLAND_COLLECTION_BONUS+'% coin bonus earned':''}">${i.short}${complete?' <span aria-hidden="true">✓</span>':''}</button>`;
+  }).join('');
+  const local=collections[indexIsland];
+  $('collectionBonus').classList.toggle('earned',local?local.complete:bonus>0);
+  $('collectionBonusTitle').textContent=local
+    ? local.complete?`${ISLANDS[indexIsland].short} complete · +${ISLAND_COLLECTION_BONUS}% earned`:`${ISLANDS[indexIsland].short} · ${local.found}/${local.total} discovered`
+    : `Permanent coin bonus: +${bonus}%`;
+  $('collectionBonusDetail').textContent=local
+    ? local.complete?`Total +${bonus}% on all fish sales, at every market.`:`Find all ${local.total} for permanent +${ISLAND_COLLECTION_BONUS}% sale coins · current total +${bonus}%.`
+    : `${collections.filter(p=>p.complete).length}/${ISLANDS.length} islands completed · +${ISLAND_COLLECTION_BONUS}% each · applies at every market.`;
   const pool=sortFishIndex(SPECIES.filter(sp=>indexIsland<0||sp.island===indexIsland));
   const filter=$('indexFilter').value;
   const list=pool.filter(sp=>filter==='all'||(filter==='found'?!!G.discoveries[sp.id]:!G.discoveries[sp.id]));
@@ -1662,6 +1688,7 @@ window.__reelDeal = window.__reelLife = {
   renderShop,renderMarket,fightSetup,pickSpecies,paintTensionBand,eligibleSpecies,
   updateStats,fishValue,rollWeight,xpForLevel,level,hasLicense,saveGame,levelProgress,
   castLuckModifier,effectiveLuck,updateCastMeter,
+  saleValue,bagTotal,collectionCoinBonus,islandCollectionProgress,fishSaleValue,sortFishIndex,
   walkable,groundAt,landBobber,triggerBite,hookFish,catchFish,SHOP_POS,MARKET_POS,
   startCharge,releaseCast,landingPoint,inWater,spawnAtIsland,nearestVendor
 };

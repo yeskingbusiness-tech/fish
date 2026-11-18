@@ -52,6 +52,7 @@ export function boatEconomyRows(){
 }
 function report(){
   console.log('Saving goals assume a neutral 50% cast. Low/full charge applies -10/+10 luck points.');
+  console.log('Base saving goals exclude collection rewards: each completed island adds +5% sale coins, up to +30%.');
   console.log('Gear: income from the previous bait in the shop\'s own island.');
   console.table(gearEconomyRows().map(r => ({
     tier:r.tier, island:r.island, 'coins/catch':r.income.toFixed(1),
