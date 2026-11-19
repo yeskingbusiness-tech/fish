@@ -13,15 +13,21 @@ const hexc  = c => '#' + c.toString(16).padStart(6,'0');
 const fmt   = n => n.toLocaleString('en-US');
 
 import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow, sortFishIndex, castLuckModifier, effectiveLuck,
-  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=39';
+  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=40';
 import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, hasIslandLicense, travelRequirement,
-  ISLAND_COLLECTION_BONUS, islandCollectionProgress, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=39';
-import { createWorld } from './world.mjs?v=39';
-import { fishSVG } from './fish-geometry.mjs?v=39';
-import { createFishModel, animateFishModel, disposeFishModel } from './fish-model.mjs?v=39';
-import { createPlayerModel, heldFishSpan, heldFishLayout, firstPersonFishPose, frontViewPose } from './player-view.mjs?v=39';
-import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=39';
-import { BAG_TABS, bagGearKind, nextBagTab, contextualHint, HELP_CONTROLS } from './ui-state.mjs?v=39';
+  ISLAND_COLLECTION_BONUS, islandCollectionProgress, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=40';
+import { createWorld } from './world.mjs?v=40';
+import { fishSVG } from './fish-geometry.mjs?v=40';
+import { createFishIcons } from './fish-icons.mjs?v=40';
+import { createAdaptiveQuality, memoLast, createBaitPoolLookup } from './render-performance.mjs?v=40';
+import { createFishModel, animateFishModel, disposeFishModel } from './fish-model.mjs?v=40';
+import { createPlayerModel, heldFishSpan, heldFishLayout, firstPersonFishPose, frontViewPose } from './player-view.mjs?v=40';
+import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=40';
+import { BAG_TABS, bagGearKind, nextBagTab, contextualHint, HELP_CONTROLS } from './ui-state.mjs?v=40';
+
+const fishIcons = createFishIcons(SPECIES);
+const localFishPool = createBaitPoolLookup(eligibleSpecies);
+const frameWork = {vendorChecks:0,hintChecks:0,particleUploads:0};
 
 const pickSpecies = () => drawSpecies(G.zone, G.gear.bait, Math.random, G.castPower);
 const rollWeight = sp => drawWeight(sp, G.gear.bait, Math.random, G.castPower);
@@ -98,7 +104,8 @@ const sfx = {
 // ---------- Renderer ----------
 const canvas = document.getElementById('scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias:false, powerPreference:'high-performance', stencil:false });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+const adaptiveQuality = createAdaptiveQuality(devicePixelRatio);
+renderer.setPixelRatio(adaptiveQuality.pixelRatio);
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.shadowMap.enabled = false; // flat blocky lighting — and much faster
@@ -174,6 +181,7 @@ const P_MAX = 70;
 const pMat = new THREE.MeshBasicMaterial({ color:0xdff6ff, transparent:true, opacity:0.9 });
 const pMesh = new THREE.InstancedMesh(UNIT, pMat, P_MAX);
 pMesh.frustumCulled = false;
+pMesh.visible = false; // No particle draw/upload until the first splash.
 scene.add(pMesh);
 const pData = [];
 for(let i=0;i<P_MAX;i++) pData.push({ life:0, x:0, y:0, z:0, vx:0, vy:0, vz:0 });
@@ -319,22 +327,33 @@ const lockHint = $('lockHint'), shopBtnEl = $('shopBtn'), shopOverlay = $('shopO
 const marketBtnEl = $('marketBtn'), marketOverlayEl = $('marketOverlay'), marketBody = $('marketBody');
 const bagOverlay = $('bagOverlay'), bagBody = $('bagBody'), helpOverlay = $('helpOverlay');
 const reelWarn = $('reelWarn'), stickEl = $('stick'), stickKnob = document.querySelector('.stick-knob');
+const portBtnEl = $('portBtn'), tensionTrack = $('tensionTrack'), castPowerValue = $('castPowerValue'), castLuck = $('castLuck');
+const setText = (el,text) => {if(el.textContent!==text)el.textContent=text;};
+const setHidden = (el,hidden) => {if(el.classList.contains('hidden')!==hidden)el.classList.toggle('hidden',hidden);};
 let drawerOpen = false;
 const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
 
-function hidePrompt(){ promptEl.style.display = 'none'; }
+function hidePrompt(){ if(promptEl.style.display!=='none')promptEl.style.display='none'; }
 const hintTarget = new THREE.Vector3();
+const hintFor = memoLast((state,blocked,holding,nearVendor,moving,x,z,yaw,pitch,rod,zone,bait,power)=>{
+  frameWork.hintChecks++;
+  // Position/aim/tackle arguments invalidate the landing check immediately;
+  // stationary frames do not repeat water tests, pool filters or number formatting.
+  const canCast=!blocked&&state==='aim'&&!holding&&!nearVendor&&!moving&&landingPoint(.5,hintTarget);
+  return contextualHint({state,blocked,holding,nearVendor,moving,canCast,
+    baitMatches:canCast?localFishPool(zone,bait).length>0:true,touch:isTouch,
+    luckLabel:state==='waiting'?castLuckLabel(power):''});
+});
 function updateContextHint(moving=false){
   updateLockHint();
   const blocked=uiBusy()||!!voyage||!catchModal.classList.contains('hidden')||!lockHint.classList.contains('hidden');
-  const canCast=!blocked&&G.state==='aim'&&!heldCatch&&!nearbyStall&&!moving&&landingPoint(.5,hintTarget);
-  const hint=contextualHint({state:G.state,blocked,holding:!!heldCatch,nearVendor:!!nearbyStall,moving,canCast,
-    baitMatches:eligibleSpecies(G.zone,G.gear.bait).length>0,touch:isTouch,luckLabel:castLuckLabel(G.castPower)});
+  const hint=hintFor(G.state,blocked,!!heldCatch,!!nearbyStall,moving,camera.position.x,camera.position.z,
+    camera.rotation.y,camera.rotation.x,G.gear.rod,G.zone,G.gear.bait,G.castPower);
   if(!hint){hidePrompt();return;}
-  if(promptEl.textContent!==hint.text)promptEl.textContent=hint.text;
+  setText(promptEl,hint.text);
   const cls='prompt'+(hint.mode?' '+hint.mode:'');
   if(promptEl.className!==cls)promptEl.className=cls;
-  promptEl.style.display='';
+  if(promptEl.style.display!=='')promptEl.style.display='';
 }
 function showToast(msg, bad=false){
   toastEl.textContent = msg;
@@ -363,18 +382,28 @@ function updateStats(){
   $('journeyObjective').textContent = next ? `Next stop · ${next.short} at level ${next.level}` : 'All island licenses unlocked · fill your index';
   const found = Object.keys(G.discoveries).length;
   $('indexCount').textContent = found + '/120';
-  const pool = eligibleSpecies(G.zone, G.gear.bait);
+  const pool = localFishPool(G.zone, G.gear.bait);
   $('equipmentStrip').innerHTML = `<span>${RODS[G.gear.rod].name}</span><span>${LINES[G.gear.line].name}</span><span class="${pool.length?'':'wrong-bait'}">${BAITS[G.gear.bait].name}${pool.length?'':' · no local bites'}</span><span>${bag.length} fish in bag</span>`;
   $('boatCoins').textContent = fmt(G.coins) + 'c';
   if(heldCatch && !bag.includes(heldCatch)) stowFish();
   updateCarryUI();
 }
+let logDirty=true;
+function invalidateLog(){logDirty=true;if(drawerOpen)renderLog();}
 function renderLog(){
-  logSummary.textContent=`${fmt(log.length)} recent catches · ${Object.keys(G.discoveries).length}/120 discovered`;
-  if(!log.length){ logList.innerHTML = '<p class="empty">No recent catches. Cast your line!</p>'; return; }
-  logList.innerHTML = log.map(e =>
-    `<div class="log-item"><span class="e">${fishSVG(e.sp)}</span><div><b>${e.sp.name}</b><small>${e.weight} lbs • ${ISLANDS[e.sp.island].short}</small></div><span class="pts">${fmt(saleValue(e.sp,e.weight))}c</span></div>`
-  ).join('');
+  if(!drawerOpen)return; // Never build a hidden 200-catch history at boot/landing.
+  if(logDirty){
+    fishIcons.disconnect(logList);
+    logSummary.textContent=`${fmt(log.length)} recent catches · ${Object.keys(G.discoveries).length}/120 discovered`;
+    logList.innerHTML=log.length?log.map(e =>
+      `<div class="log-item"><span class="e">${fishIcons.markup(e.sp)}</span><div><b>${e.sp.name}</b><small>${e.weight} lbs • ${ISLANDS[e.sp.island].short}</small></div><span class="pts">${fmt(saleValue(e.sp,e.weight))}c</span></div>`
+    ).join(''):'<p class="empty">No recent catches. Cast your line!</p>';
+    logDirty=false;
+  }
+  fishIcons.observe(logList);
+}
+function closeLog(){
+  logDrawer.classList.add('hidden');drawerOpen=false;fishIcons.disconnect(logList);resumeWorld();
 }
 const RED_LO = 8, RED_HI = 92;      // hit either end of the bar and the fish is gone
 
@@ -431,10 +460,10 @@ function castLuckLabel(power){
 }
 function updateCastMeter(){
   castFill.style.width = (G.power * 100) + '%';
-  $('castPowerValue').textContent = Math.round(G.power * 100) + '%';
-  $('castLuck').textContent = castLuckLabel(G.power);
-  $('castLuck').classList.toggle('positive',G.power>0.5);
-  $('castLuck').classList.toggle('negative',G.power<0.5);
+  setText(castPowerValue,Math.round(G.power * 100) + '%');
+  setText(castLuck,castLuckLabel(G.power));
+  castLuck.classList.toggle('positive',G.power>0.5);
+  castLuck.classList.toggle('negative',G.power<0.5);
 }
 function landingPoint(power, out){
   camera.getWorldDirection(camFwd);
@@ -459,7 +488,7 @@ function inWater(p){ return world.inWater(p); }
 function startCharge(){
   if(G.state !== 'aim' || uiBusy()) return;
   if(heldCatch){showToast('Put away your fish before casting — use X or Put away.');return;}
-  if(!eligibleSpecies(G.zone,G.gear.bait).length){ showToast('No local fish take this bait. Use Bag → Bait (I) to switch.',true); return; }
+  if(!localFishPool(G.zone,G.gear.bait).length){ showToast('No local fish take this bait. Use Bag → Bait (I) to switch.',true); return; }
   ensureAudio();
   setState('charging');
   G.power = 0; G.powerDir = 1;
@@ -532,7 +561,7 @@ function updatePlayerView(moving=false){
   playerModel.root.visible=third;
   rodRig.visible=!third&&!heldCatch&&!voyage;
   heldFishRig.visible=!!heldCatch&&!voyage&&G.state!=='menu';
-  playerModel.pose({x:G.px,z:G.pz,ground,yaw:G.yaw,pitch:G.pitch,time:G.time,stride:G.bob,moving,
+  if(third)playerModel.pose({x:G.px,z:G.pz,ground,yaw:G.yaw,pitch:G.pitch,time:G.time,stride:G.bob,moving,
     holding:!!heldCatch,carry,rodRotation:rodRig.quaternion,bend:tipJoint.rotation.x});
   if(third){
     const p=frontViewPose({x:G.px,z:G.pz,ground,yaw:G.yaw,pitch:G.pitch,aspect:frontCamera.aspect,fov:frontCamera.fov,fish:heldCatch?carriedSize:null},world.cameraBlockers[G.zone]);
@@ -566,7 +595,7 @@ function openBag(tab='fish'){
 }
 function closeBag(){
   if(!bagOpen)return;
-  bagOpen=false;bagOverlay.classList.add('hidden');resumeWorld();
+  bagOpen=false;bagOverlay.classList.add('hidden');fishIcons.disconnect(bagBody);resumeWorld();
 }
 // B opens catches; I remains a quick route to the last owned-gear tab.
 // Both routes use the exact same panel, selection, guards and focus trap.
@@ -592,21 +621,23 @@ function renderBag(){
   $('bagNote').textContent=kind
     ? 'Equip owned tackle for free, wherever you are. Buy new gear at local stalls.'+(kind==='bait'?' The rarity range applies to all fish sizes. Earlier bait can still help with lower rarities.':'')
     : 'Hold a catch without removing it from your bag. Sell fish at the market.';
-  if(kind)bagBody.innerHTML=gearRows(kind,G.owned[kind].slice().sort((a,b)=>a-b));
+  if(kind){fishIcons.disconnect(bagBody);bagBody.innerHTML=gearRows(kind,G.owned[kind].slice().sort((a,b)=>a-b));}
   else renderFishBag();
   // Equipping replaces its row. Keep keyboard focus inside the live panel.
   if(hadBodyFocus&&!bagBody.contains(document.activeElement))bagBody.focus({preventScroll:true});
 }
 function renderFishBag(){
   if(!bagOpen||bagTab!=='fish')return;
+  fishIcons.disconnect(bagBody);
   bagBody.innerHTML=bag.length?bag.map((e,i)=>{
     const held=e===heldCatch;
     return `<article class="carry-row ${held?'selected':''}">
-      <div class="carry-icon">${fishSVG(e.sp)}</div>
+      <div class="carry-icon">${fishIcons.markup(e.sp)}</div>
       <div class="carry-copy"><span class="carry-rarity ${e.sp.rarity}">${RARITY[e.sp.rarity].label}</span><b>${e.sp.name}</b><small>${Number(e.weight).toFixed(1)} lb · ${ISLANDS[e.sp.island].short}</small></div>
       <button class="buy-btn" data-hold-fish="${i}" aria-pressed="${held}" aria-label="${held?'Put away':'Hold'} ${e.sp.name}, ${Number(e.weight).toFixed(1)} pounds">${held?'Put away':'Hold'}</button>
     </article>`;
   }).join(''):'<div class="fish-bag-empty"><span aria-hidden="true">▥</span><h3>No fish in your bag yet.</h3><p>Land a catch, then come back to hold it up.<br>Sold fish stay in your index, not in your bag.</p></div>';
+  fishIcons.observe(bagBody);
 }
 function stowFish(){
   if(!heldCatch)return false;
@@ -685,7 +716,7 @@ function hookFish(){
   G.surgeTimer = rand(0.6, 1.4); G.surgeDur = 0;
   G.yankTimer = 0.4; G.yank = 0; G.yankDur = 0;
   G.reelHeld = false;
-  reelFishName.innerHTML = G.discoveries[hookedSpecies.id] ? `<span class="reel-fish">${fishSVG(hookedSpecies)}</span>${hookedSpecies.name}` : `<span class="reel-fish">${unknownFishSVG()}</span>Unidentified fish`;
+  reelFishName.innerHTML = G.discoveries[hookedSpecies.id] ? `<span class="reel-fish">${fishIcons.markup(hookedSpecies,{eager:true})}</span>${hookedSpecies.name}` : `<span class="reel-fish">${unknownFishSVG()}</span>Unidentified fish`;
   paintTensionBand();
   setState('reeling');
   sfx.hook();
@@ -716,11 +747,11 @@ function catchFish(){
   log.unshift({ sp, weight });
   if(log.length>200) log.length=200;
   bag.push({ sp, weight });
-  renderLog(); updateStats(); saveGame();
+  invalidateLog(); updateStats(); saveGame();
 
   $('catchRarity').textContent = sp.rarity.toUpperCase() + ' CATCH';
   $('catchRarity').className = 'modal-eyebrow' + (sp.rarity !== 'common' ? ' ' + sp.rarity : '');
-  $('catchIcon').innerHTML = fishSVG(sp);
+  $('catchIcon').innerHTML = fishIcons.markup(sp,{eager:true});
   $('catchName').textContent = sp.name;
   $('catchWeight').textContent = weight + ' lbs';
   $('catchPoints').innerHTML = '+' + fmt(earnedXP) + ' XP' + (isNew?' · 50% discovery bonus':'') + '<span class="catch-value">WORTH ' + fmt(value) + 'c AT THE MARKET</span>';
@@ -749,11 +780,12 @@ function reelInEarly(){
 }
 
 // ---------- particles / ripples ----------
-let pCursor = 0;
+let pCursor = 0, activeParticles = 0, activeRipples = 0;
 function spawnSplash(pos, n, spread){
   for(let k=0;k<n;k++){
     const p = pData[pCursor];
     pCursor = (pCursor + 1) % P_MAX;
+    if(p.life<=0)activeParticles++;
     p.life = rand(0.35, 0.7);
     p.x = pos.x + rand(-0.2,0.2); p.y = pos.y + 0.1; p.z = pos.z + rand(-0.2,0.2);
     p.vx = rand(-spread, spread); p.vy = rand(1.6, 3.4); p.vz = rand(-spread, spread);
@@ -762,7 +794,7 @@ function spawnSplash(pos, n, spread){
 function spawnRipple(pos){
   for(const r of ripples){
     if(r.life <= 0){
-      r.life = 1;
+      r.life = 1;activeRipples++;
       r.mesh.visible = true;
       r.mesh.position.set(pos.x, 0.16, pos.z);
       r.mesh.scale.setScalar(0.6);
@@ -772,32 +804,29 @@ function spawnRipple(pos){
   }
 }
 function updateParticles(dt){
-  for(let i=0;i<P_MAX;i++){
-    const p = pData[i];
-    if(p.life > 0){
-      p.life -= dt;
-      p.vy -= 9 * dt;
-      p.x += p.vx*dt; p.y += p.vy*dt; p.z += p.vz*dt;
-      const s = Math.max(0, Math.min(0.14, p.life * 0.2));
-      D.position.set(p.x, Math.max(0.02, p.y), p.z);
-      D.rotation.set(0,0,0);
-      D.scale.set(s, s, s);
-    } else {
-      D.scale.set(0,0,0);
-      D.position.set(0, -50, 0);
+  // An empty pool is invisible and does not rewrite/upload 70 matrices every
+  // frame. The final live frame clears expired instances before going dormant.
+  if(activeParticles){
+    for(let i=0;i<P_MAX;i++){
+      const p=pData[i];
+      if(p.life>0){
+        p.life-=dt;
+        if(p.life<=0){p.life=0;activeParticles--;}
+        p.vy-=9*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;
+        const size=Math.max(0,Math.min(.14,p.life*.2));
+        D.position.set(p.x,Math.max(.02,p.y),p.z);D.rotation.set(0,0,0);D.scale.set(size,size,size);
+      }else{D.scale.set(0,0,0);D.position.set(0,-50,0);}
+      D.updateMatrix();pMesh.setMatrixAt(i,D.matrix);
     }
-    D.updateMatrix();
-    pMesh.setMatrixAt(i, D.matrix);
+    pMesh.instanceMatrix.needsUpdate=true;frameWork.particleUploads++;
+    pMesh.visible=activeParticles>0;
   }
-  pMesh.instanceMatrix.needsUpdate = true;
-
-  for(const r of ripples){
-    if(r.life > 0){
-      r.life -= dt * 1.1;
-      const s = 1 + (1 - r.life) * 5;
-      r.mesh.scale.set(s, s, s);
-      r.mesh.material.opacity = Math.max(0, r.life) * 0.8;
-      if(r.life <= 0) r.mesh.visible = false;
+  if(activeRipples)for(const r of ripples){
+    if(r.life>0){
+      r.life-=dt*1.1;
+      r.mesh.scale.setScalar(1+(1-r.life)*5);
+      r.mesh.material.opacity=Math.max(0,r.life)*.8;
+      if(r.life<=0){r.mesh.visible=false;activeRipples--;}
     }
   }
 }
@@ -917,7 +946,7 @@ function gearRows(kind,indexes){
   return indexes.map(index=>{
     let row=gearRow(kind,GEAR[kind].list[index],index);
     if(kind==='bait'){
-      const count=eligibleSpecies(G.zone,index).length;
+      const count=localFishPool(G.zone,index).length;
       row=row.replace('</b>','</b><small class="local-pool '+(count?'':'no-bites')+'">'+(count?count+' possible species in '+ISLANDS[G.zone].short:'NO BITES IN THESE WATERS')+'</small>');
     }
     return row;
@@ -990,7 +1019,8 @@ function renderMarket(){
   $('marketNote').textContent = bonus
     ? `Permanent index bonus: +${bonus}% on all fish sales. Every price below includes it. Selling keeps your discoveries and bonus.`
     : `Complete an island’s fish index to earn +${ISLAND_COLLECTION_BONUS}% sale coins forever. Selling never erases discoveries.`;
-  const body = $('marketBody');
+  const body = marketBody;
+  fishIcons.disconnect(body);
   if(!bag.length){
     body.innerHTML = '<p class="shop-empty">Your catch bag is empty.<br>Catch something, then bring it here.</p>';
     return;
@@ -998,12 +1028,13 @@ function renderMarket(){
   body.innerHTML =
     `<div class="bag-total"><span>${bag.length} fish in the bag</span><span>${fmt(bagTotal())}c</span></div>` +
     bag.map((e, i) => `<div class="sell-row">
-      <div class="e">${fishSVG(e.sp)}</div>
+      <div class="e">${fishIcons.markup(e.sp)}</div>
       <div><b>${e.sp.name}</b><small>${e.weight} lbs · ${RARITY[e.sp.rarity].label}</small></div>
       <div class="val">${fmt(saleValue(e.sp,e.weight))}c</div>
       <button class="buy-btn" data-sell="${i}">Sell</button>
     </div>`).join('') +
     `<button class="sell-all" id="sellAll">SELL ALL · ${fmt(bagTotal())}c</button>`;
+  fishIcons.observe(body);
 }
 function openMarket(){
   if(uiBusy() || G.state !== 'aim') return;
@@ -1022,7 +1053,7 @@ function closeMarket(){
   if(!marketOpen) return;
   marketOpen = false;
   $('marketOverlay').classList.add('hidden');
-  resumeWorld();
+  fishIcons.disconnect(marketBody);resumeWorld();
 }
 function sellFish(i){
   if(!marketOpen || !isNearVendor('market') || !Number.isInteger(i))return;
@@ -1044,18 +1075,19 @@ function sellAll(){
 }
 
 // ---------- Island vendors, field guide and voyages ----------
-function nearestVendor(){
-  let closest=null, distance=6.3;
+const vendorProximity=memoLast((zone,x,z)=>{
+  frameWork.vendorChecks++;
+  let closest=null,distance=6.3;const near=new Set();
   for(const s of world.stalls){
-    if(s.zone!==G.zone)continue;
-    const d=Math.hypot(G.px-s.x,G.pz-s.z);
+    if(s.zone!==zone)continue;
+    const d=Math.hypot(x-s.x,z-s.z);
+    if(d<6.3)near.add(s.kind);
     if(d<distance){distance=d;closest=s;}
   }
-  return closest;
-}
-function isNearVendor(kind){
-  return world.stalls.some(s=>s.zone===G.zone&&s.kind===kind&&Math.hypot(G.px-s.x,G.pz-s.z)<6.3);
-}
+  return {closest,near};
+});
+function nearestVendor(){return vendorProximity(G.zone,G.px,G.pz).closest;}
+function isNearVendor(kind){return vendorProximity(G.zone,G.px,G.pz).near.has(kind);}
 function clearInput(){
   clearKeys(); G.reelHeld=false;
   stick.active=false;stick.x=stick.y=0;stick.id=-1;stickKnob.style.transform='';
@@ -1108,7 +1140,7 @@ function openIndex(){
   if(uiBusy()||G.state!=='aim'){if(G.state!=='aim')showToast('Land this catch first, then open the index.');return;}
   indexOpen=true;$('indexOverlay').classList.remove('hidden');renderIndex();focusPanel('indexClose');
 }
-function closeIndex(){indexOpen=false;$('indexOverlay').classList.add('hidden');resumeWorld();}
+function closeIndex(){indexOpen=false;$('indexOverlay').classList.add('hidden');fishIcons.disconnect($('fishGrid'));resumeWorld();}
 function renderIndex(){
   const found=Object.keys(G.discoveries).length;
   const collections=islandCollectionProgress(G.discoveries), bonus=coinBonus();
@@ -1132,13 +1164,15 @@ function renderIndex(){
   const count=pool.filter(sp=>G.discoveries[sp.id]).length;
   $('indexIslandCount').textContent=`${count} / ${pool.length} in these waters`;
   $('indexHint').textContent=indexIsland<0?'By island, then rarity · common → mythic.':ISLANDS[indexIsland].short+' · common → mythic.';
+  fishIcons.disconnect($('fishGrid'));
   $('fishGrid').innerHTML=list.length?list.map(sp=>{
     const r=G.discoveries[sp.id];
     // Unknown entries contain no species name, color, rarity, description,
     // title or accessible label. There is nothing for CSS/hover to reveal.
     if(!r)return `<article class="fish-entry undiscovered"><div class="entry-top"><span>#${String(sp.number).padStart(3,'0')}</span><span>UNDISCOVERED</span></div><div class="entry-fish">${unknownFishSVG()}</div><h3>???</h3><p>${ISLANDS[sp.island].short}</p><div class="entry-record">NOT YET CAUGHT</div></article>`;
-    return `<details class="fish-entry discovered ${sp.rarity}"><summary><div class="entry-top"><span>#${String(sp.number).padStart(3,'0')}</span><span class="rarity-label ${sp.rarity}">${RARITY[sp.rarity].label}</span></div><div class="entry-fish">${fishSVG(sp)}</div><h3>${sp.name}</h3><p>${ISLANDS[sp.island].short}</p><div class="entry-record">BEST ${Number(r.best).toFixed(1)} LB <span>×${fmt(r.count)}</span></div></summary><p class="entry-lore">${sp.desc}<br><b>${sp.minW}–${sp.maxW} lb</b> · ${r.first?'First caught '+r.first:'From your earlier adventures'}</p></details>`;
+    return `<details class="fish-entry discovered ${sp.rarity}"><summary><div class="entry-top"><span>#${String(sp.number).padStart(3,'0')}</span><span class="rarity-label ${sp.rarity}">${RARITY[sp.rarity].label}</span></div><div class="entry-fish">${fishIcons.markup(sp)}</div><h3>${sp.name}</h3><p>${ISLANDS[sp.island].short}</p><div class="entry-record">BEST ${Number(r.best).toFixed(1)} LB <span>×${fmt(r.count)}</span></div></summary><p class="entry-lore">${sp.desc}<br><b>${sp.minW}–${sp.maxW} lb</b> · ${r.first?'First caught '+r.first:'From your earlier adventures'}</p></details>`;
   }).join(''):'<p class="empty">No entries in this filter yet. There is a whole sea to explore.</p>';
+  fishIcons.observe($('fishGrid'));
 }
 
 // Hand-drawn with square tiles, just like the world. No image assets required.
@@ -1242,7 +1276,7 @@ function finishVoyage(){
   $('arrivalName').textContent=ISLANDS[id].name;$('arrivalDesc').textContent=ISLANDS[id].tagline;
   $('arrivalBanner').classList.remove('hidden');clearTimeout(finishVoyage._t);
   finishVoyage._t=setTimeout(()=>$('arrivalBanner').classList.add('hidden'),3400);
-  if(!eligibleSpecies(id,G.gear.bait).length)showToast('New waters need different bait. Use Bag → Bait (I) or visit the Bait Shack.',true);
+  if(!localFishPool(id,G.gear.bait).length)showToast('New waters need different bait. Use Bag → Bait (I) or visit the Bait Shack.',true);
   else showToast('Land ahoy! Turn around to explore the village.');
 }
 
@@ -1257,7 +1291,7 @@ function requestLock(){
 function updateLockHint(){
   const show = !pointerLocked && supportsLock && !lockFallback && G.state === 'aim'
     && !G.thirdPerson && !heldCatch && !nearbyStall && !uiBusy() && !voyage && catchModal.classList.contains('hidden');
-  lockHint.classList.toggle('hidden', !show);
+  setHidden(lockHint,!show);
 }
 function releasePointer(){
   if(document.pointerLockElement) document.exitPointerLock();
@@ -1335,7 +1369,7 @@ addEventListener('keydown', e => {
     if(marketOpen){closeMarket();return;}
     if(chartOpen){closeChart();return;}
     if(indexOpen){closeIndex();return;}
-    if(drawerOpen){logDrawer.classList.add('hidden');drawerOpen=false;resumeWorld();return;}
+    if(drawerOpen){closeLog();return;}
   }
   if(e.code==='Tab'&&(uiBusy()||G.state==='caught')){
     const panel=bagOpen?bagOverlay:helpOpen?helpOverlay:shopOpen?shopOverlay:marketOpen?marketOverlayEl:chartOpen?$('chartOverlay'):indexOpen?$('indexOverlay'):drawerOpen?logDrawer:catchModal;
@@ -1390,7 +1424,7 @@ addEventListener('blur',()=>{clearInput();if(G.state==='charging')setState('aim'
 // ---------- UI wiring ----------
 $('startArt').innerHTML = ICON.startArt;
 $('soundBtn').innerHTML = ICON.soundOn;
-for(const id of ['marketBtn','portBtn'])$(id).querySelector('b').textContent=isTouch?'Tap':'E';
+for(const id of ['shopBtn','marketBtn','portBtn'])$(id).querySelector('b').textContent=isTouch?'Tap':'E';
 
 $('startBtn').addEventListener('click', () => {
   ensureAudio();
@@ -1414,9 +1448,9 @@ $('logBtn').addEventListener('click', () => {
   clearInput();
   const open = logDrawer.classList.toggle('hidden');
   drawerOpen = !open;
-  if(!open){renderLog();focusPanel('closeLog');}else resumeWorld();
+  if(!open){renderLog();focusPanel('closeLog');}else closeLog();
 });
-$('closeLog').addEventListener('click', () => { logDrawer.classList.add('hidden'); drawerOpen = false; resumeWorld(); });
+$('closeLog').addEventListener('click',closeLog);
 
 // ---- shop wiring ----
 shopBtnEl.addEventListener('click', openShop);
@@ -1513,8 +1547,9 @@ $('resetBtn').addEventListener('click',()=>{
   stowFish();G.thirdPerson=false;
   const fresh=normalizeSave({version:SAVE_VERSION});const {bag:emptyBag,log:emptyLog,...state}=fresh;
   Object.assign(G,state);bag.length=0;log.length=0;G.castPower=0.5;G.power=0;
-  logDrawer.classList.add('hidden');drawerOpen=false;world.setBoat(0);spawnAtIsland(0);
-  applyGear();renderLog();saveGame();resumeWorld();showToast('A fresh adventure. Tight lines!');
+  logDrawer.classList.add('hidden');drawerOpen=false;fishIcons.disconnect(logList);logList.replaceChildren();
+  world.setBoat(0);spawnAtIsland(0);
+  applyGear();invalidateLog();saveGame();resumeWorld();showToast('A fresh adventure. Tight lines!');
 });
 $('soundBtn').addEventListener('click', function(){
   soundOn = !soundOn;
@@ -1532,27 +1567,18 @@ addEventListener('resize', () => {
   frontCamera.updateProjectionMatrix();
   placeRodForAspect();
   updatePlayerView();
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+  const ratio=adaptiveQuality.resize(devicePixelRatio);
+  if(renderer.getPixelRatio()!==ratio)renderer.setPixelRatio(ratio);
   renderer.setSize(innerWidth, innerHeight);
 });
 
 // ---------- Adaptive quality ----------
-let perfFrames = 0, perfTime = 0, perfChecked = 0;
 function checkPerformance(dt){
-  if(perfChecked >= 2) return;
-  perfFrames++; perfTime += dt;
-  if(perfFrames < 70) return;
-  const fps = perfFrames / perfTime;
-  if(perfChecked === 0){
-    if(fps < 50) renderer.setPixelRatio(1);
-    if(fps < 32) renderer.setPixelRatio(0.75);
-    perfChecked = 1;
-  } else {
-    if(fps < 30) renderer.setPixelRatio(0.6);
-    perfChecked = 2;
-  }
-  perfFrames = 0; perfTime = 0;
+  const ratio=adaptiveQuality.sample(dt,{active:!uiBusy()&&G.state!=='menu'&&G.state!=='caught'});
+  if(ratio!==null&&renderer.getPixelRatio()!==ratio)renderer.setPixelRatio(ratio);
 }
+document.addEventListener('visibilitychange',()=>adaptiveQuality.resetSampling());
+addEventListener('pagehide',event=>{if(!event.persisted)fishIcons.dispose();});
 
 // ---------- Animation loop ----------
 const clock = new THREE.Clock();
@@ -1617,11 +1643,11 @@ function tick(){
   G.nearShop=!!nearbyStall&&['rod','line','bait'].includes(nearbyStall.kind);
   G.nearMarket=nearbyStall?.kind==='market';G.nearPort=isNearVendor('port');
   const idle=G.state==='aim'&&!uiBusy();
-  shopBtnEl.classList.toggle('hidden',!idle||!G.nearShop);
-  marketBtnEl.classList.toggle('hidden',!idle||!G.nearMarket);
-  $('portBtn').classList.toggle('hidden',!idle||nearbyStall?.kind!=='port');
-  if(idle&&G.nearShop)shopBtnEl.innerHTML=nearbyStall.name+' <b>'+(isTouch?'Tap':'E')+'</b>';
-  stickEl.classList.toggle('hidden',!(isTouch&&idle));
+  setHidden(shopBtnEl,!idle||!G.nearShop);
+  setHidden(marketBtnEl,!idle||!G.nearMarket);
+  setHidden(portBtnEl,!idle||nearbyStall?.kind!=='port');
+  if(idle&&G.nearShop&&shopBtnEl.firstChild.nodeValue!==nearbyStall.name+' ')shopBtnEl.firstChild.nodeValue=nearbyStall.name+' ';
+  setHidden(stickEl,!(isTouch&&idle));
   if(voyage)tickVoyage(dt);
   updateContextHint(moving);
 
@@ -1729,18 +1755,19 @@ function tick(){
     if(G.state === 'reeling' && G.progress >= 100) catchFish();
 
     tensionNeedle.style.left = `calc(${G.tension}% - 3px)`;
-    progressFill.style.width = G.progress + '%';
-    reelPct.textContent = Math.floor(G.progress) + '%';
+    const progressWidth=G.progress+'%';
+    if(progressFill.style.width!==progressWidth)progressFill.style.width=progressWidth;
+    setText(reelPct,Math.floor(G.progress)+'%');
 
-    const track = $('tensionTrack');
-    track.classList.toggle('danger', G.tension > G.bandHi);
-    track.classList.toggle('slack', G.tension < G.bandLo);
-    reelWarn.textContent =
+    tensionTrack.classList.toggle('danger', G.tension > G.bandHi);
+    tensionTrack.classList.toggle('slack', G.tension < G.bandLo);
+    const warning =
       G.over > 0.25 ? 'LINE OVERLOADED — ' + Math.round(G.fishWeight) + 'lb ON ' + l2.rating + 'lb LINE' :
       G.tension > G.bandHi ? 'TOO TIGHT — RELEASE TO LOWER IT' :
       G.tension < G.bandLo ? 'TOO SLACK — HOLD TO RAISE IT' :
       surging ? "IT'S SURGING — STAY ON IT" : 'WINDING IN';
-    reelWarn.classList.toggle('warn', !!reelWarn.textContent);
+    setText(reelWarn,warning);
+    reelWarn.classList.toggle('warn',!!warning);
 
     if(hookedFish){
       hookedFish.position.set(
@@ -1857,6 +1884,7 @@ window.__reelDeal = window.__reelLife = {
   updateStats,fishValue,rollWeight,catchXP,xpForLevel,level,hasLicense,saveGame,levelProgress,
   castLuckModifier,effectiveLuck,updateCastMeter,
   makeFish3D,disposeFishModel,animateFishModel,fishSVG,
+  get performanceStats(){return {quality:adaptiveQuality.stats,icons:fishIcons.stats,...frameWork,baitPools:localFishPool.size,activeParticles,activeRipples};},
   get hookedFish(){return hookedFish;},
   saleValue,bagTotal,collectionCoinBonus,islandCollectionProgress,fishSaleValue,sortFishIndex,
   walkable,groundAt,landBobber,triggerBite,hookFish,catchFish,SHOP_POS,MARKET_POS,

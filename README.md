@@ -20,6 +20,46 @@ npm test                  # dependency-free data/progression/save regression tes
 Node 18 or newer. Any static HTTP server also works; opening `index.html` as `file://`
 does not support the module imports.
 
+## Smoother menus & rendering · v40
+
+Performance improvements **without reducing fish model detail or changing the game**:
+
+- **Shared, lazy illustrations:** each discovered species uses one page-local SVG
+  image URL containing the exact v39 artwork. Inventory, index, log and market
+  rows reuse it instead of duplicating hundreds of live SVG paths per fish.
+  Only visible rows plus a small scroll-ahead margin generate/load illustrations;
+  names, weights, buttons and all index entries remain available to keyboard and
+  assistive technology. Catch/reel icons load eagerly. Unknown fish still use the
+  same anonymous silhouette, with no anatomy or real name in their markup.
+- **No hidden Catch Log rebuild:** landings mark history dirty, then render it on
+  the next opening. Reopening unchanged history reuses its rows. Full history,
+  records, sale bonuses and saves are retained. Closing/replacing a panel cancels
+  its pending image observers; the bounded 120-image cache is reused across panels
+  and released on page teardown (retained for browser back/forward cache).
+- **Continuous adaptive resolution:** one-second sample windows run throughout
+  play, not only twice during startup. Sustained slow frames step down canvas
+  pixel ratio, with a three-second cooldown. Ten good windows restore one step.
+  Menus, hidden tabs and isolated long interruptions do not drive quality down;
+  resizing preserves an existing reduction. The range is 0.6 to the device's DPR
+  (capped at 1.5; never upscales devices below 0.6). **HTML text and artwork stay
+  sharp.** Models, camera framing, simulation timing and input frequency stay the same.
+- **Less idle work:** vendor proximity is recomputed only when island/position
+  changes; UI bait pools are cached by island and bait using the original rule.
+  Context hints reuse unchanged aim/state inputs, shop labels and reel text are
+  written only when changed, hidden first-person avatars are not posed, and empty
+  splash/ripple pools stop matrix updates/uploads. Live splashes still animate.
+
+Structural browser budgets verify **1,680 elements instead of 43,701** in a fully
+revealed index, and **1,920 instead of 85,962** in a 240-fish Bag. The closed
+200-entry log creates no fish rows at boot or on a catch; a stationary 30-frame
+sample has no HUD mutations, repeated vendor/hint/pool calculations or inactive
+particle uploads. These are reproducible work reductions, not an FPS promise for
+every device. Regression tests also compare all 120 image sources byte-for-byte
+with the original illustrations and exercise real renderer scaling/recovery.
+
+No shader/model prewarming, fishing rebalance, save migration or UI redesign is
+part of this update. **Huge fish remain huge; fish anatomy and saved progress are unchanged.**
+
 ## Species anatomy & model quality · v39
 
 **All 120 species have been remodelled.** The former generic body box, tail box
@@ -74,8 +114,8 @@ The shared CPU geometry/illustrations are deterministic and cached. GPU meshes
 are batched to **at most six draw calls and currently fewer than 4,000 triangles
 per fish**; there are no textures, model downloads or per-scale draw calls. Each
 instance owns its GPU geometry/materials and disposes them exactly once when
-stowed, sold or removed after a fight. The world, controls and mobile resolution
-behaviour are unchanged.
+stowed, sold or removed after a fight. The world and controls are unchanged;
+v40 improves resolution adaptation separately without changing the fish geometry.
 
 This is a presentation update: **fish IDs/numbers, weights, rarity, catch odds,
 XP, gear, prices, boats and the v8 save schema are unchanged**. Existing catches
@@ -574,11 +614,11 @@ Use a **Static Site**—no server or build is necessary:
 Alternatively, a Node Web Service can use `npm install` / `npm start`; `serve.js` honors
 Render's `PORT`. Static hosting avoids the need for a running Node process.
 
-For other static hosts, deploy `index.html`, `style.css`, `main.js`, **all nine `.mjs`
+For other static hosts, deploy `index.html`, `style.css`, `main.js`, **all eleven `.mjs`
 modules**, and `vendor/`. Every browser-facing path is relative and every dependency is
 local. `.mjs` must be served as JavaScript (already handled by `serve.js`).
 
-Cache stamps are currently **`v=39`** in the HTML and module imports. Bump the corresponding
+Cache stamps are currently **`v=40`** in the HTML and module imports. Bump the corresponding
 stamps when changing a cached module. Render's blueprint also sends `Cache-Control: no-cache`.
 
 ## Testing
@@ -620,6 +660,11 @@ Fish-model tests enforce explicit coverage of all 120 IDs, distinct uncoloured
 trunks, biological feature presence/absence, unique bounded illustrations,
 complete concave triangulation, immutable data and deterministic geometry. They
 also cap triangles/draw calls and test asymmetric trunk-supported framing.
+Performance tests cover lazy thumbnail creation, exact vector/URL reuse, accessible
+markup, observer cancellation/fallback/disposal, all 144 cached bait pools, and
+immediate cache invalidation. Deterministic frame sequences verify continuous
+quality reduction/recovery, hysteresis, interruption handling, extreme slowdowns,
+DPR bounds and preserving reduced quality through resizes.
 
 `npm run economy` prints the deterministic income estimates and saving goals for
 every gear tier and boat, including the local gear ceiling and boat premium, using
@@ -673,7 +718,13 @@ attributes and independent resources, animation, actual index/Bag/held/catch
 art, unknown-entry secrecy, exact-once disposal and no geometry growth across
 24 rendered swaps. It also exercises a real squid cast/hook/reel/landing,
 matching saved/reloaded anatomy, and responsive phone/landscape presentation.
-The trophy/player suites now check every actual vertex, not unit-cube proxies:
+`tests/performance-browser.cjs` adds DOM budgets for a complete index and 240-fish
+Bag, exact lazy image loading/reuse across all 120 species, a 200-catch closed-log
+no-op/reopen/update check, observer cleanup, phone/landscape layout, save invariance,
+zero idle HUD/particle work and live cast splashes. It also drives controlled frame
+intervals through the real renderer to verify post-startup resolution reduction,
+recovery, menu/long-pause exclusions and orientation-preserving quality.
+The trophy/player suites check every actual vertex, not unit-cube proxies:
 
 ```sh
 # Use an installed Chromium/Chrome:
@@ -697,6 +748,8 @@ required to run or deploy the game.
 | `fish-appearance.mjs` | 120 immutable art records across 36 anatomical construction families |
 | `fish-geometry.mjs` | Deterministic faceted sculpts, field markings, triangulation and matching SVG illustrations |
 | `fish-model.mjs` | Batched Three.js meshes, species-appropriate rig animation and private GPU disposal |
+| `fish-icons.mjs` | Shared exact-vector image URLs, lazy list loading and observer/resource cleanup |
+| `render-performance.mjs` | Adaptive resolution with hysteresis, last-input memoization and cached UI bait pools |
 | `game-data.mjs` | 120 species, 72 gear tiers, shared gear/boat pricing, fish pools and weight rolls |
 | `archipelago.mjs` | Island / boat definitions, XP and travel requirements |
 | `world.mjs` | Merged cube terrain and props, collision, distant-island LOD, sea routing |

@@ -5,6 +5,11 @@ module.exports=async function testFishModels(browser,url,shots){
   page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   await page.addInitScript(()=>{HTMLCanvasElement.prototype.requestPointerLock=undefined;});
   const frame=()=>page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+  const ready=selector=>page.waitForFunction(selector=>{
+    const root=document.querySelector(selector),b=root.getBoundingClientRect();
+    const images=[...root.querySelectorAll('img')].filter(e=>{const r=e.getBoundingClientRect();return r.bottom>b.top&&r.top<b.bottom&&r.right>b.left&&r.left<b.right;});
+    return images.length&&images.every(e=>e.complete&&e.naturalWidth>0);
+  },selector);
   const photo=async name=>{await page.evaluate(()=>{__reelDeal.setHudHidden(true);document.getElementById('hudRestoreHint').classList.add('hidden');});await frame();await page.screenshot({path:`${shots}/${name}.png`});await page.evaluate(()=>__reelDeal.setHudHidden(false));};
   try{
     await page.goto(url,{waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await page.click('#startBtn');
@@ -53,14 +58,15 @@ module.exports=async function testFishModels(browser,url,shots){
       a.G.caught=120;a.updateStats();a.saveGame();window.artSave=localStorage.getItem('reel-deal-save-v8');
     });
     await page.click('#indexBtn');assert.equal(await page.locator('.fish-entry.discovered').count(),120);
-    assert.equal(await page.locator('#fishGrid svg[data-fish-id]').count(),120);
-    assert.equal(await page.evaluate(()=>[...document.querySelectorAll('#fishGrid svg[data-fish-id]')].every(svg=>{
-      const s=__reelDeal.SPECIES.find(s=>s.id===svg.dataset.fishId),b=svg.getBBox();
-      return s&&svg.getAttribute('aria-label')===s.name&&b.x>=7&&b.y>=8&&b.x+b.width<=153&&b.y+b.height<=92;
+    assert.equal(await page.locator('#fishGrid img[data-fish-id]').count(),120);
+    assert.equal(await page.evaluate(()=>[...document.querySelectorAll('#fishGrid img[data-fish-id]')].every(image=>{
+      const s=__reelDeal.SPECIES.find(s=>s.id===image.dataset.fishId),b=image.getBoundingClientRect(),p=image.parentElement.getBoundingClientRect();
+      return s&&image.alt===s.name&&image.dataset.anatomy&&b.width>0&&b.height>0&&b.left>=p.left&&b.right<=p.right;
     })),true);
-    for(const island of [0,2,4]){await page.locator(`[data-index-island="${island}"]`).click();await page.screenshot({path:`${shots}/remodel-index-${island}.png`});}
+    await ready('#fishGrid');
+    for(const island of [0,2,4]){await page.locator(`[data-index-island="${island}"]`).click();await ready('#fishGrid');await page.screenshot({path:`${shots}/remodel-index-${island}.png`});}
     await page.click('#indexClose');
-    await page.click('#bagBtn');assert.equal(await page.locator('#bagBody svg[data-fish-id]').count(),120);await page.click('#bagClose');
+    await page.click('#bagBtn');assert.equal(await page.locator('#bagBody img[data-fish-id]').count(),120);await page.click('#bagClose');
 
     // Render actual held specimens, not static PNG illustrations of them.
     for(const id of ['bluegill','rainbow-trout','flathead-catfish','alligator-gar','paddlefish','giant-manta','ocean-sunfish','giant-oarfish','colossal-squid','river-kraken','void-angler','star-whale','reel-life']){
@@ -91,7 +97,8 @@ module.exports=async function testFishModels(browser,url,shots){
       await page.setViewportSize(viewport);await page.waitForFunction(()=>Math.abs(__reelDeal.camera.aspect-innerWidth/innerHeight)<1e-9);
       await page.click('#indexBtn');await page.locator('[data-index-island="4"]').click();
       assert.equal(await page.locator('#fishGrid').evaluate(e=>e.scrollWidth<=e.clientWidth),true);
-      assert.equal(await page.locator('.entry-fish svg').evaluateAll(svg=>svg.every(e=>{const a=e.getBoundingClientRect(),b=e.parentElement.getBoundingClientRect();return a.left>=b.left-1&&a.right<=b.right+1&&a.top>=b.top-1&&a.bottom<=b.bottom+1;})),true);
+      assert.equal(await page.locator('.entry-fish :is(svg,img)').evaluateAll(svg=>svg.every(e=>{const a=e.getBoundingClientRect(),b=e.parentElement.getBoundingClientRect();return a.left>=b.left-1&&a.right<=b.right+1&&a.top>=b.top-1&&a.bottom<=b.bottom+1;})),true);
+      await ready('#fishGrid');
       if(viewport.width===390)await page.screenshot({path:`${shots}/remodel-index-mobile.png`});
       await page.click('#indexClose');
       await page.evaluate(()=>{const a=__reelDeal;a.openFishBag();a.holdFish(a.bag.findIndex(e=>e.sp.id==='colossal-squid'));if(!a.G.thirdPerson)a.toggleView();});
@@ -124,8 +131,9 @@ module.exports=async function testFishModels(browser,url,shots){
         a.G.reelHeld=a.G.tension<(a.G.bandLo+a.G.bandHi)/2;requestAnimationFrame(steer);
       }steer();
     }));assert.equal(state,'caught');
-    assert.equal(await page.locator('#catchIcon svg').getAttribute('data-fish-id'),'colossal-squid');
-    assert.equal(await page.locator('#catchIcon svg').getAttribute('data-anatomy'),'squid');
+    assert.equal(await page.locator('#catchIcon img').getAttribute('data-fish-id'),'colossal-squid');
+    assert.equal(await page.locator('#catchIcon img').getAttribute('data-anatomy'),'squid');
+    await ready('#catchIcon');
     await page.screenshot({path:`${shots}/remodel-squid-catch.png`});await page.click('#continueBtn');
     await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await page.click('#startBtn');
     assert.equal(await page.evaluate(()=>__reelDeal.bag.at(-1).sp.id),'colossal-squid');

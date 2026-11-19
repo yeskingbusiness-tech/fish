@@ -1,4 +1,4 @@
-import { fishAppearance } from './fish-appearance.mjs?v=39';
+import { fishAppearance } from './fish-appearance.mjs?v=40';
 
 // Dependency-free, deterministic sculpting. Faceted, bevelled volumes and thick
 // polygon fins keep the block-world style without making every animal a cuboid.
