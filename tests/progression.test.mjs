@@ -25,7 +25,6 @@ test('144,000 weighted draws obey both island and strict bait limits',()=>{
       if(!pool.length){assert.equal(sp,null);continue;}
       assert.ok(pool.includes(sp));assert.equal(sp.island,zone.id);
       assert.ok(RARITY[sp.rarity].tier>=bait.lo&&RARITY[sp.rarity].tier<=bait.hi);
-      assert.ok(sp.maxW>=bait.minSize);
     }
   }
 });

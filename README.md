@@ -76,8 +76,8 @@ places you safely on the destination's fishing pier. Water is not walkable.
 
 **Current island + equipped bait** determine the eligible fish pool. Cast charge
 adjusts luck within that pool; it never unlocks another island's fish or bypasses
-the bait's rarity window and minimum species-size filter. Longer rods do not add
-extra eligibility or luck beyond the same charge-based bonus.
+the bait's advertised rarity window. Species size is not an extra eligibility
+filter. Longer rods do not add eligibility or luck beyond the same charge bonus.
 
 The local bait shop and Bag → Bait show how many local species each bait can attract.
 If a bait has no valid fish here, casting is blocked with an explanation—there is no
@@ -86,12 +86,52 @@ and the previous island's top bait works when arriving on the next island.
 
 - **Rods:** cast reach, reel speed, and control. Bamboo Pole → Mythril Rod.
 - **Lines:** weight rating and reduced strain. Cotton Twine → 3400lb Mythril.
-- **Bait:** rarity window, minimum species size, luck, and a gentle weight bonus. Garden Worm → Moonbait.
+- **Bait:** rarity window, luck, and a gentle weight bonus. Garden Worm → Moonbait.
 - **Bag → Rods / Lines / Bait (I):** equip any already-owned tier from anywhere for free. The bag cannot buy stock; visit a local vendor for new gear.
 
 Some collection entries reward revisiting an island with a different bait. For example,
 Pinewater's Golden Koi requires a legendary-capable bait from a later island; Sunscar's
 American Eel takes an earlier uncommon-capable bait. Keep your old tackle!
+
+### Honest bait eligibility & Pinewater's last entry · v38
+
+Removed the old minimum-species-size gate. It made a broader rarity range secretly
+exclude smaller species: **Cheese Cube omitted two Pinewater Rare fish**, and
+**Live Minnow could not hook #040 at all**, even though its Rare–Legendary label
+included that fish's rarity. This was an eligibility problem, not just bad luck.
+
+Eligibility is now exactly **current island + the bait's inclusive rarity range**.
+All matching species are eligible at every natural size. A later bait with the
+same or wider range cannot silently lose species. A bait that explicitly **drops
+lower rarities** can still have fewer possible species; early and late rarity
+windows remain strict. Luck and cast power only change odds inside that pool.
+
+| Bait | Sold in | Rarity range | Possible species in Pinewater | Can hook #040? |
+| --- | --- | --- | ---: | --- |
+| Salmon Egg | Pinewater | Rare–Epic | 14 | No |
+| Dough Ball | Sunscar | Rare–Epic | 14 | No |
+| Cheese Cube | Sunscar | Rare–Legendary | 15 | **Yes** |
+| Powerbait | Sunscar | Rare–Legendary | 15 | **Yes** |
+| Live Minnow | Sunscar | Rare–Legendary | 15 | **Yes** |
+
+**#040 is still a return-trip catch.** Its rarity was not lowered, and Pinewater's
+local bait did not gain a new rarity. Buy an appropriate bait in Sunscar, then
+return to Pinewater and equip it in **Bag → Bait**. You must fish in the species'
+home island; casting in Sunscar will not catch Pinewater fish.
+
+#040 remains rare: with Live Minnow, its chance is about **6.7% per hook at neutral
+charge** or **7.6% at full charge**. That is not a guarantee within a fixed number
+of attempts. No pity counter, forced discovery or automatic collection completion
+was added. The last entry stays unnamed in the index until actually landed.
+
+The Bag/shop count uses the exact same pool as the fish picker. Labels now say
+**ALL SIZES**, and the notes explain the rule instead of advertising an extra
+size cutoff. Bait luck, weight bonuses, natural species weight bounds and roll
+formulas are unchanged. All local/arrival-bait pools used by the economy and XP
+audits are unchanged; the correction fixes return-trip eligibility. Prices,
+equipment strength, boats, island levels, saves, discoveries and earned rewards
+are not reset or rebalanced. Landing the final missing species still earns the
+existing permanent +5% island collection bonus, once.
 
 ### Cast power and luck · v30
 
@@ -132,7 +172,7 @@ and its difference from your equipped bait.
 
 Luck is a **relative weighting modifier**, not a literal catch percentage or a
 guaranteed rare fish. It favors rarer fish only within the bait's existing eligible
-pool; island, rarity and species-size restrictions do not change. Its bite-speed
+pool; it cannot bypass island or rarity restrictions. Its bite-speed
 and weight-bias effects still apply. Even Moonbait at full charge keeps a positive
 bite wait (at least about 0.64 seconds). The separate half-point-per-tier weight
 bonus and natural fish weight limits are unchanged.
@@ -147,8 +187,8 @@ weight bias. The bait shop and Bag → Bait show the bonus and upgrade compariso
 The bonus tapers as a fish approaches its species' natural maximum, rather than
 clamping many rolls into identical maximum-size trophies. Fish stay within their
 species' weight range. Better bait yields slightly heavier fish **on average**, not
-a guaranteed heavier fish on every catch. The species-size filter uses a species'
-maximum possible weight, not a guaranteed minimum catch weight.
+a guaranteed heavier fish on every catch. The natural species weight range
+remains unchanged; no bait can roll beyond that species' maximum.
 
 Only **new catches with the equipped bait** receive the boost. Switching back to a
 lower tier lowers the bonus immediately; already-caught fish, saved records and coins
@@ -205,9 +245,10 @@ retuned to meet both rules without cascading boat-price inflation.
   **500 → 850**, and **1,250 → 2,200 lb**. Names display their real rating;
   final Mythril line now supports **3,400 lb**.
 - **Bait:** the boundary jump is **12–13 luck points**, versus 3–6 within an island.
-  Bait windows and minimum species-size gates are unchanged, as is the gentle
-  separate weight-bonus cap. Better luck can improve future catch sizes, rarity,
-  income and XP; it never rewrites fish already in a bag or save.
+  Bait rarity windows and the gentle separate weight-bonus cap are unchanged.
+  The old species-size gate was subsequently removed in v38. Better luck can
+  improve future catch sizes, rarity, income and XP; it never rewrites fish
+  already in a bag or save.
 
 The stronger stats affect actual fishing: faster green-zone reeling, a wider safe
 band and reduced strain, plus better bait odds/weight bias/bite wait. **Cast power
@@ -474,7 +515,7 @@ For other static hosts, deploy `index.html`, `style.css`, `main.js`, **all six `
 modules**, and `vendor/`. Every browser-facing path is relative and every dependency is
 local. `.mjs` must be served as JavaScript (already handled by `serve.js`).
 
-Cache stamps are currently **`v=37`** in the HTML and module imports. Bump the corresponding
+Cache stamps are currently **`v=38`** in the HTML and module imports. Bump the corresponding
 stamps when changing a cached module. Render's blueprint also sends `Cache-Control: no-cache`.
 
 ## Testing
@@ -507,6 +548,11 @@ Economy tests compare prices to published baselines, enforce both the destinatio
 30% entry rule and the departure 25% boat premium, and verify ownership and coins.
 Island-gear tests check meaningful rod/line/bait stat jumps, truthful line names,
 fixed prices, all 24 saved tier IDs and improved owned gear without repurchases.
+Bait-eligibility tests check all 144 island/bait pools against the exact rarity
+range, no species losses when a range broadens, Pinewater’s 14/15 species counts,
+#040’s local-bait exclusion and next-area access, and real weighted spawn
+frequencies at minimum, neutral and full charge. They also check unchanged
+local/arrival pools and natural fish weight bounds.
 
 `npm run economy` prints the deterministic income estimates and saving goals for
 every gear tier and boat, including the local gear ceiling and boat premium, using
@@ -549,7 +595,12 @@ without body/hands, all 30 vendor camera clearances, and travel/stow/reload/save
 invariants. `tests/island-gear-browser.cjs` covers all 15 destination entry prices,
 advanced-boat price independence, displayed/charged costs, one-coin shortages,
 actual green-zone reel speed and rod/line control, bait wait/weight improvements,
-free re-equips/reloads, and phone/landscape scrolling with touch purchases:
+free re-equips/reloads, and phone/landscape scrolling with touch purchases.
+`tests/bait-eligibility-browser.cjs` verifies all 144 displayed bait counts, the
+14→15 Pinewater correction, no premature #040 spoilers, and an actual cast, hook,
+tension fight and landing using each of Cheese Cube, Powerbait and Live Minnow.
+It also checks the 19→20 discovery reward, save/reload persistence, and free
+touch re-equips with phone/short-landscape labels and scrolling:
 
 ```sh
 # Use an installed Chromium/Chrome:

@@ -1,7 +1,7 @@
 # Reel Deal 3D — Complete fish roster
 
 **Spoilers:** all 120 catchable species. In-game entries remain blacked out and unnamed until landed.
-Each fish belongs to exactly one island; the equipped bait must also match its rarity/size window.
+Each fish belongs to exactly one island; the equipped bait must match its rarity window. Species size does not exclude a fish.
 Earlier bait can be re-equipped from the tackle bag for return trips.
 Fresh numbers follow the in-game island/rarity order, #001–#120, and stay fixed across filters.
 Completing any island’s 20-species index earns permanent +5% coins on every fish sale; all six stack to +30%.

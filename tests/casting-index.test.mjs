@@ -110,7 +110,6 @@ test('minimum, neutral and maximum casts retain every strict island and bait gat
       if(!pool.length){assert.equal(sp,null);continue;}
       assert.ok(pool.includes(sp));assert.equal(sp.island,island);
       assert.ok(RARITY[sp.rarity].tier>=BAITS[bait].lo&&RARITY[sp.rarity].tier<=BAITS[bait].hi);
-      assert.ok(sp.maxW>=BAITS[bait].minSize);
     }
   }
 });

@@ -282,8 +282,6 @@ const BAITS = BAIT_NAMES.map(([name, color], i) => {
   const luckPercent = Math.round(90 * Math.pow(i / (BAIT_NAMES.length - 1), 1.2)) + i + 8*Math.floor(i/4);
   return {
     id:'bait' + i, name, color, cost: BAIT_COST[i], lo, hi,
-    // Species-size eligibility uses maxW, not a minimum specimen weight.
-    minSize: Math.round(0.9 * Math.pow(1.30, i) - 0.9),
     luck: luckPercent / 100,
     // A separate, gentle weight bonus: +0.5 percentage points per upgrade.
     // This is the upper bound on the rolled-weight boost, not a higher maxW.
@@ -303,7 +301,10 @@ function fishValue(sp, weight){
 }
 
 // Bait/island gates define eligibility; cast luck only reweights that same pool.
-// No luck value can hook a fish outside the bait's strict rarity/size window.
+// No luck value can hook a fish outside the bait's strict rarity window.
+// Species size is NOT an eligibility gate: upgrading to a wider rarity range
+// must not silently discard smaller fish (including Pinewater's #040). Better
+// bait still biases specimen weight through rollWeight, within natural limits.
 function baitWindow(i){
   const b = BAITS[i] || BAITS[0];
   return [b.lo, b.hi];
@@ -312,7 +313,7 @@ function eligibleSpecies(island, baitIndex){
   const bait = BAITS[baitIndex];
   if(!bait || !Number.isInteger(island) || island < 0 || island > 5) return [];
   return SPECIES.filter(s => s.island === island &&
-    RARITY[s.rarity].tier >= bait.lo && RARITY[s.rarity].tier <= bait.hi && s.maxW >= bait.minSize);
+    RARITY[s.rarity].tier >= bait.lo && RARITY[s.rarity].tier <= bait.hi);
 }
 // Sort a copy without reading index numbers. Spawn order and save IDs never change.
 function sortFishIndex(items = SPECIES){

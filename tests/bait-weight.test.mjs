@@ -63,7 +63,7 @@ test('higher bait tiers increase average displayed catch weight, while individua
   }
 });
 
-test('weight bonuses never bypass the island, rarity or species-size gates', () => {
+test('weight bonuses never bypass the island or strict rarity gates', () => {
   assert.equal(pickSpecies(0,23,()=>.999),null);
   assert.equal(pickSpecies(5,0,()=>.999),null);
   for(let island=0;island<6;island++)for(let bait=0;bait<BAITS.length;bait++){

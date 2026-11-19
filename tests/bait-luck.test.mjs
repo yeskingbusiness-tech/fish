@@ -25,10 +25,10 @@ test('bait luck keeps small local upgrades and makes each island boundary a 12â€
   }
 });
 
-test('the luck update leaves strict bait windows, species-size gates and weight bonuses unchanged', () => {
+test('bait keeps its strict rarity windows and weight bonuses, without a hidden size gate', () => {
   assert.deepEqual(BAITS.map(b=>[b.lo,b.hi]),WINDOWS);
   for(let i=0;i<BAITS.length;i++){
-    assert.equal(BAITS[i].minSize,Math.round(.9*Math.pow(1.3,i)-.9));
+    assert.equal('minSize' in BAITS[i],false);
     assert.equal(BAITS[i].weightBonus,+(i*.005).toFixed(3));
   }
   assert.equal(pickSpecies(0,23),null);

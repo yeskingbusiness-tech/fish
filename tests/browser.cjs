@@ -403,6 +403,7 @@ fs.mkdirSync(shots,{recursive:true});
     await mp.screenshot({path:`${shots}/mobile-cast-meter.png`});
     await mobile.close();console.log('PASS: mobile drag-look, joystick, index, chart, boat shop, bait stats and cast-luck meter');
     await require('./island-gear-browser.cjs')(browser,URL,shots);
+    await require('./bait-eligibility-browser.cjs')(browser,URL,shots);
     await require('./collection-browser.cjs')(browser,URL,shots);
     await require('./xp-browser.cjs')(browser,URL,shots);
     await require('./player-view-browser.cjs')(browser,URL,shots);

@@ -13,13 +13,13 @@ const hexc  = c => '#' + c.toString(16).padStart(6,'0');
 const fmt   = n => n.toLocaleString('en-US');
 
 import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow, sortFishIndex, castLuckModifier, effectiveLuck,
-  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=37';
+  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=38';
 import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, hasIslandLicense, travelRequirement,
-  ISLAND_COLLECTION_BONUS, islandCollectionProgress, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=37';
-import { createWorld } from './world.mjs?v=37';
-import { createPlayerModel, heldFishSpan, heldFishLayout, firstPersonFishPose, frontViewPose } from './player-view.mjs?v=37';
-import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=37';
-import { BAG_TABS, bagGearKind, nextBagTab, contextualHint, HELP_CONTROLS } from './ui-state.mjs?v=37';
+  ISLAND_COLLECTION_BONUS, islandCollectionProgress, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=38';
+import { createWorld } from './world.mjs?v=38';
+import { createPlayerModel, heldFishSpan, heldFishLayout, firstPersonFishPose, frontViewPose } from './player-view.mjs?v=38';
+import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=38';
+import { BAG_TABS, bagGearKind, nextBagTab, contextualHint, HELP_CONTROLS } from './ui-state.mjs?v=38';
 
 const pickSpecies = () => drawSpecies(G.zone, G.gear.bait, Math.random, G.castPower);
 const rollWeight = sp => drawWeight(sp, G.gear.bait, Math.random, G.castPower);
@@ -663,7 +663,7 @@ function renderBag(){
   bagBody.setAttribute('aria-labelledby','bagTab-'+bagTab);
   const kind=bagGearKind(bagTab);
   $('bagNote').textContent=kind
-    ? 'Equip owned tackle for free, wherever you are. Buy new gear at local stalls.'+(kind==='bait'?' Check the local bites below; earlier bait is useful in old waters.':'')
+    ? 'Equip owned tackle for free, wherever you are. Buy new gear at local stalls.'+(kind==='bait'?' The rarity range applies to all fish sizes. Earlier bait can still help with lower rarities.':'')
     : 'Hold a catch without removing it from your bag. Sell fish at the market.';
   if(kind)bagBody.innerHTML=gearRows(kind,G.owned[kind].slice().sort((a,b)=>a-b));
   else renderFishBag();
@@ -919,9 +919,8 @@ const gearStat = (kind, g) => {
   if(kind === 'rod')  return `REACH ${g.cast}m · REEL ${g.reel.toFixed(2)}x · POWER ${rodPower(g)}`;
   if(kind === 'line') return `MAX FISH ${g.rating} lb · STRAIN ${Math.round((2 - g.strain) * 100)}`;
   const lo = RARITY[RARITY_ORDER[g.lo]].label, hi = RARITY[RARITY_ORDER[g.hi]].label;
-  const size = g.minSize ? `SPECIES MAX ${g.minSize}LB+` : 'ANY SPECIES SIZE';
   const weight = g.weightBonus ? `WEIGHT UP TO +${fmt(g.weightBonus * 100)}%` : 'STANDARD WEIGHT';
-  return `CATCHES ${lo === hi ? lo : lo + '–' + hi} · ${size} · LUCK +${Math.round(g.luck * 100)}% · ${weight}`;
+  return `CATCHES ${lo === hi ? lo : lo + '–' + hi} · ALL SIZES · LUCK +${Math.round(g.luck * 100)}% · ${weight}`;
 };
 const swatchStyle = (kind, g) => `background:#${g.color.toString(16).padStart(6, '0')}`;
 // how this tier compares to what you have on
@@ -944,10 +943,8 @@ function gearDelta(kind, g, i){
   }
   const d = Math.round((g.luck - cur.luck) * 100);
   const parts = [];
-  const winChanged = g.hi > cur.hi || g.lo > cur.lo;
   if(g.hi > cur.hi) parts.push(`unlocks ${RARITY[RARITY_ORDER[g.hi]].label}`);
   if(g.lo > cur.lo) parts.push(`drops ${RARITY[RARITY_ORDER[g.lo - 1]].label} and below`);
-  if(!winChanged && g.minSize > cur.minSize) parts.push(`species max ${g.minSize}lb+`);
   parts.push(`${d >= 0 ? '+' : ''}${d}% luck`);
   const weightDelta = (g.weightBonus - cur.weightBonus) * 100;
   parts.push(`${weightDelta >= 0 ? '+' : ''}${fmt(weightDelta)}% weight bonus cap`);
@@ -998,7 +995,7 @@ function renderShop(){
   $('shopEyebrow').textContent=i.name.toUpperCase()+' · LOCAL OUTFITTER';
   $('shopNote').textContent=`Only tiers ${i.id*4+1}–${i.id*4+4} are sold here. Explore new islands for the next four. Prices below are the exact coins charged.`;
   if(i.id>0)$('shopNote').textContent+=` Entry gear: ${fmt(GEAR[kind].list[i.id*4].cost)}c — 30% above the ${BOATS[i.id].name} (${fmt(BOATS[i.id].cost)}c) required to reach this island.`;
-  if(kind==='bait')$('shopNote').textContent+=' Luck favors rarer eligible fish; it is not a catch percentage. The small weight boost tapers near each species’ maximum.';
+  if(kind==='bait')$('shopNote').textContent+=' All local fish in the shown rarity range are eligible, regardless of size. Luck favors rarer eligible fish; it is not a catch percentage. The small weight boost tapers near each species’ maximum.';
   shopBody.innerHTML=gearRows(kind,GEAR[kind].list.map((g,index)=>index).filter(index=>gearIsland(index)===G.zone));
   if(G.zone<5)shopBody.innerHTML+=`<div class="next-stock">Next shipment: tiers ${i.id*4+5}–${i.id*4+8} at <b>${ISLANDS[i.id+1].name}</b> · Level ${ISLANDS[i.id+1].level}</div>`;
 }
