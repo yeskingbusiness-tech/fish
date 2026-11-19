@@ -26,7 +26,8 @@ module.exports=async function testPerformance(browser,url,shots){
     assert.equal(await page.evaluate(()=>__reelDeal.performanceStats.icons.images),0);
     await page.click('#indexClose');
     await page.evaluate(()=>{
-      const a=__reelDeal,fish=Array.from({length:240},(_,i)=>({id:a.SPECIES[i%120].id,n:a.SPECIES[i%120].name,w:a.SPECIES[i%120].maxW}));
+      const a=__reelDeal; a.G.state='menu'; // Deliberately replace the save for the next boot.
+      const fish=Array.from({length:240},(_,i)=>({id:a.SPECIES[i%120].id,n:a.SPECIES[i%120].name,w:a.SPECIES[i%120].maxW}));
       localStorage.setItem('reel-deal-save-v9',JSON.stringify({version:9,coins:1234,xp:a.xpForLevel(400),caught:240,
         bag:fish,log:fish.slice(0,200),licenses:a.ISLANDS.map(i=>i.id),
         discoveries:Object.fromEntries(a.SPECIES.map(s=>[s.id,{count:2,best:s.maxW,first:''}]))}));
@@ -67,7 +68,7 @@ module.exports=async function testPerformance(browser,url,shots){
     assert.equal(await page.evaluate(()=>__reelDeal.heldCatch===__reelDeal.bag.at(-1)),true,'lazy rows retain specimen identity');
     await page.click('#putAwayBtn');
 
-    await page.evaluate(()=>{const a=__reelDeal,s=a.world.stalls.find(s=>s.zone===0&&s.kind==='market');a.G.px=s.x;a.G.pz=s.z-3.8;a.openMarket();});
+    await page.evaluate(()=>{const a=__reelDeal,s=a.world.stalls.find(s=>s.zone===0&&s.kind==='market');a.G.px=s.approach.x;a.G.pz=s.approach.z;a.openMarket();});
     assert.equal(await page.locator('#marketBody img').count(),240);assert.equal(await page.locator('#marketBody path').count(),0);
     await ready(page,'marketBody');await page.screenshot({path:`${shots}/performance-market.png`});await page.click('#marketClose');
     for(const viewport of [{width:390,height:844},{width:844,height:390}]){
@@ -103,7 +104,7 @@ module.exports=async function testPerformance(browser,url,shots){
     assert.equal(await page.locator('#logList .log-item').count(),200);await page.click('#closeLog');
     console.log('PASS: all 400 thumbnails exactly match the original vectors; lazy index/240-fish Bag/market/200-entry log, duplicate image reuse, closed-log no-op, observer cleanup, mobile layout and unchanged saves');
 
-    await page.evaluate(()=>{const a=__reelDeal,s=a.world.stalls.find(s=>s.zone===0&&s.kind==='rod');a.G.px=s.x;a.G.pz=s.z-3.8;});
+    await page.evaluate(()=>{const a=__reelDeal,s=a.world.stalls.find(s=>s.zone===0&&s.kind==='rod');a.G.px=s.approach.x;a.G.pz=s.approach.z;});
     await page.waitForFunction(()=>__reelDeal.performanceStats.activeParticles===0);await frame(page,3);
     const idle=await page.evaluate(async()=>{
       const a=__reelDeal,before=a.performanceStats,p=a.scene.children.find(o=>o.isInstancedMesh&&o.count===70),version=p.instanceMatrix.version;
@@ -112,7 +113,7 @@ module.exports=async function testPerformance(browser,url,shots){
       const after=a.performanceStats;return {mutations,uploads:p.instanceMatrix.version-version,visible:p.visible,vendors:after.vendorChecks-before.vendorChecks,hints:after.hintChecks-before.hintChecks,pools:after.baitPools-before.baitPools};
     });
     assert.deepEqual(idle,{mutations:0,uploads:0,visible:false,vendors:0,hints:0,pools:0});metrics.idle30Frames=idle;
-    assert.equal(await page.evaluate(()=>{const a=__reelDeal,s=a.world.stalls.find(s=>s.zone===0&&s.kind==='bait');a.G.px=s.x;a.G.pz=s.z-3.8;return a.nearestVendor().kind;}),'bait');
+    assert.equal(await page.evaluate(()=>{const a=__reelDeal,s=a.world.stalls.find(s=>s.zone===0&&s.kind==='bait');a.G.px=s.approach.x;a.G.pz=s.approach.z;return a.nearestVendor().kind;}),'bait');
     await frame(page);assert.match(await page.locator('#shopBtn').textContent(),/Bait Shack/);
     assert.equal(await page.evaluate(()=>{const a=__reelDeal;a.G.px=0;a.G.pz=4;a.openShop('bait');return a.shopOpen;}),false,'cached proximity must not waive physical vendor guards');
     const pools=await page.evaluate(()=>{const a=__reelDeal;for(let zone=0;zone<6;zone++)for(let bait=0;bait<24;bait++){a.G.zone=zone;a.G.gear.bait=bait;a.updateStats();const empty=a.eligibleSpecies(zone,bait).length===0;if(!!document.querySelector('#equipmentStrip .wrong-bait')!==empty)return false;}a.spawnAtIsland(0);a.G.gear.bait=0;a.updateStats();return a.performanceStats.baitPools;});
@@ -145,7 +146,7 @@ module.exports=async function testPerformance(browser,url,shots){
     await page.evaluate(async()=>{const T=await import('three');T.Clock.prototype.getDelta=window.originalDelta;});
     metrics.quality={reduced,recovered};assert.deepEqual(errors,[]);
     console.log('PASS: actual renderer continuously reduces/recovers resolution after startup, preserves reduction across orientation changes, ignores menu/long-pause frames and leaves sharp UI/save data alone');
-    fs.writeFileSync(`${shots}/v41-performance-browser.json`,JSON.stringify(metrics,null,2));
+    fs.writeFileSync(`${shots}/v42-performance-browser.json`,JSON.stringify(metrics,null,2));
   }catch(error){if(!page.isClosed())await page.screenshot({path:`${shots}/performance-failure.png`});throw error;}
   finally{await page.close();}
 };

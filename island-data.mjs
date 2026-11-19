@@ -1,3 +1,4 @@
+import { ISLAND_LAYOUTS } from './island-layout.mjs?v=42';
 // Exact destination order/unlock levels from the 400-entry collection brief.
 // Environments and landmark geometry are presentation data, not rarity/size rules.
 const rows=[
@@ -52,12 +53,17 @@ function waterObstacles(theme){
   if(theme==='coral')return Array.from({length:16},(_,k)=>({x:-20+k*2,z:-8-k%3*2,w:1,d:1,h:.8+k%4*.6}));
   return [];
 }
+// Irregular, fixed positions selected with generous open-water corridors.
+// Stable per world version: reloads never reshuffle the archipelago.
+export const WORLD_LAYOUT_VERSION=2;
+const centers=[[-390,25],[-320,-770],[-1470,-440],[-1370,-1220],[-1700,-2000],[-1640,-2880],[-1250,-3590],[-1000,-2500],[-590,-1620],[110,-1320],[890,-680],[1710,-890],[810,-1380],[1660,-2060],[840,-2260],[-50,-2290],[130,-3070],[820,-2950],[590,-3640],[1740,-3450]];
 export const ISLANDS=Object.freeze(rows.map((r,id)=>{
   const [name,short,level,environment,theme,landmark,stock,boatName,land,sand,rock,water,sky,accent,description]=r;
-  const row=Math.floor(id/4),col=row%2?3-id%4:id%4;
+  const layout=ISLAND_LAYOUTS[id],[cx,cz]=centers[id];
+  const x=cx-[0,25,0,-25][layout.quarter],z=cz-[25,0,-25,0][layout.quarter];
   return Object.freeze({id,key:name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/-$/,''),name,short,level,environment,theme,landmark,stock,boatName,
-    x:-390+col*260,z:-row*260,chartX:14+col*24,chartY:20+row*16,land,sand,rock,water,sky,accent,color:'#'+land.toString(16).padStart(6,'0'),
-    waterObstacles:waterObstacles(theme),landforms:landforms[id].map(([x,z,w,d,h])=>Object.freeze({x,z,w,d,h})),description,tagline:environment+' · '+landmark,waters:environment});
+    x,z,layout,land,sand,rock,water,sky,accent,color:'#'+land.toString(16).padStart(6,'0'),
+    waterObstacles:waterObstacles(theme).map(f=>Object.freeze({...f,x:f.x*layout.landmarkMirror})),landforms:landforms[id].map(([x,z,w,d,h])=>Object.freeze({x,z,w,d,h})),description,tagline:environment+' · '+landmark,waters:environment});
 }));
 export const ISLAND_COUNT=ISLANDS.length;
 export const GEAR_PER_ISLAND=2;

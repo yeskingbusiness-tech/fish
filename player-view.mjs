@@ -2,6 +2,15 @@
 // data. THREE is passed in so the camera/size helpers can be tested without WebGL.
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
+// A low, forward-looking chase view. Look past the bow, not down at the hull.
+// Larger canopies get enough clearance; this never changes the fishing camera.
+export function boatViewPose({x,z,yaw,size=1,aspect=1.5}){
+  const distance=6+size*(7.8+(aspect<1?1.2:0)),ahead=14+size*5;
+  const fx=-Math.sin(yaw),fz=-Math.cos(yaw);
+  return {x:x-fx*distance,y:1.4+size*3.4,z:z-fz*distance,
+    targetX:x+fx*ahead,targetY:1.7+size*1.2,targetZ:z+fz*ahead};
+}
+
 export function heldFishSpan(sp,weight){
   const w=Number.isFinite(Number(weight))?Math.max(0,Number(weight)):0;
   const template=sp.template||sp.id||'';

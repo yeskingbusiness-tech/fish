@@ -1,7 +1,7 @@
 // Full current open-water regression runner. Uses real WebGL (SwiftShader in CI).
 const assert=require('node:assert/strict'),fs=require('node:fs');
 const{chromium}=require('playwright-core');
-const URL=process.env.TEST_URL||'http://127.0.0.1:3100',shots=process.env.SCREENSHOT_DIR||'.artifacts/expansion';fs.mkdirSync(shots,{recursive:true});
+const URL=process.env.TEST_URL||'http://127.0.0.1:3100',shots=process.env.SCREENSHOT_DIR||'.artifacts/navigation-v42';fs.mkdirSync(shots,{recursive:true});
 (async()=>{
  let executablePath=process.env.CHROMIUM_PATH,args=['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-dev-shm-usage'];
  if(!executablePath){const s=require('@sparticuz/chromium').default;executablePath=await s.executablePath();args=[...s.args.filter(a=>a!=='--single-process'),...args];}
@@ -9,7 +9,7 @@ const URL=process.env.TEST_URL||'http://127.0.0.1:3100',shots=process.env.SCREEN
  const watch=p=>{p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});};
  const frame=p=>p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
  async function boot(p){watch(p);await p.addInitScript(()=>{HTMLCanvasElement.prototype.requestPointerLock=undefined;});await p.goto(URL,{waitUntil:'networkidle'});await p.waitForFunction(()=>window.__reelDeal);await p.click('#startBtn');}
- async function vendor(kind,zone=0){await page.evaluate(({kind,zone})=>{const a=__reelDeal;a.closeShop();a.closeMarket();a.closeChart();a.closeIndex();a.closeBag();a.spawnAtIsland(zone);const s=a.world.stalls.find(s=>s.zone===zone&&s.kind===kind);a.G.px=s.x;a.G.pz=s.z-3.8;a.G.state='aim';a.updateStats();},{kind,zone});await frame(page);}
+ async function vendor(kind,zone=0){await page.evaluate(({kind,zone})=>{const a=__reelDeal;a.closeShop();a.closeMarket();a.closeChart();a.closeIndex();a.closeBag();a.spawnAtIsland(zone);const s=a.world.stalls.find(s=>s.zone===zone&&s.kind===kind);a.G.px=s.approach.x;a.G.pz=s.approach.z;a.G.state='aim';a.updateStats();},{kind,zone});await frame(page);}
  try{
   page=await browser.newPage({viewport:{width:1280,height:820}});await boot(page);
   assert.deepEqual(await page.evaluate(()=>[__reelDeal.SPECIES.length,__reelDeal.ISLANDS.length,__reelDeal.RODS.length,__reelDeal.LINES.length,__reelDeal.BAITS.length,__reelDeal.BOATS.length]),[400,20,40,40,40,8]);
@@ -44,18 +44,18 @@ const URL=process.env.TEST_URL||'http://127.0.0.1:3100',shots=process.env.SCREEN
   await page.keyboard.press('q');assert.equal(await page.evaluate(()=>__reelDeal.G.boatMode),'fish');await frame(page);assert.equal(await page.evaluate(()=>__reelDeal.G.sailing.speed),0);
   // Same route point just outside every border; old and new vessel classes get the same access result.
   for(let id=1;id<20;id++){
-   const result=await page.evaluate(async id=>{const a=__reelDeal,n=await import('./navigation.mjs?v=41'),i=a.ISLANDS[id],c=n.territoryCenter(i),from={x:c.x,z:c.z-120},to={x:c.x,z:c.z-90};return a.BOATS.map(b=>({locked:n.boatMoveBlock(from,to,{xp:a.xpForLevel(i.level)-1,radius:b.size*4})?.kind,open:n.boatMoveBlock(from,to,{xp:a.xpForLevel(i.level),radius:b.size*4})}));},id);
+   const result=await page.evaluate(async id=>{const a=__reelDeal,n=await import('./navigation.mjs?v=42'),i=a.ISLANDS[id],c=n.territoryCenter(i),from={x:c.x,z:c.z-n.TERRITORY_RADIUS-25},to={x:c.x,z:c.z-n.TERRITORY_RADIUS+25};return a.BOATS.map(b=>({locked:n.boatMoveBlock(from,to,{xp:a.xpForLevel(i.level)-1,radius:b.size*4})?.kind,open:n.boatMoveBlock(from,to,{xp:a.xpForLevel(i.level),radius:b.size*4})}));},id);
    assert.ok(result.every(r=>r.locked==='level'&&r.open===null));
   }
-  await page.evaluate(()=>{const a=__reelDeal,i=a.ISLANDS[1];a.G.xp=a.xpForLevel(10);a.G.licenses=[0];a.G.sailing={x:i.x,z:i.z-80,yaw:0,speed:0};a.G.boat=0;a.G.boatMode='fish';a.tickBoat(.02);});await frame(page);
+  await page.evaluate(()=>{const a=__reelDeal,i=a.ISLANDS[1];a.G.xp=a.xpForLevel(10);a.G.licenses=[0];a.G.sailing={...a.islandToWorld(i,0,-120),yaw:i.layout.yaw,speed:0};a.G.boat=0;a.G.boatMode='fish';a.tickBoat(.02);});await frame(page);
   assert.equal(await page.evaluate(()=>__reelDeal.G.zone),1);assert.equal(await page.locator('#arrivalName').textContent(),'Pinewater Isle');assert.equal(await page.locator('#arrivalBanner').isVisible(),true);
   assert.equal(await page.evaluate(()=>__reelDeal.G.boat),0);
-  await page.evaluate(async()=>{const a=__reelDeal,n=await import('./navigation.mjs?v=41');a.G.sailing={...n.dockLocation(1,a.BOATS[0].size),yaw:0,speed:0};a.tickBoat(.01);a.updateBoatUI();});await page.click('#dockBoatBtn');assert.equal(await page.evaluate(()=>__reelDeal.G.onBoat),false);assert.equal(await page.evaluate(()=>__reelDeal.G.zone),1);
+  await page.evaluate(async()=>{const a=__reelDeal,n=await import('./navigation.mjs?v=42');a.G.sailing={...n.dockPose(1,a.BOATS[0].size),speed:0};a.tickBoat(.01);a.updateBoatUI();});await page.click('#dockBoatBtn');assert.equal(await page.evaluate(()=>__reelDeal.G.onBoat),false);assert.equal(await page.evaluate(()=>__reelDeal.G.zone),1);
   console.log('PASS manual throttle/steering/stop/docking; all 152 boat/border combinations; starter-boat arrival and territory banner');
   // A real tiny catch: choose a weighted picker interval; let actual fight run.
   await page.evaluate(async()=>{const a=__reelDeal;a.spawnAtIsland(4);a.G.xp=a.xpForLevel(400);a.G.licenses=a.ISLANDS.map(i=>i.id);a.G.gear={rod:9,line:9,bait:9};a.G.owned={rod:[0,9],line:[0,9],bait:[0,9]};a.G.px=a.ISLANDS[4].x;a.G.pz=a.ISLANDS[4].z-65;a.G.onBoat=true;a.G.boatMode='fish';a.G.sailing={x:a.G.px,z:a.G.pz,yaw:0,speed:0};a.G.yaw=0;a.G.pitch=-.12;a.G.castTerritory=4;a.G.castShorePenalty=0;a.updateStats();});await frame(page);
   await page.keyboard.down('Space');await page.waitForFunction(()=>__reelDeal.G.power>.6);await page.keyboard.up('Space');await page.waitForFunction(()=>__reelDeal.G.state==='waiting',null,{timeout:20000});
-  const hook=await page.evaluate(async()=>{const a=__reelDeal,d=await import('./game-data.mjs?v=41'),pool=a.eligibleSpecies(4,9),weights=pool.map(s=>d.speciesChance(s,9,a.G.castPower,a.G.castShorePenalty)),index=pool.findIndex(s=>s.name==='Clown Killifish');const q=(weights.slice(0,index).reduce((n,w)=>n+w,0)+weights[index]/2)/weights.reduce((a,b)=>a+b,0),random=Math.random;
+  const hook=await page.evaluate(async()=>{const a=__reelDeal,d=await import('./game-data.mjs?v=42'),pool=a.eligibleSpecies(4,9),weights=pool.map(s=>d.speciesChance(s,9,a.G.castPower,a.G.castShorePenalty)),index=pool.findIndex(s=>s.name==='Clown Killifish');const q=(weights.slice(0,index).reduce((n,w)=>n+w,0)+weights[index]/2)/weights.reduce((a,b)=>a+b,0),random=Math.random;
    try{a.triggerBite();let calls=0;Math.random=()=>calls++===0?q:.5;a.hookFish();}finally{Math.random=random;}return {id:a.hookedFish.userData.designId,weight:a.G.fishWeight,text:document.getElementById('reelFishName').textContent};});
   assert.equal(hook.id,'clown-killifish');assert.ok(hook.weight>0&&hook.weight<.01);assert.match(hook.text,/Unidentified/);
   const state=await page.evaluate(()=>new Promise(resolve=>{const a=__reelDeal,start=performance.now();function steer(){if(a.G.state!=='reeling'||performance.now()-start>50000){resolve(a.G.state);return;}a.G.reelHeld=a.G.tension<(a.G.bandLo+a.G.bandHi)/2;requestAnimationFrame(steer);}steer();}));assert.equal(state,'caught');
@@ -69,6 +69,7 @@ const URL=process.env.TEST_URL||'http://127.0.0.1:3100',shots=process.env.SCREEN
   await page.tap('#minimapButton');assert.equal(await page.locator('#chartOverlay').isVisible(),true);await page.locator('[data-destination="19"]').tap();await page.locator('#waypointBtn').tap();assert.equal(await page.evaluate(()=>__reelDeal.G.waypoint),19);await page.screenshot({path:`${shots}/map-mobile.png`});await page.tap('#chartClose');
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:`${shots}/helm-mobile.png`});await page.close();page=null;
   console.log('PASS mobile joystick, stop/helm controls, minimap expansion, final-island waypoint and no page overflow');
+  await require('./navigation-browser.cjs')(browser,URL,shots);
   await require('./fishing-browser.cjs')(browser,URL,shots);
   await require('./fish-model-browser.cjs')(browser,URL,shots);
   await require('./ui-browser.cjs')(browser,URL,shots);

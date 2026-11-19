@@ -4,7 +4,7 @@
 
 The environment, shops, boats and basic angler are cuboid-built. **The fish are not cubes:** anatomical sculpts, fins, jaws, tails, shells, legs and tentacles also generate their matching illustrated thumbnails.
 
-Version **2.1.0**, browser cache **v41**, save schema **v9**. Static browser game; no build, account, backend or runtime dependency installation required.
+Version **2.1.1**, browser cache **v42**, save schema **v9**, world layout **2**. Static browser game; no build, account, backend or runtime dependency installation required.
 
 ## Run
 
@@ -19,19 +19,22 @@ The development server binds `0.0.0.0`, serves `.mjs` with module MIME types, an
 
 ## Explore under your own power
 
-- Walk to the **Boatyard & Dock**, then choose **Board your boat**. The Harbor Skiff is free.
-- **W/S** accelerates/reverses; **A/D** steers. Touch uses the joystick.
+- Choose **Board boat / Return to boat** on the HUD, or press **R**, from anywhere while idle. No chart or walk to a shop is needed. The Harbor Skiff is free.
+- This teleports **you to your own parked boat**, not the boat to you and not to a selected island. Its position and heading persist while you walk around or reload. Finish any cast/fight and close panels first.
+- **W/S** accelerates/reverses; **A/D** steers. Touch uses the joystick. All hulls turn **20% faster** than v41.
+- The helm camera sits low above the hull/canopy and looks **beyond the bow toward the horizon**, rather than down at the boat. Fishing and trophy cameras retain their own behavior.
 - **Q / Stop & fish** stops the engine and returns to fishing controls. Q again takes the helm. Boats cannot move during a cast or fight.
 - **E / Dock** disembarks when close to an unlocked island's berth. Shops and markets require walking up to their actual counters; no remote selling from the water.
-- The **minimap** shows heading, territory boundaries, nearby islands and a waypoint. Click it or press **M** for the full north-up chart. Mark a destination and steer there yourself.
+- The **minimap** shows heading, territory boundaries, rotated land/docks, your parked boat and a waypoint. Click it or press **M** for the full north-up chart. Choose a numbered island to read its name/details, mark a destination and steer there yourself. The chart no longer has a rectangular grid or a snake-route line.
 - Entering a new island's surrounding water displays its name and environment briefly.
 - There is **no automatic sailing, skip-crossing button or boat-range gate**. Every boat, including the starter, can reach every level-unlocked territory.
+- Territories have a **300 m radius**, up from 110 m: **7.44× the area**. The twenty fixed, irregular positions never reshuffle on reload; open corridors separate even the largest hull from still-locked borders.
 - Locked territories have **invisible circular collision barriers** extending through the water column. Swept movement prevents high-speed tunnelling. Land, docks, icebergs and the outer sea edge also block boats.
 - Eight optional vessels increase in **size and top speed**, not access. The larger physical footprint needs more space around shore. Boat prices are independent of local gear; the former “required boat / 130% entry gear” pricing relationship no longer applies.
 
 ### Shore luck
 
-The shore penalty is **−95% within 8 world metres** of terrain/docks/solid reef or ice obstacles. It eases linearly to **no penalty at 55 metres**, within the surrounding territory. This penalty multiplies the entire luck factor, so expensive bait cannot cancel it while standing on the pier.
+The shore penalty is **−95% within 6 world metres** of terrain/docks/solid reef or ice obstacles. It eases linearly to **no penalty at 48 metres**, within the surrounding territory. The full penalty remains unchanged, but its distance band is slightly smaller than v41. Physical sand shelves are also a little narrower (58 × 46 m instead of 60 × 48 m for the main shelf). This penalty multiplies the entire luck factor, so expensive bait cannot cancel it while standing on the pier.
 
 Luck is sampled at the **angler's position on cast release**, not the bobber's landing point. A long shore cast does not bypass it. Shore fishing remains possible, but rarer fish, specimen weight and bite timing favor heading offshore. The final all-Unfathomable territory still has the weight/timing effect. Between territories, cruise into an unlocked territory before casting.
 
@@ -62,7 +65,7 @@ Each has **20 numbered entries, two rods, two lines and two baits**. That's **40
 | 19 | Eternity's Reach | 350 | Ancient cosmic ocean · enormous hourglass ruin |
 | 20 | Origin's End | 400 | Primordial ocean · first spring and concentric terraces |
 
-Landform shapes, elevations, plants, landmarks, water/sky palettes and local building details differ. Shared village paths keep shops easy to find. Roofs use local craft: timber, vines, coral, snow/icicles, forge chimneys or stone temple details.
+Landform shapes, elevations, plants, landmarks, water/sky palettes and local building details differ. **Every island has a distinct authored shop arrangement**: docking orientation/berth side, pier offsets, paths, trees, lamps and landmark placement also vary. Rendering, walking/boat collision, counter approaches, spawn points and map footprints use the same orthogonal transforms. Paths connect each counter to the pier without running through another stall. Roofs use local craft: timber, vines, coral, snow/icicles, forge chimneys or stone temple details.
 
 ## Collection and fishing
 
@@ -109,7 +112,9 @@ Choose **Hold** on a Bag specimen. It remains in the Bag until sold. **V** toggl
 
 ## Saved games
 
-Saves use **`reel-deal-save-v9`**, local to this browser and site origin. Free-driving position is saved periodically and restores only if it is valid, unlocked water; invalid positions fall back to the dock.
+Saves use **`reel-deal-save-v9`**, local to this browser and site origin. The boat's parked position is independent of the player's current island. A sailing record additionally notes whether the player was aboard. Position is saved periodically while sailing, on boarding/docking, when the page is hidden and on page exit. Invalid or locked-water locations never waive a level gate.
+
+The **`worldLayout: 2`** marker versions map coordinates separately from collection data. Existing v41 saves are validated against **frozen original grid geometry**, then converted relative to their saved island and its new orientation. If valid old water becomes new land, the sailor safely resumes at that island's new berth. Invalid locations recover at an accessible dock. Conversion is idempotent and does not reset money, XP, catches, equipment, licenses or earned bonuses.
 
 Migration from v8/v7/v6 uses **frozen original definitions**, not the new catalog:
 
@@ -146,23 +151,27 @@ CHROMIUM_PATH=/path/to/chrome npm run test:browser
 # TEST_URL can override http://127.0.0.1:3100.
 ```
 
-Node tests cover the full catalog, rarity availability, 800 bait/territory combinations, precise weights, reward multipliers, level gates, 40-tier equipment, save migration, swept boat collisions, shore luck, camera fitting, coplanar face removal and performance utilities.
+**128 Node tests** cover the full catalog, rarity availability, 800 bait/territory combinations, precise weights, reward multipliers, level gates, 40-tier equipment, save/map migration, transformed village plans, navigable routes around locked cylinders, persistent boat positions, swept boat collisions, shore luck, low helm/trophy camera fitting, coplanar face removal and performance utilities.
 
-The current browser runner replaces the superseded automatic-voyage/four-tier fixtures. It exercises all **60 local shops**, exact purchases, eight boats, every level boundary, manual throttle/steering/docking, mobile controls, minimap/chart waypoints, real tiny-fish catches, red/yellow/green fights, one-time rewards, original-save migration, all **520 current/legacy GPU models**, all **400 production holding/camera paths**, twenty environment captures, accessible UI and continuous renderer adaptation.
+The current browser runner replaces the superseded automatic-voyage/four-tier fixtures. It exercises all **60 local equipment shops** plus every market/boatyard approach, full pier-to-counter walking connectivity, **160 boat/island berths**, exact purchases, all eight full-size hulls in the low camera, every level boundary, manual throttle/steering/docking, return-to-boat/save/reload, mobile controls, non-overlapping irregular chart targets and waypoints, real tiny-fish catches, red/yellow/green fights, one-time rewards, original-save migration, all **520 current/legacy GPU models**, all **400 production holding/camera paths**, twenty environment captures, accessible UI and continuous renderer adaptation.
 
-Screenshots and audit logs go to `.artifacts/expansion/` (ignored by Git). Software-GPU measurements are regression checks, not an FPS promise for every device.
+Current screenshots and audit logs go to `.artifacts/navigation-v42/` (ignored by Git). In the twenty environment captures, the maximum was **28 draw calls / 29,212 triangles**; the expanded sea does not add mesh subdivisions. The idle HUD check still makes zero DOM mutations or empty-particle uploads over 30 frames. Software-GPU measurements are regression checks, not an FPS promise for every device.
+
+## Rebalancing proposals
+
+[`BALANCE_NOTES.md`](BALANCE_NOTES.md) records the current catch-effort audit and proposed gear/XP smoothing, optional boat trade-ins, species-relative trophy rewards and collection-streak protection. **These are recommendations, not enabled mechanics.** v42 leaves existing prices, sale/XP multipliers, natural fish sizes and collection rewards unchanged; only the requested shore extent and navigation/handling were adjusted.
 
 ## Source map
 
 | File | Responsibility |
 | --- | --- |
 | `collection-roster.mjs`, `FISH_ROSTER.md` | Exact authored collection, species weights and display spans |
-| `island-data.mjs` | Destination order, levels, environments and authored landforms |
+| `island-data.mjs`, `island-layout.mjs`, `village-paths.mjs` | Destination order/levels, fixed irregular coordinates, authored village plans, transforms and counter paths |
 | `game-data.mjs`, `archipelago.mjs` | Equipment, rarity/weight rolls, prices, XP, rewards and boats |
 | `navigation.mjs`, `minimap.mjs` | Manual navigation, swept barriers, shore proximity and mini chart |
 | `world.mjs`, `voxel-geometry.mjs` | Batched cube environments, face subtraction, collision and LOD |
 | `fish-appearance.mjs`, `fish-geometry.mjs`, `fish-model.mjs` | Non-cuboid anatomy, shared illustrations and GPU rigs |
 | `fish-icons.mjs`, `render-performance.mjs` | Lazy shared thumbnails, adaptive quality and idle-work caches |
 | `player-view.mjs`, `ui-state.mjs` | Character, species-specific sizing, framing, Bag and Help rules |
-| `legacy-v8-data.mjs`, `legacy-catalog.mjs`, `save-state.mjs` | Frozen historical identities and explicit migration |
+| `legacy-v8-data.mjs`, `legacy-catalog.mjs`, `legacy-v41-world.mjs`, `save-state.mjs` | Frozen historical identities/map geometry, parked boats and explicit migration |
 | `main.js`, `index.html`, `style.css` | Gameplay, controls, responsive panels and HUD |

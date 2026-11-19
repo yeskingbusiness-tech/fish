@@ -1,7 +1,7 @@
 // Pure collection, equipment and fishing rules. No size is derived from rarity.
-import { COLLECTION_ROSTER } from './collection-roster.mjs?v=41';
-import { ISLANDS, GEAR_PER_ISLAND } from './island-data.mjs?v=41';
-import { fishAppearance } from './fish-appearance.mjs?v=41';
+import { COLLECTION_ROSTER } from './collection-roster.mjs?v=42';
+import { ISLANDS, GEAR_PER_ISLAND } from './island-data.mjs?v=42';
+import { fishAppearance } from './fish-appearance.mjs?v=42';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export const SALE_MULTIPLIER=.85;
 export const RARITY_ORDER=Object.freeze(['common','uncommon','rare','epic','legendary','mythic','exotic','divine','ancient','celestial','transcendent','unfathomable']);

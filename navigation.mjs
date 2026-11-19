@@ -1,20 +1,18 @@
 // Pure boating geometry. The level barriers are invisible vertical cylinders;
 // swept movement prevents fast boats/large frames from tunnelling through them.
-import { ISLANDS, hasIslandLicense } from './archipelago.mjs?v=41';
-export const TERRITORY_RADIUS=110;
-export const SEA_BOUNDS=Object.freeze({minX:-590,maxX:590,minZ:-1240,maxZ:200});
-export const territoryCenter=i=>({x:i.x,z:i.z+25});
-export const LAND_RECTS=Object.freeze(ISLANDS.flatMap(i=>[
-  ...[...i.landforms,...i.waterObstacles].map(f=>({island:i.id,minX:i.x+f.x-f.w/2,maxX:i.x+f.x+f.w/2,minZ:i.z+f.z-f.d/2,maxZ:i.z+f.z+f.d/2})),
-  {island:i.id,minX:i.x-30,maxX:i.x+30,minZ:i.z+10,maxZ:i.z+58},
-  {island:i.id,minX:i.x-28,maxX:i.x-16,minZ:i.z-2,maxZ:i.z+18},
-  {island:i.id,minX:i.x-2.5,maxX:i.x+2.5,minZ:i.z-2.5,maxZ:i.z+14},
-  {island:i.id,minX:i.x+7.3,maxX:i.x+10.7,minZ:i.z+.5,maxZ:i.z+14},
-]));
+import { ISLANDS, hasIslandLicense } from './archipelago.mjs?v=42';
+import { islandToWorld, islandRectToWorld, islandSurfaces } from './island-layout.mjs?v=42';
+export const TERRITORY_RADIUS=300; // 7.44× the old 110m territory area.
+export const SHORE_FULL_PENALTY_DISTANCE=6;
+export const SHORE_CLEAR_DISTANCE=48;
+export const BOAT_TURN_RATE=1.44; // +20%, for all eight hulls.
+export const SEA_BOUNDS=Object.freeze({minX:-2200,maxX:2240,minZ:-4140,maxZ:525});
+export const territoryCenter=i=>islandToWorld(i,0,25);
+export const LAND_RECTS=Object.freeze(ISLANDS.flatMap(i=>islandSurfaces(i).map(r=>Object.freeze(islandRectToWorld(i,r)))));
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export function territoryAt(x,z){return ISLANDS.find(i=>{const c=territoryCenter(i);return Math.hypot(x-c.x,z-c.z)<TERRITORY_RADIUS;})?.id??null;}
 export function distanceToShore(x,z){return Math.min(...LAND_RECTS.map(r=>Math.hypot(x-clamp(x,r.minX,r.maxX),z-clamp(z,r.minZ,r.maxZ))));}
-export function shoreLuckPenalty(x,z){const distance=distanceToShore(x,z);return -.95*(1-clamp((distance-8)/47,0,1))||0;}
+export function shoreLuckPenalty(x,z){const distance=distanceToShore(x,z);return -.95*(1-clamp((distance-SHORE_FULL_PENALTY_DISTANCE)/(SHORE_CLEAR_DISTANCE-SHORE_FULL_PENALTY_DISTANCE),0,1))||0;}
 function circleHit(a,b,c,r){const dx=b.x-a.x,dz=b.z-a.z,len=dx*dx+dz*dz;const t=len?clamp(((c.x-a.x)*dx+(c.z-a.z)*dz)/len,0,1):0;return Math.hypot(a.x+dx*t-c.x,a.z+dz*t-c.z)<r;}
 function rectHit(a,b,r,pad){
   let lo=0,hi=1;
@@ -34,13 +32,25 @@ export function boatMoveBlock(a,b,{xp=0,licenses=[],radius=1.2}={}){
 export function stepBoat(state,input,boat,dt,access={}){
   const step=clamp(Number.isFinite(dt)?dt:0,0,.1),throttle=clamp(input.throttle||0,-1,1),steer=clamp(input.steer||0,-1,1);
   const desired=throttle*boat.speed*(throttle<0?.4:1),speed=state.speed+(desired-state.speed)*Math.min(1,step*(throttle?1.6:3.5));
-  const yaw=state.yaw-steer*step*1.2*(.35+.65*Math.min(1,Math.abs(speed)/boat.speed))*(speed<-.2?-1:1);
+  const yaw=state.yaw-steer*step*BOAT_TURN_RATE*(.35+.65*Math.min(1,Math.abs(speed)/boat.speed))*(speed<-.2?-1:1);
   const next={x:state.x-Math.sin(yaw)*speed*step,z:state.z-Math.cos(yaw)*speed*step,yaw,speed};
   const block=boatMoveBlock(state,next,{...access,radius:boat.size*4});
   return block?{...state,yaw,speed:0,block}:{...next,block:null};
 }
-export function dockLocation(island,size=1){const i=ISLANDS[island];return {x:i.x+14+size*4,z:i.z-6-size*2};}
+export function dockLocation(island,size=1){const i=ISLANDS[island],l=i.layout;return islandToWorld(i,l.dockX+l.berthSide*(14+size*4),-6-size*2);}
+export function dockPose(island,size=1){return {...dockLocation(island,size),yaw:ISLANDS[island].layout.yaw};}
 export function nearbyDock(x,z){
-  return ISLANDS.find(i=>Math.hypot(x-(i.x+22),z-(i.z-10))<20)?.id??null;
+  return ISLANDS.find(i=>{const p=islandToWorld(i,i.layout.dockX+i.layout.berthSide*22,-10);return Math.hypot(x-p.x,z-p.z)<20;})?.id??null;
 }
 export function mapPoint(x,z){return {x:(x-SEA_BOUNDS.minX)/(SEA_BOUNDS.maxX-SEA_BOUNDS.minX)*100,y:(z-SEA_BOUNDS.minZ)/(SEA_BOUNDS.maxZ-SEA_BOUNDS.minZ)*100};}
+
+export function validBoatPose(pose,boat,access={}){
+  return !!pose&&['x','z','yaw'].every(k=>Number.isFinite(pose[k]))&&!boatMoveBlock(pose,pose,{...access,radius:boat.size*4});
+}
+// Boarding teleports the PLAYER, never moves an existing valid boat to the
+// selected map destination. Validation still enforces earned territory access.
+export function returnBoatPose(position,zone,boat,access={}){
+  if(validBoatPose(position,boat,access))return {x:position.x,z:position.z,yaw:position.yaw};
+  const home=hasIslandLicense(zone,access.xp||0,access.licenses||[])?zone:0;
+  return dockPose(home,boat.size);
+}

@@ -71,7 +71,7 @@ module.exports=async function testModels(browser,url,shots){
   const environments=[];
   for(let id=0;id<20;id++){
    const image=await page.evaluate(async id=>{const a=__reelDeal,T=await import('three'),i=a.ISLANDS[id];a.playerModel.root.visible=false;a.rodRig.visible=false;a.heldFishRig.visible=false;
-    const camera=new T.PerspectiveCamera(50,1280/820,.1,1200);camera.position.set(i.x+65,36,i.z-59);camera.lookAt(i.x,4,i.z+26);camera.updateMatrixWorld(true);a.world.update(20,1,id,camera,false);a.renderer.render(a.scene,camera);
+    const camera=new T.PerspectiveCamera(50,1280/820,.1,1200);const vantage=a.islandToWorld(i,65,-59),target=a.islandToWorld(i,0,26);camera.position.set(vantage.x,36,vantage.z);camera.lookAt(target.x,4,target.z);camera.updateMatrixWorld(true);a.world.update(20,1,id,camera,false);a.renderer.render(a.scene,camera);
     return {url:a.renderer.domElement.toDataURL('image/png'),name:i.name,calls:a.renderer.info.render.calls,triangles:a.renderer.info.render.triangles};
    },id);
    fs.writeFileSync(`${shots}/island-${String(id+1).padStart(2,'0')}.png`,Buffer.from(image.url.split(',')[1],'base64'));environments.push({id,name:image.name,calls:image.calls,triangles:image.triangles});assert.ok(image.calls<=45);assert.ok(image.triangles<65000);

@@ -1,18 +1,20 @@
 import * as THREE from 'three';
-import { exposedCuboidFaces } from './voxel-geometry.mjs?v=41';
-import { ISLANDS, BOATS } from './archipelago.mjs?v=41';
-import { dockLocation, SEA_BOUNDS } from './navigation.mjs?v=41';
+import { exposedCuboidFaces } from './voxel-geometry.mjs?v=42';
+import { ISLANDS, BOATS } from './archipelago.mjs?v=42';
+import { dockLocation, SEA_BOUNDS, territoryCenter } from './navigation.mjs?v=42';
+import { islandToWorld, worldToIsland, islandSurfaces } from './island-layout.mjs?v=42';
+import { villagePathTiles } from './village-paths.mjs?v=42';
 
 const UNIT = new THREE.BoxGeometry(1, 1, 1);
 const scratch = new THREE.Object3D();
 const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 const mix = (a,b,t) => a + (b-a)*t;
-const STALL_LAYOUT = [
-  { kind:'rod', name:'Rod Works', x:-17, z:29, color:0x6aafcc, banner:'ROD WORKS' },
-  { kind:'line', name:'Line & Spool', x:0, z:42, color:0xba9bd2, banner:'LINE & SPOOL' },
-  { kind:'bait', name:'Bait Shack', x:17, z:29, color:0xe4a568, banner:'BAIT SHACK' },
-  { kind:'market', name:'Fish Market', x:-8.5, z:18, color:0x77b88b, banner:'FISH MARKET' },
-  { kind:'port', name:'Boatyard & Dock', x:9, z:16, color:0x6ea3b5, banner:'BOATYARD & DOCK' },
+const STORE_DETAILS = [
+  { kind:'rod', name:'Rod Works', color:0x6aafcc, banner:'ROD WORKS' },
+  { kind:'line', name:'Line & Spool', color:0xba9bd2, banner:'LINE & SPOOL' },
+  { kind:'bait', name:'Bait Shack', color:0xe4a568, banner:'BAIT SHACK' },
+  { kind:'market', name:'Fish Market', color:0x77b88b, banner:'FISH MARKET' },
+  { kind:'port', name:'Boatyard & Dock', color:0x6ea3b5, banner:'BOATYARD & DOCK' },
 ];
 
 // One vertex-coloured draw call for hundreds of cuboids; no imported models.
@@ -100,6 +102,7 @@ function boatMesh(id){
 export function createWorld(scene){
   const root=new THREE.Group(); scene.add(root);
   const colliders=[], islands=[], distantIslands=[], stalls=[];
+  const surfaces=ISLANDS.map(islandSurfaces);
   const waterUniforms={uTime:{value:0},uDeep:{value:new THREE.Color(0x16748b)},uLight:{value:new THREE.Color(0x58bdc4)},uFog:{value:new THREE.Color(0x9bd9ed)}};
   const waterMat=new THREE.ShaderMaterial({
     uniforms:waterUniforms, transparent:true,
@@ -114,11 +117,13 @@ export function createWorld(scene){
       vec2 edge=abs(fract(vGrid)-.5); c*=1.-step(.485,max(edge.x,edge.y))*.12*(1.-smoothstep(35.,140.,vDepth));
       float glint=step(.994,fract(sin(dot(cell,vec2(6.45,8.92))+floor(uTime*1.5))*41758.5));
       c+=glint*.19*(1.-smoothstep(35.,110.,vDepth));
-      c=mix(c,uFog,smoothstep(65.,350.,vDepth)); gl_FragColor=vec4(c,.97); }`
+      c=mix(c,uFog,smoothstep(100.,850.,vDepth)); gl_FragColor=vec4(c,.97); }`
   });
-  const water=new THREE.Mesh(new THREE.BoxGeometry(2300,.10,2600,64,1,64),waterMat);
-  water.position.set(0,-.08,-500); root.add(water);
-  root.add(cube(2300,1,2600,0x376f71,0,-4,-500));
+  const width=SEA_BOUNDS.maxX-SEA_BOUNDS.minX+800,depth=SEA_BOUNDS.maxZ-SEA_BOUNDS.minZ+800;
+  const centerX=(SEA_BOUNDS.minX+SEA_BOUNDS.maxX)/2,centerZ=(SEA_BOUNDS.minZ+SEA_BOUNDS.maxZ)/2;
+  const water=new THREE.Mesh(new THREE.BoxGeometry(width,.10,depth,64,1,64),waterMat);
+  water.position.set(centerX,-.08,centerZ); root.add(water);
+  root.add(cube(width,1,depth,0x376f71,centerX,-4,centerZ));
 
   const sky=new THREE.Mesh(new THREE.BoxGeometry(2200,2200,2200),new THREE.ShaderMaterial({
     side:THREE.BackSide,depthWrite:false,fog:false,
@@ -130,14 +135,17 @@ export function createWorld(scene){
   const sun=cube(22,22,2,0xffefd0,120,120,-250); sun.material=new THREE.MeshBasicMaterial({color:0xffefd0,fog:false}); root.add(sun);
 
   for(const zone of ISLANDS){
-    const group=new THREE.Group(); group.position.set(zone.x,0,zone.z); root.add(group);
+    const layout=zone.layout,d=layout.dockX,side=layout.berthSide;
+    const stallLayout=layout.stalls.map(st=>({...STORE_DETAILS.find(meta=>meta.kind===st.kind),...st}));
+    const localColliders=[];
+    const group=new THREE.Group();group.name='island-'+zone.id;group.position.set(zone.x,0,zone.z);group.rotation.y=layout.yaw;root.add(group);
     const S=[],glows=[];
     const glow=(w,h,d,x,y,z,c)=>glows.push({w,h,d,x,y,z,c});
     const add=(w,h,d,x,y,z,c,more={})=>S.push({w,h,d,x,y,z,c,...more});
-    const block=(x,z,r,top)=>colliders.push({zone:zone.id,x:x+zone.x,z:z+zone.z,r,top});
+    const block=(x,z,r,top)=>localColliders.push({zone:zone.id,x,z,r,top});
     // Stepped, genuinely walkable island footprint. No invisible terrain walls.
-    add(60,3.2,48,0,-1.2,34,zone.rock);
-    add(60,.5,48,0,.25,34,zone.sand);
+    add(58,3.2,46,0,-1.2,34,zone.rock);
+    add(58,.5,46,0,.25,34,zone.sand);
     add(54,.45,43,0,.725,34.5,zone.land);
     for(const f of zone.landforms){
       add(f.w,f.h,f.d,f.x,f.h/2-.8,f.z,zone.rock);
@@ -145,32 +153,28 @@ export function createWorld(scene){
       if(f.h>6)add(f.w*.5,f.h*.34,f.d*.52,f.x,f.h*1.16-.8,f.z,zone.theme==='fjord'||zone.theme==='ice'?0xdcebf0:zone.rock);
     }
     // A connected peninsula carries each island's signature landmark.
-    add(12,2.9,20,-22,-1.05,8,zone.rock);
-    add(12,.5,20,-22,.25,8,zone.sand);
-    add(10,.45,16,-22,.725,9,zone.land);
+    add(11,2.9,18,layout.landmarkX,-1.05,8,zone.rock);
+    add(11,.5,18,layout.landmarkX,.25,8,zone.sand);
+    add(10,.45,16,layout.landmarkX,.725,9,zone.land);
     // Pier, crosswalk and a separate boat berth.
     for(let i=0;i<16;i++){
-      add(4.9,.3,.94,0,1,13-i, i%2 ? 0xba9465 : 0xa68357);
-      if(i<13) add(3.4,.3,.94,9,1,13-i,i%2 ? 0xba9465 : 0xa68357);
+      add(4.9,.3,.94,d,1,13-i, i%2 ? 0xba9465 : 0xa68357);
+      if(i<13) add(3.4,.3,.94,d+side*9,1,13-i,i%2 ? 0xba9465 : 0xa68357);
     }
-    add(12,.3,2.6,4.5,1,11.6,0xb38e60);
-    for(const x of [-2.2,2.2,7.6,10.4]) for(let z=0;z<14;z+=3){
+    add(12,.3,2.6,d+side*4.5,1,11.6,0xb38e60);
+    for(const x of [-2.2,2.2,7.6,10.4].map(x=>d+side*x)) for(let z=0;z<14;z+=3){
       add(.23,2.2,.23,x,.25,z,0x68573e); add(.31,.22,.31,x,1.4,z,0xe7d6af);
     }
     // Low square foam/sand shelves read as a voxel shoreline.
     for(let i=0;i<14;i++){
       const x=-28+i*4.2;
-      if(Math.abs(x)<3||Math.abs(x-9)<2) continue;
-      add(3.5,.12,1.2,x,.12,9.4,0xd5eeea);
+      if(Math.abs(x-d)<3||Math.abs(x-(d+side*9))<2) continue;
+      add(3.5,.12,.8,x,.12,10.6,0xd5eeea);
     }
     // One paving stone per grid cell. Paths meet at shared EDGES, not
     // coplanar overlapping blocks (the old radial paths flickered at the plaza).
-    const paving=new Map();
-    for(const st of STALL_LAYOUT)for(let n=0;n<28;n++){
-      const t=n/27,x=Math.round(mix(0,st.x,t)/1.8),z=Math.round(mix(13,st.z-3.4,t)/1.8);
-      paving.set(x+','+z,[x*1.8,z*1.8]);
-    }
-    for(const [x,z]of paving.values())add(1.72,.08,1.72,x,1.005,z,zone.sand);
+    const paving=villagePathTiles(layout);
+    for(const {x,z}of paving)add(1.72,.08,1.72,x,1.005,z,zone.sand);
     // Signature plants, using only cuboids. Keep the central village clear.
     function tree(x,z,s=1){
       add(.55*s,3.7*s,.55*s,x,.95+1.85*s,z,0x715a43);
@@ -196,7 +200,7 @@ export function createWorld(scene){
       add(3.8*s,.03,3.8*s,x,.98,z,zone.theme==='ice'?0xc5dddf:zone.theme==='lunar'?0x6c6a91:0x628c63);
       block(x,z,.65*s,.95+6.6*s);
     }
-    [[-23,23,1.2],[-25,38,1.5],[-18,49,1.35],[-8,53,1.6],[10,52,1.6],[22,46,1.2],[25,35,1.1],[25,18,1]].forEach(v=>tree(...v));
+    layout.trees.forEach(t=>tree(t.x,t.z,t.size));
     // Cubic grasses, mushrooms / coral / crystals around the edges.
     let seed=77+zone.id*100;
     const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
@@ -208,17 +212,18 @@ export function createWorld(scene){
       if(i%4===0) add(.5,.16,.5,x,1+h,z,c);
     }
     // Village lanterns and resting spots.
-    for(const [x,z] of [[-3.5,14],[4,26],[-12,34],[12,35],[6,45]]){
+    for(const {x,z} of layout.lamps.filter(p=>paving.every(t=>Math.hypot(p.x-t.x,p.z-t.z)>1.15))){
+      block(x,z,.35,4.3);
       add(.18,2.8,.18,x,2.3,z,0x4c6262); glow(.65,.65,.65,x,3.8,z,0xffdfa0); add(.85,.16,.85,x,4.2,z,0x3e5961);
       add(.6,.16,.6,x,1,z,0x657575);
     }
-    for(const x of [-5,5]){ add(2.5,.25,.8,x,1.55,32,0xa58863); add(2.5,.75,.15,x,2,32.4,0xa58863); for(const dx of [-.85,.85]) add(.18,.65,.6,x+dx,1.25,32,0x5b665f); }
+    {const {x,z}=layout.bench;if(stallLayout.every(st=>Math.hypot(st.x-x,st.z-z)>6)&&paving.every(t=>Math.hypot(t.x-x,t.z-z)>2.3)){block(x,z,1.4,2.4);add(2.5,.25,.8,x,1.55,z,0xa58863);add(2.5,.75,.15,x,2,z+.4,0xa58863);for(const dx of [-.85,.85])add(.18,.65,.6,x+dx,1.25,z,0x5b665f);}}
     // Dock props, all collidable where appropriate.
-    add(.75,.6,.7,-1.4,1.45,8,0x6f9ca3); add(.8,.14,.75,-1.4,1.81,8,0xe4e7cd); block(-1.4,8,.6,1.9);
-    add(.6,.5,.6,1.5,1.4,6.8,0xcc8d65); block(1.5,6.8,.55,1.7);
+    add(.75,.6,.7,d-1.4,1.45,8,0x6f9ca3); add(.8,.14,.75,d-1.4,1.81,8,0xe4e7cd); block(d-1.4,8,.6,1.9);
+    add(.6,.5,.6,d+1.5,1.4,6.8,0xcc8d65); block(d+1.5,6.8,.55,1.7);
 
     // A distinct silhouette for every island, visible from its fishing pier.
-    const landmarkStart=S.length,colliderStart=colliders.length;
+    const landmarkStart=S.length,colliderStart=localColliders.length,glowStart=glows.length,childStart=group.children.length;
     if(zone.theme==='harbor'){
       block(-22,6,2.8,15.8);
       for(let j=0;j<5;j++) add(3.6-j*.35,2.2,3.6-j*.35,-22,2+j*2.1,6,j%2?0xc47765:0xf1e5ce);
@@ -317,21 +322,28 @@ export function createWorld(scene){
         const dx=b.x+21.5,dz=b.z-6;
         b.x=-21.5+dz;b.z=6-dx;[b.w,b.d]=[b.d,b.w];
       }
-      for(const b of colliders.slice(colliderStart)){
-        const dx=b.x-zone.x+21.5,dz=b.z-zone.z-6;
-        b.x=zone.x-21.5+dz;b.z=zone.z+6-dx;
+      for(const b of localColliders.slice(colliderStart)){
+        const dx=b.x+21.5,dz=b.z-6;
+        b.x=-21.5+dz;b.z=6-dx;
       }
+    }
+    // Landmarks and their water obstacles switch sides with the actual berth.
+    // Reflect the canonical landmark, not its color alone.
+    if(layout.landmarkMirror<0){
+      for(const b of [...S.slice(landmarkStart),...glows.slice(glowStart)]){b.x=-b.x;if(b.rz)b.rz=-b.rz;if(b.ry)b.ry=-b.ry;}
+      for(const b of localColliders.slice(colliderStart))b.x=-b.x;
+      for(const child of group.children.slice(childStart)){child.position.x=-child.position.x;child.rotation.y=-child.rotation.y;}
     }
     // Distinct ridge behind each village, stepped instead of polygonal terrain.
     for(let k=0;k<4;k++){
-      const x=-22+k*14,h=5+(k%3)*2;
+      const x=-22+k*14+((zone.id+k)%3-1),h=4+((zone.id+k*2)%4)*1.7;
       add(13,h,11,x,.8+h/2,54,zone.rock);
       add(10,h*.65,8,x,.8+h*1.3,54,zone.land);
       add(6,h*.3,5,x,.8+h*1.72,54,zone.theme==='ice'?0xf2f6ef:zone.land);
       block(x,53,5.6,.8+h*1.9);
     }
     // Stalls, merchandise and friendly cube vendors. Separate stock, no tabs of remote purchases.
-    for(const st of STALL_LAYOUT){
+    for(const st of stallLayout){
       const x=st.x,z=st.z,base=1;
       const color=zone.theme==='lunar'?0x9f95c0:zone.theme==='volcanic'?0xa88170:st.color;
       add(4.5,1.05,1.5,x,base+.525,z,0x846b50);add(4.8,.2,1.8,x,base+1.12,z,0xd1b58a);
@@ -379,16 +391,17 @@ export function createWorld(scene){
       if(st.kind==='port'){add(.55,.18,.95,x-1.1,base+1.35,z-.1,0x759b9e);add(.05,.6,.05,x-1.1,base+1.7,z-.1,0xe4d5ad);add(.3,.25,.08,x-.95,base+1.8,z-.1,0xe9c476);}
       group.add(label(st.banner,x,base+2.95,z-1.83,4.9,.65));
       block(x,z,2.7,4.5);
-      stalls.push({...st,zone:zone.id,x:x+zone.x,z:z+zone.z});
+      stalls.push({...st,zone:zone.id,...islandToWorld(zone,x,z),approach:islandToWorld(zone,x,z-3.8),yaw:layout.yaw});
     }
-    add(.2,2,.2,-4.1,2,11,0x62716a);
-    group.add(label(zone.name.toUpperCase(),-4.1,3.1,11,5,.65));
+    add(.2,2,.2,d-4.1,2,11,0x62716a);
+    group.add(label(zone.name.toUpperCase(),d-4.1,3.1,11,5,.65));
     group.add(mergeBoxes(S));
     if(glows.length)group.add(mergeBoxes(glows,true));
     islands.push(group);
+    colliders.push(...localColliders.map(b=>({...b,...islandToWorld(zone,b.x,b.z)})));
     // Distant islands retain their skyline without drawing every item in a stall.
     const distant=mergeBoxes(S.filter(b=>b.w>=7||(b.h>=2.5&&b.w>=1.2)));
-    distant.position.copy(group.position);root.add(distant);distantIslands.push(distant);
+    distant.position.copy(group.position);distant.rotation.copy(group.rotation);root.add(distant);distantIslands.push(distant);
   }
 
   // Clouds and birds stay around the camera, not the old origin.
@@ -417,13 +430,10 @@ export function createWorld(scene){
   function surfaceAt(x,z,onlyZone=null){
     for(const i of ISLANDS){
       if(onlyZone!==null&&onlyZone!==i.id)continue;
-      const lx=x-i.x,lz=z-i.z;
-      for(const f of [...i.landforms,...i.waterObstacles])if(Math.abs(lx-f.x)<=f.w/2&&Math.abs(lz-f.z)<=f.d/2)return f.h-.8;
-      if((Math.abs(lx)<=2.45&&lz>=-2.5&&lz<=13.6)||(Math.abs(lx-9)<=1.7&&lz>=.5&&lz<=13.6)||(lx>=-1.5&&lx<=10.5&&lz>=10.3&&lz<=12.9)) return 1.15;
-      if(lx>=-27&&lx<=-17&&lz>=1&&lz<=17)return .95;
-      if(lx>=-28&&lx<=-16&&lz>=-2&&lz<=18)return .5;
-      if(Math.abs(lx)<=27&&lz>=13&&lz<=56)return .95;
-      if(Math.abs(lx)<=30&&lz>=10&&lz<=58)return .5;
+      const p=worldToIsland(i,x,z);
+      if(Math.abs(p.x)>110||Math.abs(p.z)>110)continue;
+      const matches=surfaces[i.id].filter(r=>p.x>=r.minX&&p.x<=r.maxX&&p.z>=r.minZ&&p.z<=r.maxZ);
+      if(matches.length)return Math.max(...matches.map(r=>r.height));
     }
     return null;
   }
@@ -435,10 +445,11 @@ export function createWorld(scene){
   }
   function inWater(p){ return p.x>SEA_BOUNDS.minX&&p.x<SEA_BOUNDS.maxX&&p.z>SEA_BOUNDS.minZ&&p.z<SEA_BOUNDS.maxZ&&surfaceAt(p.x,p.z)===null; }
   const tempColor=new THREE.Color();
-  function update(time,dt,zone,camera,aboard){
+  function update(time,dt,zone,camera,aboard,boatPosition=null){
     const i=ISLANDS[zone];
     waterUniforms.uTime.value=time;
     sky.position.copy(camera.position);
+    clouds.position.set(camera.position.x,0,camera.position.z+250);
     sun.position.set(camera.position.x+120,120,camera.position.z-250);
     tempColor.setHex(i.water);waterUniforms.uLight.value.lerp(tempColor,Math.min(1,dt*1.2));
     tempColor.multiplyScalar(.65);waterUniforms.uDeep.value.lerp(tempColor,Math.min(1,dt*1.2));
@@ -447,12 +458,12 @@ export function createWorld(scene){
     sky.material.uniforms.uBottom.value.lerp(tempColor,Math.min(1,dt*1.2));
     tempColor.multiplyScalar(.73);sky.material.uniforms.uTop.value.lerp(tempColor,Math.min(1,dt*1.2));
     islands.forEach((g,n)=>{
-      const distance=Math.hypot(camera.position.x-g.position.x,camera.position.z-g.position.z-20);
-      g.visible=distance<145;distantIslands[n].visible=!g.visible&&distance<450;
+      const center=territoryCenter(ISLANDS[n]),distance=Math.hypot(camera.position.x-center.x,camera.position.z-center.z);
+      g.visible=distance<160;distantIslands[n].visible=!g.visible&&distance<950;
       if(g.visible&&g.userData.wheel)g.userData.wheel.rotation.z=time*.22;
     });
     birds.forEach((b,n)=>{const a=time*.12+n*1.5;b.g.position.set(i.x+Math.cos(a)*25,13+n*2+Math.sin(time+n)*.5,i.z+Math.sin(a)*26);b.g.rotation.y=-a;b.left.rotation.z=Math.sin(time*6+n)*.35;b.right.rotation.z=-b.left.rotation.z;});
-    if(!aboard){boat.position.copy(dockPoint(zone));boat.position.y+=Math.sin(time*1.6)*.05;boat.rotation.set(0,0,Math.sin(time)*.015);}
+    if(!aboard){const p=boatPosition||dockPoint(zone);boat.position.set(p.x,.1+Math.sin(time*1.6)*.05,p.z);boat.rotation.set(0,p.yaw??ISLANDS[zone].layout.yaw,Math.sin(time)*.015);}
     motes.visible=['storm','ice','fjord','volcanic','vents','celestial','void','lunar','time','origin'].includes(i.theme);
     if(motes.visible){
       motes.material.color.setHex(['ice','fjord','storm'].includes(i.theme)?0xe9f7ff:['volcanic','vents'].includes(i.theme)?0xffbb7a:0xc9d8ff);

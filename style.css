@@ -344,7 +344,7 @@ button:disabled{cursor:not-allowed}.primary-btn:disabled{background:#c8d1ca;colo
 .reel-ui{border-width:2px;background:#f7f3e8;box-shadow:5px 5px #193d4555}.reel-head{font:bold 13px 'Courier New',monospace}.reel-hint{font-size:10px;font-weight:500}.reel-warn{font:700 10px 'Courier New',monospace}.bar-wrap label{font:700 8px 'Courier New',monospace}
 /* Sea chart + boat yard */
 .expedition-card{width:min(1000px,96vw);max-height:92vh;background:var(--panel);border:2px solid var(--ink);box-shadow:8px 8px #0c283b55;display:flex;flex-direction:column;overflow:hidden}.expedition-tabs{display:flex;border-bottom:1px solid #b7c6b9;flex-shrink:0}.expedition-tabs .tab{flex:0 0 auto;min-width:145px;padding:13px 24px}.expedition-tabs .tab span{margin-left:10px;font-weight:400;font-size:10px}
-.chart-layout{display:grid;grid-template-columns:1.5fr 1fr;min-height:0;overflow-y:auto;overscroll-behavior:contain}.sea-chart{position:relative;min-height:510px;overflow:hidden;background-color:#d5e5dc;background-image:linear-gradient(#84aaa526 1px,transparent 1px),linear-gradient(90deg,#84aaa526 1px,transparent 1px);background-size:32px 32px;border-right:1px solid #adbfaf}.chart-route{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.chart-caption{position:absolute;left:22px;top:21px;display:grid;gap:6px}.chart-caption b{font:bold 12px 'Courier New',monospace;letter-spacing:2px}.chart-caption span{font:7px 'Courier New',monospace;letter-spacing:1px;color:#648b82}.chart-north{position:absolute;right:25px;top:24px;text-align:center;font:18px 'Courier New',monospace;color:#557b71}.chart-ocean{position:absolute;right:24px;bottom:24px;font:9px 'Courier New',monospace;letter-spacing:3px;writing-mode:vertical-rl;color:#72958a}
+.chart-layout{display:grid;grid-template-columns:1.5fr 1fr;min-height:0;overflow-y:auto;overscroll-behavior:contain}.sea-chart{position:relative;min-height:510px;overflow:hidden;background-color:#d5e5dc;background-image:radial-gradient(ellipse at 70% 35%,#eff2da77,transparent 65%);border-right:1px solid #adbfaf}.chart-route{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.chart-caption{position:absolute;left:22px;top:21px;display:grid;gap:6px}.chart-caption b{font:bold 12px 'Courier New',monospace;letter-spacing:2px}.chart-caption span{font:7px 'Courier New',monospace;letter-spacing:1px;color:#648b82}.chart-north{position:absolute;right:25px;top:24px;text-align:center;font:18px 'Courier New',monospace;color:#557b71}.chart-ocean{position:absolute;right:24px;bottom:24px;font:9px 'Courier New',monospace;letter-spacing:3px;writing-mode:vertical-rl;color:#72958a}
 .map-island{position:absolute;transform:translate(-50%,-50%);width:130px;min-height:108px;background:none;border:0;cursor:pointer;color:var(--ink);display:flex;align-items:center;flex-direction:column;justify-content:center;padding:0 4px}.map-island svg{width:86px;height:67px;transition:transform .15s}.map-island b{font:bold 12px 'Courier New',monospace;background:#eaf0dd;padding:3px 6px;white-space:nowrap;border:1px solid transparent}.map-island span{font:7px 'Courier New',monospace;letter-spacing:.7px;display:block;white-space:nowrap;margin-top:5px;color:#567c70}.map-island.current b{background:#294d49;color:#f5edce}.map-island.current span{font-weight:700}.map-island.locked svg{opacity:.5;filter:saturate(.45)}.map-island.selected b{border-color:#477e6d;box-shadow:2px 2px #477e6d33}.map-island:hover svg{transform:translateY(-4px)}
 .destination-detail{min-width:0;background:#faf6e9;display:flex;flex-direction:column}.destination-art{height:145px;display:grid;place-items:center;position:relative;background:linear-gradient(0deg,#dbe5d4 25%,transparent 25%),linear-gradient(135deg,#e7eadb,#f1eddd);overflow:hidden;border-bottom:1px solid #d5ddc9}.destination-art svg{width:163px;height:126px}.destination-art>span{position:absolute;left:20px;bottom:13px;font:8px 'Courier New',monospace;letter-spacing:1.7px;color:#74887b}.destination-copy{padding:22px;display:flex;flex-direction:column;flex:1}.destination-copy h3{font:bold 25px/1.1 'Courier New',monospace;letter-spacing:-.8px;margin:5px 0 11px}.destination-copy>p{font-size:11px;line-height:1.7;color:var(--ink-soft)}.destination-copy dl{display:grid;gap:10px;margin:20px 0 16px}.destination-copy dl>div{display:flex;justify-content:space-between;gap:14px;border-bottom:1px solid #dcdcca;padding-bottom:9px}.destination-copy dt{font:8px 'Courier New',monospace;letter-spacing:1.2px;color:#6f857c}.destination-copy dd{font-size:10px;text-align:right}.destination-copy .destination-requirement{font-size:10px;line-height:1.5;margin-top:auto;margin-bottom:14px;color:#497966}.destination-copy .destination-requirement.blocked{color:#a16d50}.destination-copy .primary-btn{width:100%;font-size:12px}.expedition-foot{display:flex;justify-content:space-between;gap:12px;font:9px/1.4 'Courier New',monospace;color:var(--ink-soft);padding:12px 20px;border-top:1px solid #b7c6b9;flex-shrink:0;background:#e9e9d8}
 .fleet-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:20px;overflow-y:auto;overscroll-behavior:contain;min-height:0}.boat-card{border:1px solid #bac9b7;background:#f6f1df}.boat-card.equipped{border:2px solid #517d69}.boat-art{height:100px;position:relative;background:#e4eadb}.boat-art svg{display:block;margin:auto;width:165px;height:100px}.boat-art>span{position:absolute;top:10px;left:10px;font:7px 'Courier New',monospace;letter-spacing:1px;color:#8a9c8b}.boat-copy{padding:14px}.boat-copy h3{font:bold 15px 'Courier New',monospace;margin:6px 0 8px}.boat-copy p{font-size:10px;line-height:1.6;color:var(--ink-soft);min-height:32px}.boat-copy .eyebrow{font-size:8px;letter-spacing:1px}.boat-specs{display:flex;justify-content:space-between;font:8px 'Courier New',monospace;color:#7a8d7e;letter-spacing:.5px;padding:14px 0}.boat-copy .buy-btn{width:100%;font-size:9px;padding:11px 6px}
@@ -444,21 +444,31 @@ button:disabled{cursor:not-allowed}.primary-btn:disabled{background:#c8d1ca;colo
 .minimap-button small{font:8px 'Courier New',monospace;letter-spacing:1px;display:block;margin:3px 2px;color:#c4d8d6}
 .shore-luck{position:absolute;bottom:58px;left:50%;transform:translateX(-50%);font:700 9px 'Courier New',monospace;letter-spacing:.5px;padding:7px 10px;background:#fff1d9e8;border:1px solid #c09b74;color:#815344;white-space:nowrap;pointer-events:none}
 .shore-luck.offshore{color:#2a6d5e;border-color:#6d9e89;background:#e8f1dce8}
-.board-boat{position:absolute;bottom:166px;left:50%;transform:translateX(-50%);background:#234d53;color:#f7e9cb;border:2px solid #e7cea2;padding:12px 20px;font:bold 13px 'Courier New',monospace;pointer-events:auto;cursor:pointer}
-.boat-controls{position:absolute;bottom:94px;left:50%;transform:translateX(-50%);display:flex;gap:8px;pointer-events:auto}
+.nav-btn.board-boat{background:#234d53;color:#f7e9cb;border-color:#e7cea2}.board-boat .nav-icon,.board-boat kbd{color:#e7cea2}.nav-btn.board-boat:disabled{opacity:.55;cursor:not-allowed}
+.boat-controls{position:absolute;bottom:140px;left:50%;transform:translateX(-50%);display:flex;gap:8px;pointer-events:auto}
 .boat-controls button{border:2px solid #23434c;background:#eddfc0;color:#23434c;padding:11px 15px;font:bold 11px 'Courier New',monospace;cursor:pointer;white-space:nowrap}
 .boat-controls button:disabled{opacity:.7;cursor:default}
 .boat-readout{position:absolute;right:22px;bottom:72px;display:grid;gap:5px;text-align:right;color:#f8efda;background:#193d45df;padding:10px 12px;border:1px solid #b0c6bc;font:10px 'Courier New',monospace}
 .boat-readout b{font-size:17px}
 .arrival-banner{top:18%;left:50%;pointer-events:none;max-width:90vw;min-width:270px;background:#152e3edb;color:#faf0cf;border:1px solid #e5d9b2}
 .arrival-banner p,.arrival-banner .eyebrow{color:#c8d7cf}
-.chart-layout{grid-template-columns:minmax(0,1.7fr) minmax(240px,1fr)}
-.sea-chart{min-height:680px;aspect-ratio:1180/1440}
-.map-island{width:23%;min-height:78px;gap:0}
-.map-island svg{width:58px;height:45px}
-.map-island b{font-size:9px;white-space:normal;max-width:100%;text-align:center;line-height:1.15}
-.map-island span{font-size:6px;letter-spacing:0}
+/* Numbered markers keep all twenty irregular destinations selectable. Names
+   appear on hover/focus/selection and in the detail panel, not over neighbors. */
+.chart-layout{grid-template-columns:minmax(0,1.65fr) minmax(270px,1fr);min-height:0}
+.sea-chart{height:max(500px,calc(92dvh - 175px));min-height:500px;aspect-ratio:auto}
+.map-island{width:44px;height:44px;min-height:44px;gap:0;padding:0;border:1px solid transparent;background:#e4ecda99}
+.map-island svg{width:32px;height:25px;flex-shrink:0}
+.map-island b{font:bold 9px 'Courier New',monospace;line-height:12px;padding:0 5px;max-width:100%;white-space:normal;text-align:center}
+.map-island .map-label{display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin:0 0 4px;padding:4px 6px;max-width:120px;font:700 9px/1.3 'Courier New',monospace;letter-spacing:0;color:#264d4b;background:#f7f0da;border:1px solid #79998a;white-space:normal;pointer-events:none}
+.map-island:is(:hover,:focus-visible,.selected){z-index:3;border-color:#5f8b79;background:#edf1df}
+.map-island:is(:hover,:focus-visible,.selected) .map-label{display:block}
+.map-island:hover svg{transform:none}
+.map-island.current{border-color:#294d49}
+.map-island.current b{background:#294d49;color:#f5edce}
+.map-island.locked b{color:#8b6555;background:#e5d9c4}
+.map-island.selected b{border:0;box-shadow:none}
 .chart-caption{left:12px;top:12px}.chart-caption b{font-size:10px;letter-spacing:1px}.chart-caption span{font-size:6px}
+.chart-key{position:absolute;bottom:12px;left:12px;font:8px/1.6 'Courier New',monospace;color:#476b65;pointer-events:none}
 .chart-ocean{display:none}
 .index-islands{flex-wrap:nowrap;overflow-x:auto;flex-shrink:0;scrollbar-width:thin;padding-bottom:12px;max-width:100%}
 .island-filter{flex-shrink:0}
@@ -474,10 +484,33 @@ button:disabled{cursor:not-allowed}.primary-btn:disabled{background:#c8d1ca;colo
  .minimap-button{width:118px;left:12px;bottom:48px;padding:4px}.minimap-button canvas{width:106px;height:106px}.minimap-button span{font-size:8px}.minimap-button small{font-size:6px}
  .boat-readout{right:12px;bottom:86px;font-size:8px;padding:7px}.boat-readout b{font-size:13px}.boat-readout span{display:none}
  .shore-luck{bottom:48px;left:auto;right:12px;transform:none;font-size:7px;max-width:60vw;white-space:normal;text-align:right}
- .boat-controls{bottom:130px;left:auto;right:12px;transform:none;display:grid;gap:5px}.boat-controls button{font-size:9px;padding:10px}.board-boat{bottom:172px;font-size:11px}
- .stick{bottom:222px}.sea-chart{min-height:600px}.map-island{min-height:70px}.map-island svg{width:49px;height:38px}.map-island b{font-size:8px}.map-island span{font-size:5px}
+ .boat-controls{bottom:130px;left:auto;right:12px;transform:none;display:grid;gap:5px}.boat-controls button{font-size:9px;padding:10px}
+ .stick{bottom:222px}.sea-chart{height:480px;min-height:480px}.map-island{min-height:44px}
  .chart-layout{display:block}.destination-copy{padding:14px}.arrival-banner{top:32%;min-width:240px}.arrival-banner h2{font-size:22px}
 }
-@media(max-height:590px){.minimap-button{bottom:43px;width:98px}.minimap-button canvas{width:86px;height:86px}.minimap-button span{font-size:7px}.minimap-button small{display:none}.boat-controls{bottom:96px}.boat-readout{bottom:60px}.shore-luck{bottom:42px}.stick{bottom:102px}.sea-chart{min-height:600px}.arrival-banner{top:32%}}
-@media(min-width:761px){.sea-chart{aspect-ratio:auto;height:100%;min-height:540px}.chart-layout{min-height:540px}.destination-art{height:110px;flex-shrink:0}.destination-copy{padding:16px}.destination-copy dl{gap:7px;margin:12px 0}.destination-copy .destination-requirement{margin-top:12px}.map-island svg{width:47px;height:36px}.map-island{min-height:68px}.chart-north{font-size:12px}}
+@media(max-height:590px){.minimap-button{bottom:43px;width:98px}.minimap-button canvas{width:86px;height:86px}.minimap-button span{font-size:7px}.minimap-button small{display:none}.boat-controls{bottom:96px}.boat-readout{bottom:60px}.shore-luck{bottom:42px}.stick{bottom:102px}.sea-chart{height:500px;min-height:500px}.arrival-banner{top:32%}}
+@media(min-width:761px){.destination-art{height:110px;flex-shrink:0}.destination-copy{padding:16px}.destination-copy dl{gap:7px;margin:12px 0}.destination-copy .destination-requirement{margin-top:12px}.chart-north{font-size:12px}}
+/* Short landscape keeps map/joystick on the left and contextual actions right. */
+@media(max-height:590px){
+ .hud-actions{width:154px;top:72px;gap:3px}.nav-btn{min-height:29px;padding:4px 7px;font-size:9px}.nav-icon{font-size:14px}.nav-icon svg{width:15px;height:15px}
+ .minimap-button{left:126px;bottom:43px}.stick{left:12px;bottom:43px;width:94px;height:94px}
+ .location-card{width:181px;padding:8px 10px}.location-card h2{font-size:17px}
+ .carrying-fish .shop-btn{bottom:89px}.shop-btn{left:auto;right:12px;transform:none;bottom:90px;max-width:calc(100vw - 245px)}
+ .held-fish-bar{left:auto;right:12px;transform:none;bottom:43px;max-width:calc(100vw - 255px);width:max-content}.held-fish-bar>p{font-size:9px}
+ .boat-controls{left:auto;right:12px;transform:none;bottom:96px;display:grid;gap:4px}.boat-controls button{font-size:9px;padding:8px 10px}
+ .boat-readout{right:12px;bottom:60px;padding:5px 8px;font-size:8px}.boat-readout b{font-size:12px}.boat-readout span{display:none}
+ .shore-luck{left:auto;right:12px;transform:none;bottom:26px;font-size:7px}
+}
+
 .chart-you{position:absolute;transform:translate(-50%,-50%);color:#fff3bb;background:#28535c;border:1px solid #e0cc8e;border-radius:50%;font-size:12px;line-height:18px;width:18px;height:18px;text-align:center;pointer-events:none;box-shadow:0 0 0 3px #f4df8c44}
+
+.chart-boat{position:absolute;transform:translate(-50%,-50%);font:bold 10px/16px 'Courier New',monospace;width:16px;height:16px;text-align:center;color:#453e29;background:#e7b76e;border:1px solid #5e634d;pointer-events:none;z-index:2}
+.chart-you{z-index:2}
+
+@media(min-width:761px){.carrying-fish .boat-controls{bottom:150px}}
+@media(max-width:760px) and (min-height:591px){
+ .prompt{left:auto;right:12px;bottom:86px;transform:none;max-width:calc(100vw - 152px);width:max-content;white-space:normal;line-height:1.5;text-align:center;padding:8px 10px;font-size:9px}
+ .carrying-fish .boat-controls{bottom:166px}
+}
+@media(pointer:coarse){.nav-btn.board-boat{min-height:44px}}
+@media(max-height:590px){.equipment-strip{bottom:7px}.shore-luck{bottom:32px}}

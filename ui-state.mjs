@@ -24,7 +24,8 @@ export function contextualHint({state,blocked=false,holding=false,nearVendor=fal
 }
 export const HELP_CONTROLS = Object.freeze([
   {action:'Walk / jog',desktop:'WASD or arrows · Shift to jog',touch:'Drag the on-screen joystick'},
-  {action:'Boat / stop & fish',desktop:'Board at a dock · WASD steer · Q stop / helm · E dock',touch:'Board boat · joystick steer · Stop & fish · Dock'},
+  {action:'Board / return to boat',desktop:'R or Board boat · returns to your own boat from anywhere',touch:'Board boat / Return to boat on the HUD'},
+  {action:'Boat / stop & fish',desktop:'WASD steer · Q stop / helm · E dock',touch:'Joystick steer · Stop & fish · Dock'},
   {action:'Look around',desktop:'Mouse · click to capture, or drag',touch:'Drag the scene'},
   {action:'Cast',desktop:'Hold click or Space, then release',touch:'Hold still, then release'},
   {action:'Hook a bite',desktop:'Click or Space when the bite appears',touch:'Tap when the bite appears'},

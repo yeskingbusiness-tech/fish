@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SPECIES } from '../game-data.mjs';
-import { heldFishSpan, heldFishLayout, firstPersonFishPose, frontViewPose } from '../player-view.mjs';
+import { boatViewPose, heldFishSpan, heldFishLayout, firstPersonFishPose, frontViewPose } from '../player-view.mjs';
 
 const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-9,`${a} != ${b}`);
 
@@ -158,4 +158,16 @@ test('portrait framing leaves space for mobile HUD while retaining the same play
   assert.ok(phone.targetY>wide.targetY);
   close((phone.x-state.x)/phone.distance,(wide.x-state.x)/wide.distance);
   close((phone.z-state.z)/phone.distance,(wide.z-state.z)/wide.distance);
+});
+
+
+test('helm camera sits just above every hull/canopy and looks far forward, not down at the boat',()=>{
+ for(const size of [.85,1,1.16,1.32,1.5,1.7,1.9,2.15])for(const aspect of [16/9,390/844,844/390])for(let angle=0;angle<360;angle+=15){
+  const state={x:-780,z:-3400,yaw:angle*Math.PI/180,size,aspect},before={...state},p=boatViewPose(state),fx=-Math.sin(state.yaw),fz=-Math.cos(state.yaw);
+  assert.ok((p.x-state.x)*fx+(p.z-state.z)*fz< -10,'camera stays behind the stern');
+  assert.ok((p.targetX-state.x)*fx+(p.targetZ-state.z)*fz>18,'target is beyond the bow, not the hull center');
+  assert.ok(p.y<6+1.9*size,'lower than the old overhead camera');assert.ok(p.y>3.6*size+.3,'clear the tallest canopy/chimney');
+  const pitch=Math.atan2(p.y-p.targetY,Math.hypot(p.x-p.targetX,p.z-p.targetZ));assert.ok(pitch>0&&pitch<7*Math.PI/180,'forward-looking horizon');
+  assert.ok(Object.values(p).every(Number.isFinite));assert.deepEqual(state,before);
+ }
 });

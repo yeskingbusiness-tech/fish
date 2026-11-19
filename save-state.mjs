@@ -1,8 +1,11 @@
-import { SPECIES, RODS, LINES, BAITS, roundWeight } from './game-data.mjs?v=41';
-import { BOATS, ISLANDS, xpForLevel, levelForXp, legacyCatchXP, hasIslandLicense, completedCollections } from './archipelago.mjs?v=41';
-import { LEGACY_V8_SPECIES } from './legacy-v8-data.mjs?v=41';
-import { ALL_CATCH_SPECIES, LEGACY_SPECIES, LEGACY_ISLAND_MAP, replacementFor } from './legacy-catalog.mjs?v=41';
-import { boatMoveBlock } from './navigation.mjs?v=41';
+import { SPECIES, RODS, LINES, BAITS, roundWeight } from './game-data.mjs?v=42';
+import { BOATS, ISLANDS, xpForLevel, levelForXp, legacyCatchXP, hasIslandLicense, completedCollections } from './archipelago.mjs?v=42';
+import { LEGACY_V8_SPECIES } from './legacy-v8-data.mjs?v=42';
+import { ALL_CATCH_SPECIES, LEGACY_SPECIES, LEGACY_ISLAND_MAP, replacementFor } from './legacy-catalog.mjs?v=42';
+import { validBoatPose, returnBoatPose, territoryAt } from './navigation.mjs?v=42';
+import { WORLD_LAYOUT_VERSION } from './island-data.mjs?v=42';
+import { V41_ISLAND_ANCHORS, validV41BoatPose } from './legacy-v41-world.mjs?v=42';
+import { islandToWorld } from './island-layout.mjs?v=42';
 export const SAVE_VERSION=9;
 export const SAVE_KEY='reel-deal-save-v9';
 export const LEGACY_KEYS=['reel-deal-save-v8','reel-deal-save-v7','reel-deal-save-v6','reel-life-3d-save-v6'];
@@ -49,6 +52,16 @@ export function migrateV8(d,legacyV6=false){
   return {...d,version:9,xp,zone,boat,ownedBoats:oldBoats,owned,gear,equipmentArchive,
     licenses:oldLicenses.map(i=>LEGACY_ISLAND_MAP[i]),visited:ids(d.visited,6).map(i=>LEGACY_ISLAND_MAP[i]),completedIslands:earned,discoveries,bag,log,best,sailing:null};
 }
+// v9 remains the collection schema; worldLayout versions position semantics.
+// Old v41 sailing coordinates use the frozen 4×5 grid, never the new chart.
+function restoreWorldPose(p,layoutVersion,zone,boat,licenses){
+  if(!p||!['x','z','yaw'].every(k=>Number.isFinite(p[k])))return null;
+  if(layoutVersion===WORLD_LAYOUT_VERSION)return {x:p.x,z:p.z,yaw:p.yaw};
+  if(layoutVersion!==undefined&&layoutVersion!==1)return null;
+  if(!validV41BoatPose(p,boat.size*4,licenses))return null;
+  const anchor=V41_ISLAND_ANCHORS[zone],localX=p.x-anchor.x,localZ=p.z-anchor.z,i=ISLANDS[zone];
+  return {...islandToWorld(i,localX,localZ),yaw:p.yaw+i.layout.yaw};
+}
 export function normalizeSave(raw={},legacyV6=false){
   let d=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
   if(legacyV6||integer(d.version)<9)d=migrateV8(d,legacyV6);
@@ -63,10 +76,16 @@ export function normalizeSave(raw={},legacyV6=false){
   for(const e of [...log,...bag])if(!best||e.weight>best.weight)best={id:e.sp.id,name:e.sp.name,weight:e.weight};
   const xp=integer(d.xp),licenses=ISLANDS.filter(i=>hasIslandLicense(i.id,xp,ids(d.licenses,ISLANDS.length))).map(i=>i.id);
   const ownedBoats=ids(d.ownedBoats,BOATS.length),boat=ownedBoats.includes(d.boat)?d.boat:0;
-  const wanted=Number.isInteger(d.zone)&&ISLANDS[d.zone]?d.zone:0,zone=hasIslandLicense(wanted,xp,licenses)?wanted:0;
+  const wanted=Number.isInteger(d.zone)&&ISLANDS[d.zone]?d.zone:0;
+  let zone=hasIslandLicense(wanted,xp,licenses)?wanted:0;
+  const access={xp,licenses},candidate=restoreWorldPose(d.sailing,d.worldLayout,zone,BOATS[boat],licenses);
+  // Old water can become new land when a berth switches sides. Keep a valid
+  // old sailor aboard at the new berth rather than stranding them in a shop.
+  const sailing=validBoatPose(candidate,BOATS[boat],access)?candidate:candidate&&d.worldLayout!==WORLD_LAYOUT_VERSION?returnBoatPose(null,zone,BOATS[boat],access):null;
+  if(sailing)zone=territoryAt(sailing.x,sailing.z)??zone;
+  const boatPosition=returnBoatPose(sailing||restoreWorldPose(d.boatPosition,d.worldLayout,zone,BOATS[boat],licenses),zone,BOATS[boat],access);
   const visited=ids(d.visited,ISLANDS.length).filter(i=>licenses.includes(i));if(!visited.includes(zone))visited.push(zone);
-  const sailing=d.sailing&&['x','z','yaw'].every(k=>Number.isFinite(d.sailing[k]))&&!boatMoveBlock(d.sailing,d.sailing,{xp,licenses,radius:BOATS[boat].size*4})?{x:d.sailing.x,z:d.sailing.z,yaw:d.sailing.yaw}:null;
   const equipmentArchive={};for(const kind of ['rod','line','bait'])equipmentArchive[kind]=Array.isArray(d.equipmentArchive?.[kind])?[...new Set(d.equipmentArchive[kind].filter(n=>Number.isInteger(n)&&n>=0&&n<24))].sort((a,b)=>a-b):[];
-  return {version:9,score:integer(d.score),caught:Math.max(integer(d.caught),log.length,bag.length),coins:integer(d.coins),xp,licenses,zone,visited,owned,gear,boat,ownedBoats,discoveries,completedIslands:completedCollections(discoveries,d.completedIslands),equipmentArchive,best,bag,log:log.slice(0,200),sailing};
+  return {version:9,score:integer(d.score),caught:Math.max(integer(d.caught),log.length,bag.length),coins:integer(d.coins),xp,licenses,zone,visited,owned,gear,boat,ownedBoats,discoveries,completedIslands:completedCollections(discoveries,d.completedIslands),equipmentArchive,best,bag,log:log.slice(0,200),worldLayout:WORLD_LAYOUT_VERSION,boatPosition,sailing};
 }
 export { encode as encodeFish };

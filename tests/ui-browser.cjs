@@ -14,7 +14,8 @@ module.exports=async function testUI(browser,url,shots){
   }
   async function seed(page){
     await page.evaluate(()=>{
-      const a=__reelDeal,bag=[{n:'Bluegill',w:'1.2'},{n:'Rainbow Trout',w:'3.6'}];
+      const a=__reelDeal; a.G.state='menu'; // Fixture replacement must not be overwritten by pagehide autosave.
+      const bag=[{n:'Bluegill',w:'1.2'},{n:'Rainbow Trout',w:'3.6'}];
       localStorage.setItem('reel-deal-save-v9',JSON.stringify({version:9,coins:1234,xp:a.xpForLevel(90),caught:1234,
         best:{name:'Rainbow Trout',weight:'3.6'},bag,log:bag,zone:0,boat:5,ownedBoats:[0,5],licenses:[0,1,2,3,4,5],
         owned:{rod:[0,3,7],line:[0,3,7],bait:[0,3,7]},gear:{rod:3,line:3,bait:3}}));
@@ -29,7 +30,7 @@ module.exports=async function testUI(browser,url,shots){
     await page.waitForFunction(time=>__reelDeal.G.time>time,time);
   }
   async function vendor(page,kind){
-    const time=await page.evaluate(kind=>{const a=__reelDeal,s=a.world.stalls.find(s=>s.zone===a.G.zone&&s.kind===kind);a.G.px=s.x;a.G.pz=s.z-3.8;return a.G.time;},kind);
+    const time=await page.evaluate(kind=>{const a=__reelDeal,s=a.world.stalls.find(s=>s.zone===a.G.zone&&s.kind===kind);a.G.px=s.approach.x;a.G.pz=s.approach.z;return a.G.time;},kind);
     await page.waitForFunction(time=>__reelDeal.G.time>time,time);
   }
   const fits=el=>{const r=el.getBoundingClientRect();return r.left>=0&&r.top>=0&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1&&el.scrollWidth<=el.clientWidth+1;};
@@ -41,7 +42,7 @@ module.exports=async function testUI(browser,url,shots){
     assert.equal(await page.locator('#coinCount').isVisible(),true);assert.equal(await page.locator('#xpText').isVisible(),true);
     assert.equal(await page.locator('#bagBtn').count(),1);
     // Existing island panel and navigation retain their layout and entry points.
-    assert.deepEqual(await page.locator('.hud-actions button').evaluateAll(es=>es.map(e=>e.id)),['mapBtn','indexBtn','bagBtn','viewBtn']);
+    assert.deepEqual(await page.locator('.hud-actions button').evaluateAll(es=>es.map(e=>e.id)),['boardBoatBtn','mapBtn','indexBtn','bagBtn','viewBtn']);
     assert.deepEqual(await page.locator('.location-card').evaluate(e=>{const r=e.getBoundingClientRect();return[r.left,r.top,r.width];}),[20,100,236]);
     await page.keyboard.press('b');assert.equal(await page.locator('#bagOverlay').isVisible(),true);
     assert.match(await page.locator('#bagBody').textContent(),/No fish in your bag yet/);
@@ -112,7 +113,7 @@ module.exports=async function testUI(browser,url,shots){
     await page.locator('#helpBody').focus();
     const helpPosition=await page.evaluate(()=>[__reelDeal.G.px,__reelDeal.G.pz,__reelDeal.G.thirdPerson,__reelDeal.heldCatch.sp.name]);
     await page.keyboard.down('w');await page.waitForTimeout(100);await page.keyboard.up('w');
-    for(const key of ['Space','b','i','m','f','v','x','h','e'])await page.keyboard.press(key);
+    for(const key of ['Space','b','i','m','f','v','x','h','e','r'])await page.keyboard.press(key);
     assert.deepEqual(await page.evaluate(()=>[__reelDeal.G.px,__reelDeal.G.pz,__reelDeal.G.thirdPerson,__reelDeal.heldCatch.sp.name]),helpPosition);
     assert.deepEqual(await page.evaluate(()=>[__reelDeal.G.state,__reelDeal.helpOpen,__reelDeal.bagOpen,__reelDeal.hudHidden]),['aim',true,false,false]);
     await page.locator('#helpClose').focus();await page.keyboard.press('Space');assert.equal(await page.locator('#helpOverlay').isVisible(),false);
@@ -128,7 +129,7 @@ module.exports=async function testUI(browser,url,shots){
     assert.equal(await page.evaluate(()=>__reelDeal.hudHidden),true);
     await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement.id),'restoreHudBtn');
     await page.keyboard.down('w');await page.waitForTimeout(100);await page.keyboard.up('w');
-    for(const key of ['b','i','m','f','v','x','?'])await page.keyboard.press(key);
+    for(const key of ['b','i','m','f','v','x','?','r'])await page.keyboard.press(key);
     await page.waitForFunction(()=>document.getElementById('hudRestoreHint').classList.contains('hidden'));
     assert.deepEqual(await page.evaluate(()=>[__reelDeal.G.thirdPerson,__reelDeal.heldCatch.sp.name,__reelDeal.carriedModel.uuid,__reelDeal.G.px,__reelDeal.G.pz,__reelDeal.G.yaw]),cosmetic);
     assert.equal(await page.locator('#toast').isVisible(),false);await capture(page,'ui-hidden-desktop');
@@ -181,7 +182,7 @@ module.exports=async function testUI(browser,url,shots){
     await vendor(page,'market');await page.keyboard.press('e');await page.click('#sellAll');await page.click('#marketClose');
     await page.click('#logBtn');assert.equal(await page.locator('#caughtCount').textContent(),'1,235');
     assert.equal(await page.locator('#bestFishName').textContent(),'Rainbow Trout');await page.click('#closeLog');
-    await vendor(page,'port');await page.keyboard.press('e');await page.locator('[data-destination="1"]').click();await page.click('#waypointBtn');await page.click('#boardFromChart');
+    await vendor(page,'port');await page.keyboard.press('e');assert.equal(await page.locator('#fleetView').isVisible(),true);await page.click('#destinationsTab');await page.locator('[data-destination="1"]').click();await page.click('#waypointBtn');await page.click('#chartClose');await page.click('#boardBoatBtn');
     assert.deepEqual(await page.evaluate(()=>[__reelDeal.G.state,__reelDeal.G.onBoat,__reelDeal.G.boatMode]),['aim',true,'drive']);
     await page.click('#helpBtn');assert.equal(await page.locator('#helpOverlay').isVisible(),true);await page.click('#helpClose');
     await page.click('#hideHudBtn');
