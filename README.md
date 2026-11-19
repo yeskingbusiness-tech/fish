@@ -54,7 +54,7 @@ are retained, even for destinations not yet visited; only future unlocks use the
 | Sunrunner | 25 | Pinewater · 2,500c | 4,500c | Sunscar |
 | Frostbreaker | 45 | Sunscar · 17,000c | 22,500c | Frostfall |
 | Cinderwake | 65 | Frostfall · 70,000c | 130,000c | Emberforge |
-| Astral Voyager | 90 | Emberforge · 147,000c | 320,000c | Moontide |
+| Astral Voyager | 90 | Emberforge · 255,000c | 320,000c | Moontide |
 
 **Next-voyage premium · v29:** each next-island boat costs **at least 25% more than
 any rod, line or bait sold on the island you are leaving**. The price floor is derived
@@ -62,7 +62,7 @@ from the actual local stock, not an unrelated fixed minimum. The remaining premi
 keeps later saving goals progressive. Prices remain fixed for everyone, and an owned
 boat never needs to be bought again. The starter skiff stays free.
 
-These are saving goals of roughly **12 / 21 / 29 / 36 / 44 landed-and-sold fish**
+These are saving goals of roughly **12 / 20 / 26 / 33 / 42 landed-and-sold fish**
 using the **departure island's top local bait**. Boats are not priced against the
 better fish that remain locked on their destination island.
 
@@ -85,7 +85,7 @@ silent fallback to an incorrect species. Every local bait has at least one local
 and the previous island's top bait works when arriving on the next island.
 
 - **Rods:** cast reach, reel speed, and control. Bamboo Pole → Mythril Rod.
-- **Lines:** weight rating and reduced strain. Cotton Twine → 1900lb Mythril.
+- **Lines:** weight rating and reduced strain. Cotton Twine → 3400lb Mythril.
 - **Bait:** rarity window, minimum species size, luck, and a gentle weight bonus. Garden Worm → Moonbait.
 - **Bag → Rods / Lines / Bait (I):** equip any already-owned tier from anywhere for free. The bag cannot buy stock; visit a local vendor for new gear.
 
@@ -121,19 +121,21 @@ spent in green, minimum- and full-power casts reel at exactly the same rate. Fis
 strength, weight and player control can still make individual fights feel different.
 The bobber's outward flight time still reflects how far it travels.
 
-### Clearer bait luck upgrades · v29
+### Bait luck upgrades · v29 / v37
 
-Every upgrade's luck gap is **one percentage point larger** than before: early bait
-now goes **0% → 3% → 7% → 11%** instead of 0% → 2% → 5% → 8%. Later gaps rise smoothly
-to 5–6 points, with Moonbait reaching a **+113% luck bonus**. All paid bait has more
-luck, while starter worms are unchanged. The shop and Bag → Bait show the actual
-bonus and the difference from your equipped bait.
+The starter island remains **0% → 3% → 7% → 11%** luck. Ordinary local upgrades
+add **3–6 percentage points**. In v37, each island boundary adds eight extra
+points on top of that normal step, giving a **12–13-point jump** when moving from
+the previous island's best bait to the new island's first bait. Moonbait now has
+**+153% luck** (previously +113%). The shop and Bag → Bait show the actual bonus
+and its difference from your equipped bait.
 
 Luck is a **relative weighting modifier**, not a literal catch percentage or a
 guaranteed rare fish. It favors rarer fish only within the bait's existing eligible
-pool; island, rarity and species-size restrictions do not change. Its existing bite
-speed and weight-bias effects still apply. The separate half-point-per-tier weight
-bonus, gear prices, island levels and already-owned items are unchanged.
+pool; island, rarity and species-size restrictions do not change. Its bite-speed
+and weight-bias effects still apply. Even Moonbait at full charge keeps a positive
+bite wait (at least about 0.64 seconds). The separate half-point-per-tier weight
+bonus and natural fish weight limits are unchanged.
 
 ### Slightly heavier catches · v28
 
@@ -153,19 +155,30 @@ lower tier lowers the bonus immediately; already-caught fish, saved records and 
 are not rewritten. The weight update did not change island/bait exclusivity, prices,
 or sale/XP formulas.
 Heavier catches naturally earn a little more through the existing formulas. The income
-audit includes the new weights and still passes the established saving-goal limits.
+audit includes the current weights and prices when checking saving goals.
 
-### Shop price balance · v26
+### Island-priced equipment & bigger upgrades · v37
 
-**Every paid gear tier and boat costs more than in v25.** Prices are fixed defaults,
-not an inflation system tied to your wallet or level. The starter kit remains free.
-The first paid rod is **100c** (about six starter catches), line **80c**, and bait **140c**.
+Each destination island's **first rod, first line and first bait cost exactly 30%
+more than the minimum boat required to reach that island**: `entry price = boat
+price × 13 / 10`. This is a fixed shop price, **not** a markup based on the player's
+wallet, currently equipped boat, where they sailed from, or previous purchases.
+Arriving in a more expensive boat or revisiting never changes the price.
 
-Rod prices follow a smooth geometric curve between island milestones. Line costs
-approximately **80% of the same-tier rod**, and permanent bait approximately **140%**,
-rounded to readable coin amounts. Gear prices strictly increase; no consecutive paid
-gear tier jumps by more than 75%. The increase eases toward the top of the ladder
-instead of flattening out and then spiking.
+| Island | Required boat price | First rod / line / bait, each |
+| --- | ---: | ---: |
+| Pinewater | 550c | **715c** |
+| Sunscar | 4,500c | **5,850c** |
+| Frostfall | 22,500c | **29,250c** |
+| Emberforge | 130,000c | **169,000c** |
+| Moontide | 320,000c | **416,000c** |
+
+The **starter island is unchanged**: free starter equipment, first paid rod
+**100c** (about six starter catches), line **80c**, and bait **140c**. Every ladder
+still has 24 tiers, four per island. Within an island, prices rise geometrically;
+after the shared entry price, lines cost less than rods and bait costs more.
+Island boundaries intentionally have much larger steps, replacing the old v26
+all-islands smooth curve and fixed 80% / 140% category-price ratios.
 
 | Island's highest local tier | Rod | Line | Bait |
 | --- | ---: | ---: | ---: |
@@ -173,20 +186,49 @@ instead of flattening out and then spiking.
 | Pinewater · tier 8 | 1,800c | 1,450c | 2,500c |
 | Sunscar · tier 12 | 12,000c | 9,600c | 17,000c |
 | Frostfall · tier 16 | 50,000c | 40,000c | 70,000c |
-| Emberforge · tier 20 | 105,000c | 84,000c | 147,000c |
-| Moontide · tier 24 | 180,000c | 144,000c | 252,000c |
+| Emberforge · tier 20 | 240,000c | 225,000c | 255,000c |
+| Moontide · tier 24 | 720,000c | 600,000c | 900,000c |
 
-Prices are checked against fish available with the **previous bait on the shop's
-island**, not income from the upgrade you cannot yet afford. Expected individual
-saving goals are roughly **5–20 catches for rods, 4–16 for lines, and 7–28 for bait**.
-A new island's better income provides some breathing room before its later upgrades.
-These are successful, landed-and-sold catches with suitable tackle—not guaranteed
-catch attempts or elapsed time. Species luck and specimen sizes still vary.
+Boat and gear prices are calculated together in travel order: departure gear →
+boat → destination entry gear. Every next-island boat remains **at least 25% above
+all departure stock**. All six current boat prices are unchanged; later gear was
+retuned to meet both rules without cascading boat-price inflation.
 
-**The v26 price rebalance left fish sale values, gear stats, XP, saved coins and
-existing ownership unchanged.** Old purchases are never charged again; re-equipping owned gear and
-boats remains free. Displayed prices are the exact prices charged, and unaffordable
-buttons show the shortage. Run `npm run economy` for the full tier-by-tier income audit.
+**A new island is a genuine equipment power jump**, not just a new name/color:
+
+- **Rods:** the first rod is about **70–89% stronger** by the shop's combined power
+  score than the previous island's top rod. It has **26–27% faster reeling**, at
+  least **30% more reach**, and about **18–19% less tension**. Local rungs keep
+  their smaller 3–4m reach / roughly 3.5% reel improvements.
+- **Lines:** arrival ratings jump **70–100%** and strain drops **17–18%**. The
+  successive boundary ratings are **15 → 30**, **55 → 100**, **165 → 300**,
+  **500 → 850**, and **1,250 → 2,200 lb**. Names display their real rating;
+  final Mythril line now supports **3,400 lb**.
+- **Bait:** the boundary jump is **12–13 luck points**, versus 3–6 within an island.
+  Bait windows and minimum species-size gates are unchanged, as is the gentle
+  separate weight-bonus cap. Better luck can improve future catch sizes, rarity,
+  income and XP; it never rewrites fish already in a bag or save.
+
+The stronger stats affect actual fishing: faster green-zone reeling, a wider safe
+band and reduced strain, plus better bait odds/weight bias/bite wait. **Cast power
+still adds only −10 to +10 luck points, and reeling has no cast-distance factor.**
+No change was made to the green/yellow/red rules, fish roster, sale/XP formulas,
+island license levels, collection rewards or giant-fish presentation.
+
+Prices are audited against fish available with the **previous bait on the shop's
+island**, not income from an unpurchased upgrade. Entry gear takes approximately
+**8 / 15 / 15 / 23 / 34 landed-and-sold catches per item** on the five destination
+islands. Final Moontide rod / line / bait goals are about **58 / 48 / 73 catches**
+per item; these are optional purchases, not a requirement to buy every intervening
+tier. Estimates use neutral charge and no collection bonuses; they are neither
+catch-attempt counts nor elapsed-time guarantees. Run `npm run economy` for the
+full price, boundary-stat and income audit.
+
+**Existing ownership, coins, XP and saves are retained.** Owned gear automatically
+uses its improved stats without a repurchase; re-equipping owned equipment and
+boats stays free. Stable tier IDs and the v8 save key are unchanged. Shop notes
+explain the 30% rule, upgrade comparisons show actual gains, displayed prices are
+exactly what is charged, and one-coin-short purchases remain blocked.
 
 ### Catch XP that keeps pace · v33
 
@@ -201,18 +243,19 @@ to whole XP after all bonuses. Common starter rewards are unchanged; every other
 fish earns at least as much as before. Rarer and larger fish are more rewarding,
 and better bait improves average XP through its real eligible pool and weight rolls.
 
-Pinewater repeat catches now average about **177 XP with arrival bait** and **247 XP
-with its best local bait**, up from 56–61. From **level 15 to 25**, that is roughly
+With v37 bait, Pinewater repeat catches average about **177 XP with arrival bait**
+and **251 XP with its best local bait**, versus about 56–62 using the legacy reward
+formula on those same catches. From **level 15 to 25**, that is roughly
 **37–53 landed repeat catches**, before any new discoveries.
 
 | Fishing island | Level stretch | Previous repeat catches, arrival / top local bait | New repeat catches, arrival / top local bait |
 | --- | --- | ---: | ---: |
 | Reedhaven | 1 → 10 | 101.0 / 81.8 | 98.4 / 70.2 |
-| Pinewater | 10 → 25 | 218.0 / 199.7 | 69.3 / 49.5 |
-| Sunscar | 25 → 45 | 372.7 / 358.9 | 90.1 / 69.8 |
-| Frostfall | 45 → 65 | 427.8 / 417.5 | 65.9 / 53.0 |
-| Emberforge | 65 → 90 | 605.9 / 603.9 | 67.3 / 65.8 |
-| Moontide | 90 → 99 | 227.6 / 227.2 | 20.8 / 20.6 |
+| Pinewater | 10 → 25 | 218.0 / 198.9 | 69.3 / 48.8 |
+| Sunscar | 25 → 45 | 371.4 / 356.0 | 88.8 / 66.9 |
+| Frostfall | 45 → 65 | 426.7 / 415.4 | 65.0 / 51.2 |
+| Emberforge | 65 → 90 | 604.0 / 601.9 | 65.8 / 64.3 |
+| Moontide | 90 → 99 | 227.2 / 226.8 | 20.6 / 20.4 |
 
 These are rounded **expected successful landings**, not attempts, guarantees or minutes.
 The audit uses actual bait eligibility, rarity odds and 1,024 weight quantiles with
@@ -431,13 +474,14 @@ For other static hosts, deploy `index.html`, `style.css`, `main.js`, **all six `
 modules**, and `vendor/`. Every browser-facing path is relative and every dependency is
 local. `.mjs` must be served as JavaScript (already handled by `serve.js`).
 
-Cache stamps are currently **`v=36`** in the HTML and module imports. Bump the corresponding
+Cache stamps are currently **`v=37`** in the HTML and module imports. Bump the corresponding
 stamps when changing a cached module. Render's blueprint also sends `Cache-Control: no-cache`.
 
 ## Testing
 
 `npm test` checks 144,000 seeded fish draws, all-species reachability, local bait pools,
-gear locations, smooth price growth, catch-income budgets, increasing island sale
+gear locations, smooth local prices, exact 130%-of-boat entry prices, catch-income
+budgets, larger island-boundary stats, unchanged starter equipment, increasing island sale
 values, XP thresholds, wider level gaps, matching boat licenses, both travel gates,
 retained v7 access, one-time save migration, persistent discoveries, and malformed
 save handling. Weight tests cover every species and bait tier, bounded bonuses,
@@ -459,8 +503,10 @@ obstacle elevation, first-person inspection and portrait framing without changin
 fish/aim data.
 UI-rule tests check the single bag tab order, roving-key behavior, contextual hint
 priority, correct desktop/touch controls and the complete Help reference.
-Economy tests also compare prices to published baselines, enforce every next-voyage
-boat premium against all local stock, and verify that ownership and coins are preserved.
+Economy tests compare prices to published baselines, enforce both the destination
+30% entry rule and the departure 25% boat premium, and verify ownership and coins.
+Island-gear tests check meaningful rod/line/bait stat jumps, truthful line names,
+fixed prices, all 24 saved tier IDs and improved owned gear without repurchases.
 
 `npm run economy` prints the deterministic income estimates and saving goals for
 every gear tier and boat, including the local gear ceiling and boat premium, using
@@ -500,7 +546,10 @@ gear tiers, and scrolling/layout at desktop, phone and short-landscape sizes.
 scale, raised grip and visible heads, all 120 models plus the angler at four viewport
 sizes and both pitch limits, resize-aware zoom, first-person foreground rendering
 without body/hands, all 30 vendor camera clearances, and travel/stow/reload/save
-invariants:
+invariants. `tests/island-gear-browser.cjs` covers all 15 destination entry prices,
+advanced-boat price independence, displayed/charged costs, one-coin shortages,
+actual green-zone reel speed and rod/line control, bait wait/weight improvements,
+free re-equips/reloads, and phone/landscape scrolling with touch purchases:
 
 ```sh
 # Use an installed Chromium/Chrome:
@@ -521,7 +570,7 @@ required to run or deploy the game.
 | `main.js` | Fishing, input, UI, shops, carried catches, collection, voyage playback, saves |
 | `ui-state.mjs` | Pure bag-tab navigation, contextual hint rules and Help controls |
 | `player-view.mjs` | Basic cuboid player, weight-scaled trophies and volume-aware camera framing |
-| `game-data.mjs` | 120 species, 72 gear tiers, fish pools, prices and weight rolls |
+| `game-data.mjs` | 120 species, 72 gear tiers, shared gear/boat pricing, fish pools and weight rolls |
 | `archipelago.mjs` | Island / boat definitions, XP and travel requirements |
 | `world.mjs` | Merged cube terrain and props, collision, distant-island LOD, sea routing |
 | `save-state.mjs` | Validated save normalization and legacy migration |

@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BAITS, RARITY, eligibleSpecies, pickSpecies } from '../game-data.mjs';
 
-// Published v28 luck percentages. Every adjacent upgrade must improve on its gap.
+// Published v28 luck percentages; local gaps keep v29's +1 point improvement.
+// v37 adds a distinct island-boundary bonus without changing eligible fish.
 const PREVIOUS = [0,2,5,8,11,14,18,22,25,29,33,37,41,45,50,54,58,63,67,72,76,81,85,90];
 const WINDOWS = [[0,1],[0,1],[0,2],[1,2],[1,2],[1,3],[1,3],[2,3],[2,3],[2,4],[2,4],[2,4],
   [3,4],[3,4],[3,5],[3,5],[3,5],[4,5],[4,5],[4,5],[4,5],[4,5],[4,5],[4,5]];
@@ -12,15 +13,15 @@ function probabilities(pool,bait,luck){
   return weights.map(w=>w/total);
 }
 
-test('every bait luck gap is one percentage point better, with no reduced or oversized steps', () => {
+test('bait luck keeps small local upgrades and makes each island boundary a 12–13 point jump', () => {
   const current=BAITS.map(b=>Math.round(b.luck*100));
-  assert.equal(current[0],0);assert.equal(current.at(-1),113);
+  assert.deepEqual(current,[0,3,7,11,23,27,32,37,49,54,59,64,77,82,88,93,106,112,117,123,136,142,147,153]);
   for(let i=1;i<BAITS.length;i++){
-    assert.equal(current[i],PREVIOUS[i]+i);
+    assert.equal(current[i],PREVIOUS[i]+i+8*Math.floor(i/4));
     assert.ok(current[i]>PREVIOUS[i]);
     const gap=current[i]-current[i-1];
-    assert.equal(gap,PREVIOUS[i]-PREVIOUS[i-1]+1);
-    assert.ok(gap>=3&&gap<=6,'luck must improve gently and predictably');
+    if(i%4===0){assert.ok(gap>=12&&gap<=13);assert.ok(gap>=2*(current[i-1]-current[i-2]));}
+    else{assert.equal(gap,PREVIOUS[i]-PREVIOUS[i-1]+1);assert.ok(gap>=3&&gap<=6);}
   }
 });
 
@@ -83,5 +84,9 @@ test('luck above 100% stays a bounded modifier, not a guaranteed mythic or a zer
   }
   assert.deepEqual([...rarities].sort(),['legendary','mythic']);
   // main.js applies this multiplier to the existing 2.4–5.8 second bite interval.
-  for(const b of BAITS)assert.ok(1-b.luck*.45>=.49&&1-b.luck*.45<=1);
+  for(const b of BAITS)for(const charge of [-.1,0,.1]){
+    const multiplier=1-(b.luck+charge)*.45;
+    assert.ok(multiplier>=.26&&multiplier<=1.05);
+    assert.ok(2.4*multiplier>.6,'even full-power top bait keeps a positive, readable bite wait');
+  }
 });

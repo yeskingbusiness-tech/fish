@@ -64,6 +64,7 @@ function report(){
   }));
   console.log('These are expected successful landings, not catch attempts or elapsed-time promises.');
   console.log('New-species discoveries add +50% once. Larger fish and better cast luck can improve the pace.');
-  console.log('Level gates, the XP curve, saved XP/licenses, sale values and gear/boat prices are unchanged.');
+  console.log('Level gates, the XP curve, saved XP/licenses and per-fish sale/XP formulas are unchanged.');
+  console.log('Current equipment luck affects this audit; v37 rebalances gear prices and island-boundary stats.');
 }
 if(process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) report();

@@ -55,7 +55,7 @@ test('higher bait tiers increase average displayed catch weight, while individua
       const mean=total/samples;
       if(bait){
         assert.ok(mean>previousMean,`${sp.name}, bait ${bait}: no visible average improvement`);
-        assert.ok(mean/previousMean<1.06,'adjacent upgrades should be modest, not giant weight jumps');
+        assert.ok(mean/previousMean<(bait%4===0?1.10:1.06),'island luck improves weights, but never makes a giant weight jump');
       }
       previousMean=mean;
     }

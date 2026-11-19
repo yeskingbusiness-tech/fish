@@ -13,13 +13,13 @@ const hexc  = c => '#' + c.toString(16).padStart(6,'0');
 const fmt   = n => n.toLocaleString('en-US');
 
 import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow, sortFishIndex, castLuckModifier, effectiveLuck,
-  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=36';
+  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=37';
 import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, hasIslandLicense, travelRequirement,
-  ISLAND_COLLECTION_BONUS, islandCollectionProgress, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=36';
-import { createWorld } from './world.mjs?v=36';
-import { createPlayerModel, heldFishSpan, heldFishLayout, firstPersonFishPose, frontViewPose } from './player-view.mjs?v=36';
-import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=36';
-import { BAG_TABS, bagGearKind, nextBagTab, contextualHint, HELP_CONTROLS } from './ui-state.mjs?v=36';
+  ISLAND_COLLECTION_BONUS, islandCollectionProgress, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=37';
+import { createWorld } from './world.mjs?v=37';
+import { createPlayerModel, heldFishSpan, heldFishLayout, firstPersonFishPose, frontViewPose } from './player-view.mjs?v=37';
+import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=37';
+import { BAG_TABS, bagGearKind, nextBagTab, contextualHint, HELP_CONTROLS } from './ui-state.mjs?v=37';
 
 const pickSpecies = () => drawSpecies(G.zone, G.gear.bait, Math.random, G.castPower);
 const rollWeight = sp => drawWeight(sp, G.gear.bait, Math.random, G.castPower);
@@ -935,11 +935,12 @@ function gearDelta(kind, g, i){
     const ratio = rodPower(g) / rodPower(cur);
     const p = ratio >= 1.9 ? '\u00d7' + ratio.toFixed(1) + ' stronger'
                            : (ratio >= 1 ? '+' : '') + Math.round((ratio - 1) * 100) + '% power';
-    return `<small class="gear-delta">${p} · +${c}m reach</small>`;
+    const speed = Math.round((g.reel / cur.reel - 1) * 100);
+    return `<small class="gear-delta">${p} · +${c}m reach · +${speed}% reel speed</small>`;
   }
   if(kind === 'line'){
-    const d = g.rating - cur.rating;
-    return `<small class="gear-delta">${d >= 0 ? '+' : ''}${d} lb rating</small>`;
+    const d = g.rating - cur.rating, relief = Math.round((1 - g.strain / cur.strain) * 100);
+    return `<small class="gear-delta">${d >= 0 ? '+' : ''}${d} lb rating · ${relief}% less strain</small>`;
   }
   const d = Math.round((g.luck - cur.luck) * 100);
   const parts = [];
@@ -996,6 +997,7 @@ function renderShop(){
   $('shopTitle').textContent={rod:'Rod Works',line:'Line & Spool',bait:'Bait Shack'}[kind];
   $('shopEyebrow').textContent=i.name.toUpperCase()+' · LOCAL OUTFITTER';
   $('shopNote').textContent=`Only tiers ${i.id*4+1}–${i.id*4+4} are sold here. Explore new islands for the next four. Prices below are the exact coins charged.`;
+  if(i.id>0)$('shopNote').textContent+=` Entry gear: ${fmt(GEAR[kind].list[i.id*4].cost)}c — 30% above the ${BOATS[i.id].name} (${fmt(BOATS[i.id].cost)}c) required to reach this island.`;
   if(kind==='bait')$('shopNote').textContent+=' Luck favors rarer eligible fish; it is not a catch percentage. The small weight boost tapers near each species’ maximum.';
   shopBody.innerHTML=gearRows(kind,GEAR[kind].list.map((g,index)=>index).filter(index=>gearIsland(index)===G.zone));
   if(G.zone<5)shopBody.innerHTML+=`<div class="next-stock">Next shipment: tiers ${i.id*4+5}–${i.id*4+8} at <b>${ISLANDS[i.id+1].name}</b> · Level ${ISLANDS[i.id+1].level}</div>`;

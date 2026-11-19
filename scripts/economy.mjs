@@ -42,6 +42,18 @@ export function gearEconomyRows(){
     };
   });
 }
+export function islandEntryRows(){
+  return ISLANDS.slice(1).map(island=>{
+    const tier=island.id*4,boat=BOATS[island.id],rod=RODS[tier],line=LINES[tier],bait=BAITS[tier];
+    return {
+      island:island.short,boat:boat.name,boatCost:boat.cost,
+      rod:rod.cost,line:line.cost,bait:bait.cost,
+      reelGain:(rod.reel/RODS[tier-1].reel-1)*100,
+      lineRatingGain:(line.rating/LINES[tier-1].rating-1)*100,
+      luckGain:Math.round((bait.luck-BAITS[tier-1].luck)*100),
+    };
+  });
+}
 export function boatEconomyRows(){
   return BOATS.slice(1).map(boat => {
     const departure = boat.range - 1;
@@ -53,6 +65,11 @@ export function boatEconomyRows(){
 function report(){
   console.log('Saving goals assume a neutral 50% cast. Low/full charge applies -10/+10 luck points.');
   console.log('Base saving goals exclude collection rewards: each completed island adds +5% sale coins, up to +30%.');
+  console.log('New-island entry gear: each category costs exactly 130% of the minimum required boat.');
+  console.table(islandEntryRows().map(r=>({
+    island:r.island,boat:r.boat,'boat price':r.boatCost,'first rod':r.rod,'first line':r.line,'first bait':r.bait,
+    'reel speed jump':r.reelGain.toFixed(1)+'%','line rating jump':r.lineRatingGain.toFixed(1)+'%','luck jump':r.luckGain+' points',
+  })));
   console.log('Gear: income from the previous bait in the shop\'s own island.');
   console.table(gearEconomyRows().map(r => ({
     tier:r.tier, island:r.island, 'coins/catch':r.income.toFixed(1),

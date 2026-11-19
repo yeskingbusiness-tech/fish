@@ -24,7 +24,7 @@ fs.mkdirSync(shots,{recursive:true});
     const islandLevels=await page.evaluate(()=>__reelDeal.ISLANDS.map(i=>i.level));
     assert.deepEqual(islandLevels,[1,10,25,45,65,90]);
     assert.deepEqual(await page.evaluate(()=>__reelDeal.BOATS.map(b=>b.cost)),[0,550,4500,22500,130000,320000]);
-    assert.deepEqual(await page.evaluate(()=>__reelDeal.BAITS.map(b=>Math.round(b.luck*100))),[0,3,7,11,15,19,24,29,33,38,43,48,53,58,64,69,74,80,85,91,96,102,107,113]);
+    assert.deepEqual(await page.evaluate(()=>__reelDeal.BAITS.map(b=>Math.round(b.luck*100))),[0,3,7,11,23,27,32,37,49,54,59,64,77,82,88,93,106,112,117,123,136,142,147,153]);
     assert.equal(await page.evaluate(()=>{const a=__reelDeal;return a.BOATS.slice(1).every(b=>b.cost>=1.25*Math.max(...[a.RODS,a.LINES,a.BAITS].flatMap(list=>list.slice((b.range-1)*4,b.range*4).map(g=>g.cost))));}),true);
     // Book secrecy + modal input isolation.
     await page.keyboard.press('f');
@@ -402,6 +402,7 @@ fs.mkdirSync(shots,{recursive:true});
     assert.equal(await mp.locator('#castMeter').evaluate(e=>{const b=e.getBoundingClientRect();return b.left>=0&&b.right<=innerWidth&&e.scrollWidth<=e.clientWidth;}),true);
     await mp.screenshot({path:`${shots}/mobile-cast-meter.png`});
     await mobile.close();console.log('PASS: mobile drag-look, joystick, index, chart, boat shop, bait stats and cast-luck meter');
+    await require('./island-gear-browser.cjs')(browser,URL,shots);
     await require('./collection-browser.cjs')(browser,URL,shots);
     await require('./xp-browser.cjs')(browser,URL,shots);
     await require('./player-view-browser.cjs')(browser,URL,shots);

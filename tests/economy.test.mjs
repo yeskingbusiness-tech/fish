@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { RODS, LINES, BAITS } from '../game-data.mjs';
 import { BOATS, ISLANDS, localGearPriceCeiling } from '../archipelago.mjs';
 import { normalizeSave } from '../save-state.mjs';
-import { expectedCatchIncome, gearEconomyRows, boatEconomyRows } from '../scripts/economy.mjs';
+import { expectedCatchIncome, gearEconomyRows, boatEconomyRows, islandEntryRows } from '../scripts/economy.mjs';
 
 // The published v25 prices: this update must raise every paid item, not quietly
 // make some tiers cheaper while advertising a general price increase.
@@ -24,16 +24,29 @@ test('every paid gear tier and boat costs more, while the starter kit stays free
   }
 });
 
-test('all three gear ladders rise smoothly, including island boundaries', () => {
+test('all three destination starting tiers cost exactly 30% above their required boat', () => {
+  const rows=islandEntryRows();
+  assert.deepEqual(rows.map(r=>r.rod),[715,5850,29250,169000,416000]);
+  for(const [n,row] of rows.entries()){
+    const island=n+1,boat=BOATS[island];
+    for(const list of [RODS,LINES,BAITS]){
+      assert.equal(list[island*4].cost*10,boat.cost*13);
+      assert.ok(list.slice(island*4,island*4+4).every(g=>g.cost>=boat.cost*13/10));
+    }
+    assert.equal(row.rod,row.line);assert.equal(row.line,row.bait);
+  }
+});
+
+test('local prices rise smoothly; island price jumps are tied to the boat, not flattened away', () => {
   for(const list of [RODS,LINES,BAITS])for(let i=2;i<list.length;i++){
     const ratio=list[i].cost/list[i-1].cost;
-    assert.ok(ratio>=1.1,`${list[i].name}: a near-flat price plateau`);
-    assert.ok(ratio<=1.75,`${list[i].name}: a sudden price wall`);
+    if(i%4===0){assert.ok(ratio>=1.6);continue;}
+    assert.ok(ratio>=1.09,`${list[i].name}: a near-flat local price plateau`);
+    assert.ok(ratio<=1.65,`${list[i].name}: a sudden price wall within an island`);
   }
   for(let i=1;i<24;i++){
+    if(i%4===0)continue; // All three entry tiers share the exact 130% boat price.
     assert.ok(LINES[i].cost<RODS[i].cost && RODS[i].cost<BAITS[i].cost);
-    assert.ok(LINES[i].cost/RODS[i].cost>=.75 && LINES[i].cost/RODS[i].cost<=.85);
-    assert.ok(BAITS[i].cost/RODS[i].cost>=1.3 && BAITS[i].cost/RODS[i].cost<=1.5);
   }
 });
 
@@ -46,15 +59,21 @@ test('first rod still takes roughly six starter catches, rather than a long grin
   assert.ok((RODS[1].cost+LINES[1].cost+BAITS[1].cost)/income<20);
 });
 
-test('every gear purchase is bounded by income from fish catchable before buying it', () => {
+test('the higher gear goals stay bounded by fish catchable before purchase, not future bait', () => {
+  const budgets={rod:[15,15,22,25,36,65],line:[12,12,20,22,35,55],bait:[21,20,25,30,40,80]};
   for(const r of gearEconomyRows()){
+    const tier=r.tier-1,island=Math.floor(tier/4);
     assert.ok(r.income>0,`${r.island} tier ${r.tier} has no valid income`);
-    assert.ok(r.rodCatches>=4.5 && r.rodCatches<=20,`rod ${r.tier}: ${r.rodCatches}`);
-    assert.ok(r.lineCatches>=3.5 && r.lineCatches<=16,`line ${r.tier}: ${r.lineCatches}`);
-    assert.ok(r.baitCatches>=6.5 && r.baitCatches<=28,`bait ${r.tier}: ${r.baitCatches}`);
+    for(const power of [0,.5,1]){
+      const income=expectedCatchIncome(island,tier-1,1024,power);
+      for(const kind of ['rod','line','bait']){
+        const catches=r[kind]/income;
+        assert.ok(catches>=3.5&&catches<=budgets[kind][island],`${kind} ${r.tier} at ${power}: ${catches}`);
+      }
+    }
   }
   const end=gearEconomyRows().at(-1);
-  assert.ok(end.rodCatches>15 && end.baitCatches>20,'endgame should not become pocket change');
+  assert.ok(end.rodCatches>55&&end.lineCatches>45&&end.baitCatches>70,'endgame upgrades remain substantial goals');
 });
 
 test('every next-island boat costs more than all departure-island gear, with at least a 25% premium', () => {
@@ -80,7 +99,7 @@ test('boats scale in departure-island catch effort, with no income-from-locked-f
     const increase=rows[i].catches-rows[i-1].catches;
     assert.ok(increase>=6 && increase<=10,`${rows[i].boat}: uneven boat savings goal`);
   }
-  assert.ok(rows.at(-1).catches>=43 && rows.at(-1).catches<=45);
+  assert.ok(rows.at(-1).catches>=41 && rows.at(-1).catches<=44);
 });
 
 test('the price update never recharges owned gear or rewrites saved coins and progress', () => {

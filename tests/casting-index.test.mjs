@@ -98,7 +98,7 @@ test('the cast modifier adds to bait luck once, works for starter worms, and nev
     close(effectiveLuck(bait,1),BAITS[bait].luck+.1);
   }
   close(effectiveLuck(0,0),-.1);close(effectiveLuck(0,1),.1);
-  close(effectiveLuck(23,1),1.23);
+  close(effectiveLuck(23,1),1.63);
   assert.deepEqual(BAITS,original);
 });
 
@@ -143,7 +143,7 @@ test('cast-adjusted weights and bite waits remain valid, while neutral casts pre
       assert.ok(Number.isFinite(weight)&&weight>=sp.minW&&weight<=sp.maxW);
       assert.ok(weight>=previous-1e-9);previous=weight;
       const waitFactor=1-effectiveLuck(bait,power)*.45;
-      assert.ok(waitFactor>=.44&&waitFactor<=1.05);
+      assert.ok(waitFactor>=.26&&waitFactor<=1.05);
     }
     assert.equal(rollWeight(sp,bait,()=>q),rollWeight(sp,bait,()=>q,.5));
     assert.equal(pickSpecies(sp.island,bait,()=>q),pickSpecies(sp.island,bait,()=>q,.5));

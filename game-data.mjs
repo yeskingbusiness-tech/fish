@@ -186,8 +186,8 @@ const speciesRosterOrder = new Map(SPECIES.map((sp,index) => [sp.id,index]));
 sortFishIndex().forEach((sp, index) => { sp.number = index + 1; });
 
 // ---------- Gear ----------
-// Three ladders of 24 tiers each. Stats follow smooth curves. Names, colours
-// and line ratings are authored; prices follow the shared island-anchor curve.
+// Three ladders of 24 tiers each: smaller local improvements and a distinct
+// power jump at every island boundary. Stable IDs preserve owned equipment.
 const ROD_NAMES = [
   ['Bamboo Pole', 0xc98a4b], ['Willow Rod', 0xb99a5a], ['Fiberglass Rod', 0x69c8db],
   ['Graphite Rod', 0x6a6a72], ['Carbon Rod', 0x3a424e], ['Carbon Pro', 0x2f3640],
@@ -200,13 +200,13 @@ const ROD_NAMES = [
 ];
 const LINE_NAMES = [
   ['Cotton Twine', 0xe8dcc0, 3], ['6lb Mono', 0xdfe9f0, 6], ['10lb Mono', 0xd8f0ff, 10],
-  ['15lb Mono', 0xcfe6f5, 15], ['20lb Mono', 0xbfe0f2, 20], ['25lb Mono', 0x9fe3d8, 25],
-  ['35lb Fluoro', 0x8fd6cf, 35], ['45lb Fluoro', 0x7fc9c6, 45], ['60lb Fluoro', 0xa9e5d0, 60],
-  ['80lb Braid', 0xd8f0a0, 80], ['100lb Braid', 0xc8e88a, 100], ['130lb Braid', 0xffd166, 130],
-  ['160lb Braid', 0xf6c445, 160], ['200lb Braid', 0xe8b03a, 200], ['250lb Braid', 0xd99b2b, 250],
-  ['300lb Braid', 0xe07a4a, 300], ['380lb Spectra', 0xd06a3a, 380], ['470lb Spectra', 0xc25a2a, 470],
-  ['580lb Spectra', 0xb84a20, 580], ['700lb Kevlar', 0xc0392b, 700], ['850lb Kevlar', 0xd0402f, 850],
-  ['1000lb Aramid', 0xe0503f, 1000], ['1400lb Dragonline', 0x9ef7c8, 1400], ['1900lb Mythril', 0xe0d0ff, 1900],
+  ['15lb Mono', 0xcfe6f5, 15], ['30lb Mono', 0xbfe0f2, 30], ['36lb Mono', 0x9fe3d8, 36],
+  ['44lb Fluoro', 0x8fd6cf, 44], ['55lb Fluoro', 0x7fc9c6, 55], ['100lb Fluoro', 0xa9e5d0, 100],
+  ['115lb Braid', 0xd8f0a0, 115], ['135lb Braid', 0xc8e88a, 135], ['165lb Braid', 0xffd166, 165],
+  ['300lb Braid', 0xf6c445, 300], ['350lb Braid', 0xe8b03a, 350], ['420lb Braid', 0xd99b2b, 420],
+  ['500lb Braid', 0xe07a4a, 500], ['850lb Spectra', 0xd06a3a, 850], ['960lb Spectra', 0xc25a2a, 960],
+  ['1100lb Spectra', 0xb84a20, 1100], ['1250lb Kevlar', 0xc0392b, 1250], ['2200lb Kevlar', 0xd0402f, 2200],
+  ['2500lb Aramid', 0xe0503f, 2500], ['2900lb Dragonline', 0x9ef7c8, 2900], ['3400lb Mythril', 0xe0d0ff, 3400],
 ];
 const BAIT_NAMES = [
   ['Garden Worm', 0xd98b7a], ['Bread Ball', 0xe8d9b0], ['Sweet Corn', 0xffd94a],
@@ -218,42 +218,57 @@ const BAIT_NAMES = [
   ['Scent Bomb', 0xd07ae0], ['Chum Cloud', 0xb090c0], ['Firefly Sac', 0xe8f07a],
   ['Silver Minnow', 0xd8e8f0], ['Dragonfly Nymph', 0x6fd0b0], ['Moonbait', 0xc0d8ff],
 ];
-// Fixed base prices, never scaled to a player's wallet or level. Anchors are
-// [zero-based tier, rod price]: the first paid upgrade, then each island's top
-// tier. Geometric interpolation avoids cheap plateaus followed by sudden walls.
-// Calibrated against local fish income using the PREVIOUS bait, not the bait a
-// player is saving up to buy. `npm run economy` audits the resulting catch effort.
-const PRICE_ANCHORS = [
-  [1, 100], [3, 260], [7, 1800], [11, 12000],
-  [15, 50000], [19, 105000], [23, 180000],
+// Price each island in travel order, avoiding a boat/gear circular dependency:
+// departure stock -> required boat -> destination entry gear. The first rod,
+// line AND bait are exactly 130% of that island's minimum required boat price,
+// irrespective of the player's equipped boat, ownership, wallet or travel route.
+const BOAT_SAVING_GOALS = [0,550,4500,22500,130000,320000];
+const LOCAL_GEAR_TOPS = [
+  // rod, line, bait. The starter island keeps its accessible existing prices.
+  [260,210,360], [1800,1450,2500], [12000,9600,17000],
+  [50000,40000,70000], [240000,225000,255000], [720000,600000,900000],
 ];
 function roundShopPrice(value){
-  const step = value < 1000 ? 10 : value < 10000 ? 50 : value < 100000 ? 500 : 1000;
+  const step = value < 1000 ? 5 : value < 10000 ? 50 : value < 100000 ? 250 : 1000;
   return Math.round(value / step) * step;
 }
-function rodPrice(tier){
-  if(tier === 0) return 0; // the starter kit must always be free
-  if(tier === 1) return PRICE_ANCHORS[0][1];
-  const upper = PRICE_ANCHORS.findIndex(([end]) => end >= tier);
-  const [from, low] = PRICE_ANCHORS[upper - 1];
-  const [to, high] = PRICE_ANCHORS[upper];
-  return roundShopPrice(low * Math.pow(high / low, (tier - from) / (to - from)));
+function roundBoatPrice(value){
+  const step = value < 1000 ? 50 : value < 10000 ? 250 : value < 100000 ? 500 : 5000;
+  return Math.ceil(value / step) * step;
 }
-const ROD_COST = ROD_NAMES.map((_, tier) => rodPrice(tier));
-// Keep the three ladders in proportion: line remains cheaper than rod, and
-// permanent bait costs more because it opens the better-paying fish pools.
-const LINE_COST = ROD_COST.map(price => roundShopPrice(price * 0.8));
-const BAIT_COST = ROD_COST.map(price => roundShopPrice(price * 1.4));
+const ROD_COST = [0,100,160,260], LINE_COST = [0,80,130,210], BAIT_COST = [0,140,220,360];
+const BOAT_COST = [0];
+for(let island=1;island<6;island++){
+  const ladders=[ROD_COST,LINE_COST,BAIT_COST];
+  const departureCeiling=Math.max(...ladders.map(list=>list.at(-1)));
+  BOAT_COST.push(roundBoatPrice(Math.max(BOAT_SAVING_GOALS[island],departureCeiling*1.25)));
+  const entry=BOAT_COST[island]*13/10; // Exact integer coins, including Pinewater's 715c.
+  ladders.forEach((list,kind)=>{
+    // Local prices rise geometrically. Even if a future boat/gear rebalance
+    // raises the entry price, all three subsequent upgrades still cost more.
+    const top=Math.max(LOCAL_GEAR_TOPS[island][kind],roundShopPrice(entry*1.1**3));
+    list.push(entry);
+    for(let rung=1;rung<4;rung++)list.push(roundShopPrice(entry*(top/entry)**(rung/3)));
+  });
+}
+Object.freeze(BOAT_COST);
 
-const RODS = ROD_NAMES.map(([name, color], i) => ({
-  id:'rod' + i, name, color, cost: ROD_COST[i],
-  cast: Math.round(12 + 3.6 * i),
-  tension: +(1.55 * Math.pow(0.94, i)).toFixed(2),
-  reel: +(0.75 * Math.pow(1.035, i)).toFixed(2),
-}));
+const ROD_REACH_BASE = [12,34,60,94,138,194];
+const RODS = ROD_NAMES.map(([name, color], i) => {
+  const island=Math.floor(i/4),rung=i%4;
+  return {
+    id:'rod' + i, name, color, cost: ROD_COST[i],
+    cast: Math.round(ROD_REACH_BASE[island] + 3.6*rung),
+    // Crossing an island adds ~26% reel speed and ~19% less tension, versus
+    // ~3.5% and ~6% within one island. Starter stats remain unchanged.
+    tension: +(1.55 * Math.pow(0.94, i) * Math.pow(0.86, island)).toFixed(2),
+    reel: +(0.75 * Math.pow(1.035, i) * Math.pow(1.22, island)).toFixed(2),
+  };
+});
 const LINES = LINE_NAMES.map(([name, color, rating], i) => ({
   id:'line' + i, name, color, rating, cost: LINE_COST[i],
-  strain: +(1.60 * Math.pow(0.945, i)).toFixed(2),
+  // Island entry ratings jump 70–100%; strain drops ~17% instead of ~5.5%.
+  strain: +(1.60 * Math.pow(0.945, i) * Math.pow(0.88, Math.floor(i/4))).toFixed(2),
 }));
 // each bait can only ever hook fish inside its rarity window
 const BAIT_WINDOW = [
@@ -262,9 +277,9 @@ const BAIT_WINDOW = [
 ];
 const BAITS = BAIT_NAMES.map(([name, color], i) => {
   const [lo, hi] = BAIT_WINDOW[i];
-  // One extra percentage point per rung widens every old luck gap by one point.
-  // Luck is a relative modifier, not a catch probability: 113% is not a guarantee.
-  const luckPercent = Math.round(90 * Math.pow(i / (BAIT_NAMES.length - 1), 1.2)) + i;
+  // Preserve the 3–6 point local steps, plus eight extra points on arrival at
+  // a new island: boundary steps are 12–13 points. Even 153% is not a guarantee.
+  const luckPercent = Math.round(90 * Math.pow(i / (BAIT_NAMES.length - 1), 1.2)) + i + 8*Math.floor(i/4);
   return {
     id:'bait' + i, name, color, cost: BAIT_COST[i], lo, hi,
     // Species-size eligibility uses maxW, not a minimum specimen weight.
@@ -274,12 +289,6 @@ const BAITS = BAIT_NAMES.map(([name, color], i) => {
     // This is the upper bound on the rolled-weight boost, not a higher maxW.
     weightBonus: +(i * 0.005).toFixed(3),
   };
-});
-// every tier must cost more than the one below it, whatever the tables say
-[RODS, LINES, BAITS].forEach(list => {
-  for(let i = 1; i < list.length; i++){
-    if(list[i].cost <= list[i - 1].cost) list[i].cost = Math.ceil(list[i - 1].cost * 1.08 / 10) * 10;
-  }
 });
 
 // ---------- Progression ----------
@@ -343,4 +352,4 @@ function rollWeight(sp, baitIndex = 0, random = Math.random, castPower = 0.5){
 }
 
 
-export { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow, eligibleSpecies, sortFishIndex, castLuckModifier, effectiveLuck, pickSpecies, rollWeight };
+export { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, BOAT_COST, fishValue, baitWindow, eligibleSpecies, sortFishIndex, castLuckModifier, effectiveLuck, pickSpecies, rollWeight };

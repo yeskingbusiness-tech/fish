@@ -1,4 +1,4 @@
-import { SPECIES, RODS, LINES, BAITS, fishValue } from './game-data.mjs?v=36';
+import { SPECIES, RODS, LINES, BAITS, BOAT_COST, fishValue } from './game-data.mjs?v=37';
 
 // The archipelago is deliberately data-driven: six islands, twenty species and
 // four gear tiers per island. No distance roll can bypass an island's fish pool.
@@ -64,24 +64,17 @@ export function localGearPriceCeiling(island){
   const from = island * 4;
   return Math.max(...[RODS, LINES, BAITS].flatMap(list => list.slice(from, from + 4).map(item => item.cost)));
 }
-function boatPrice(destination, savingGoal){
-  // The next voyage is always more expensive than ALL local rod/line/bait stock.
-  // Derive the floor from shared item prices, so future gear rebalances respect it.
-  const price = Math.max(savingGoal, localGearPriceCeiling(destination - 1) * 1.25);
-  const step = price < 1000 ? 50 : price < 10000 ? 250 : price < 100000 ? 500 : 5000;
-  return Math.ceil(price / step) * step;
-}
-// Fixed saving goals, calibrated against the island an angler is LEAVING:
-// about 12 / 21 / 29 / 36 / 44 landed fish using that departure island's top bait.
-// The 25% local-gear premium is a minimum; prices never depend on a player's wallet.
-// Boat licenses share their destination's level so the two gates cannot drift.
+// Prices come from the shared travel-order calculation in game-data.mjs:
+// each boat exceeds departure gear by at least 25%, and its destination's first
+// rod, line and bait each cost exactly 30% more than that boat. Boat licenses
+// share their destination's level; owned boats are never charged again.
 export const BOATS = [
   { id:0, name:'Harbor Skiff', range:0, level:ISLANDS[0].level, cost:0, speed:30, color:0xb78755, stripe:0xeee2b5, description:'Your trusty starter. Built for the home harbor.' },
-  { id:1, name:'Pinewood Dinghy', range:1, level:ISLANDS[1].level, cost:boatPrice(1,550), speed:35, color:0x527f6b, stripe:0xe9d4a1, description:'A wooden runabout for your first crossing.' },
-  { id:2, name:'Sunrunner', range:2, level:ISLANDS[2].level, cost:boatPrice(2,4500), speed:44, color:0xd69b52, stripe:0x68c3c5, description:'A shaded cabin and a hull made for warm seas.' },
-  { id:3, name:'Frostbreaker', range:3, level:ISLANDS[3].level, cost:boatPrice(3,22500), speed:52, color:0x7eb3c7, stripe:0xe7f3f3, description:'Reinforced blue steel for the frozen shelf.' },
-  { id:4, name:'Cinderwake', range:4, level:ISLANDS[4].level, cost:boatPrice(4,130000), speed:60, color:0x59606b, stripe:0xf4a15e, description:'An ironclad cruiser for rough volcanic waters.' },
-  { id:5, name:'Astral Voyager', range:5, level:ISLANDS[5].level, cost:boatPrice(5,320000), speed:72, color:0x8a7fbc, stripe:0xd1e4ff, description:'A moonlit expedition vessel. No water is beyond you.' },
+  { id:1, name:'Pinewood Dinghy', range:1, level:ISLANDS[1].level, cost:BOAT_COST[1], speed:35, color:0x527f6b, stripe:0xe9d4a1, description:'A wooden runabout for your first crossing.' },
+  { id:2, name:'Sunrunner', range:2, level:ISLANDS[2].level, cost:BOAT_COST[2], speed:44, color:0xd69b52, stripe:0x68c3c5, description:'A shaded cabin and a hull made for warm seas.' },
+  { id:3, name:'Frostbreaker', range:3, level:ISLANDS[3].level, cost:BOAT_COST[3], speed:52, color:0x7eb3c7, stripe:0xe7f3f3, description:'Reinforced blue steel for the frozen shelf.' },
+  { id:4, name:'Cinderwake', range:4, level:ISLANDS[4].level, cost:BOAT_COST[4], speed:60, color:0x59606b, stripe:0xf4a15e, description:'An ironclad cruiser for rough volcanic waters.' },
+  { id:5, name:'Astral Voyager', range:5, level:ISLANDS[5].level, cost:BOAT_COST[5], speed:72, color:0x8a7fbc, stripe:0xd1e4ff, description:'A moonlit expedition vessel. No water is beyond you.' },
 ];
 
 export const MAX_LEVEL = 99;
