@@ -272,6 +272,33 @@ Fish already in your bag receive the boost when sold, including the fish that
 completes an island. Existing wallet coins are not multiplied or retroactively paid.
 Shop prices, fish eligibility, XP and the cast-luck/reeling rules are unchanged.
 
+## Huge trophies & automatic framing · v36
+
+Held fish now grow with their **actual weight**, not their weight relative to that
+species' maximum. Equal pounds produce equal display lengths across species while
+retaining their different body shapes. There is no arm-span cap: the stylized length
+is `0.45 + 0.65 × sqrt(weight in lb)` in world units. A 1 lb fish is 1.1 units long;
+a 100 lb fish is 6.95, and a 1,500 lb trophy is about **25.6 units** beside the roughly
+2-unit-tall angler. The heaviest current catch can reach about 26.8 units.
+
+- Choose **Bag → Fish → Hold**, then **V / Front view** to see that scale beside
+  your character. Small catches stay at chest height; larger trophies are raised
+  overhead, with the belly aligned to the hands instead of floating above them.
+- The front camera fits the **entire fish and character**, using real width,
+  height and depth, field of view, screen aspect and a margin for animated fins.
+  It pulls farther back on narrow phones rather than shrinking the fish model.
+  Turning, tilting and rotating/resizing the screen recompute the fit automatically.
+- Near obstacles, the trophy camera elevates over the blocking stall/tree instead
+  of pushing inside a giant. Putting the fish away restores the normal camera.
+- First person also fits the full-size fish at an appropriate display distance,
+  with its own foreground depth pass so terrain/water cannot slice through it.
+  **No body or hands appear in first person.** The actual eye/aim camera is not
+  moved or zoomed, so cast direction, luck, distance and reeling remain unchanged.
+- Weight, value, coins, XP, discoveries and bag identity are untouched. Display
+  bounds/pose/zoom are transient and rebuilt from the selected specimen; there
+  are **no new save fields, save-key changes or migrations**. Selling, voyages,
+  view switching and Hide HUD retain their existing behavior.
+
 ## Quieter interface · v35
 
 - **One Bag:** the **Fish · Rods · Lines · Bait** tabs replace the two separate bags.
@@ -316,14 +343,16 @@ first person**—only the rod, or the held fish. No character assets are downloa
 - **X / Put away** stows the fish without removing it from your bag. Put it away
   before casting again. Touch look-drags never accidentally stow or cast it.
 - Holding is display-only: no extra XP, coins, discoveries, weight changes or sale
-  charges. Larger fish display larger, but giants are scaled to fit the screen.
+  charges. Heavier fish display larger; the camera now backs up to fit giants
+  instead of shrinking them to arm-span size (see v36 above).
 - Selling the held specimen (including Sell All) clears the display. Selling a
   different fish does not change what is held, even for identical duplicates.
 - Walking and fishing work in either view. The front camera is separate from the
   player’s aim, so it never reverses casts or changes bait luck, reach or reeling.
   Finish an active cast/fight before switching views or opening the bag.
-- The camera follows the player and shortens its distance near island obstacles.
-  Voyages temporarily use the boat camera, then restore your chosen view and fish.
+- The camera follows the player, shortening its distance near island obstacles
+  when not holding a fish; a held trophy instead uses v36's size-aware fit and
+  obstacle elevation. Voyages use the boat camera, then restore your view and fish.
 - Reloading returns to first person with the fish put away; the actual bag and all
   earned progress remain saved. There is **no save-key change or migration**.
 
@@ -398,11 +427,11 @@ Use a **Static Site**—no server or build is necessary:
 Alternatively, a Node Web Service can use `npm install` / `npm start`; `serve.js` honors
 Render's `PORT`. Static hosting avoids the need for a running Node process.
 
-For other static hosts, deploy `index.html`, `style.css`, `main.js`, **all five `.mjs`
+For other static hosts, deploy `index.html`, `style.css`, `main.js`, **all six `.mjs`
 modules**, and `vendor/`. Every browser-facing path is relative and every dependency is
 local. `.mjs` must be served as JavaScript (already handled by `serve.js`).
 
-Cache stamps are currently **`v=35`** in the HTML and module imports. Bump the corresponding
+Cache stamps are currently **`v=36`** in the HTML and module imports. Bump the corresponding
 stamps when changing a cached module. Render's blueprint also sends `Cache-Control: no-cache`.
 
 ## Testing
@@ -424,8 +453,10 @@ XP balance tests cover all rarity/size/island rewards, unchanged starter XP, exa
 discovery rounding, repeat-catch budgets for every arrival/local bait at low/mid/full
 power, and audit agreement with the actual picker. They also check exact saved XP
 and licenses at all 99 levels, the unchanged v8 key, and frozen v6 XP reconstruction.
-Player-view tests cover bounded display sizing for every species, every camera
-heading, obstacle clearance, and portrait framing without changing fish/aim data.
+Player-view tests cover absolute-weight growth across all species, equal-weight
+lengths, giant belly/hand contact, eight-corner volume fitting, every camera heading,
+obstacle elevation, first-person inspection and portrait framing without changing
+fish/aim data.
 UI-rule tests check the single bag tab order, roving-key behavior, contextual hint
 priority, correct desktop/touch controls and the complete Help reference.
 Economy tests also compare prices to published baselines, enforce every next-voyage
@@ -464,7 +495,12 @@ all three remote re-equip paths, purchase/ownership guards, B/I aliases, accessi
 tabs and Help, native Space activation, pointer/keyboard/joystick isolation,
 contextual fishing/vendor hints, lifetime Catch Log records, clean screenshot mode
 and safe click/tap/H/Escape restoration. It also checks reload/reset, all 24 owned
-gear tiers, and scrolling/layout at desktop, phone and short-landscape sizes:
+gear tiers, and scrolling/layout at desktop, phone and short-landscape sizes.
+`tests/trophy-browser.cjs` checks actual mesh length against pounds, giant-vs-player
+scale, raised grip and visible heads, all 120 models plus the angler at four viewport
+sizes and both pitch limits, resize-aware zoom, first-person foreground rendering
+without body/hands, all 30 vendor camera clearances, and travel/stow/reload/save
+invariants:
 
 ```sh
 # Use an installed Chromium/Chrome:
@@ -484,7 +520,7 @@ required to run or deploy the game.
 | --- | --- |
 | `main.js` | Fishing, input, UI, shops, carried catches, collection, voyage playback, saves |
 | `ui-state.mjs` | Pure bag-tab navigation, contextual hint rules and Help controls |
-| `player-view.mjs` | Basic cuboid player, front camera framing and bounded held-fish sizing |
+| `player-view.mjs` | Basic cuboid player, weight-scaled trophies and volume-aware camera framing |
 | `game-data.mjs` | 120 species, 72 gear tiers, fish pools, prices and weight rolls |
 | `archipelago.mjs` | Island / boat definitions, XP and travel requirements |
 | `world.mjs` | Merged cube terrain and props, collision, distant-island LOD, sea routing |

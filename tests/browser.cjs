@@ -405,6 +405,7 @@ fs.mkdirSync(shots,{recursive:true});
     await require('./collection-browser.cjs')(browser,URL,shots);
     await require('./xp-browser.cjs')(browser,URL,shots);
     await require('./player-view-browser.cjs')(browser,URL,shots);
+    await require('./trophy-browser.cjs')(browser,URL,shots);
     await require('./ui-browser.cjs')(browser,URL,shots);
     console.log('Renderer:',await page.evaluate(()=>({calls:__reelDeal.renderer.info.render.calls,triangles:__reelDeal.renderer.info.render.triangles})));
     assert.deepEqual(errors,[],'No browser errors allowed');

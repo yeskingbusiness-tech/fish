@@ -2,20 +2,108 @@
 // data. THREE is passed in so the camera/size helpers can be tested without WebGL.
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
-export function heldFishSpan(sp, weight){
+export function heldFishSpan(_sp, weight){
   const w = Number.isFinite(Number(weight)) ? Math.max(0, Number(weight)) : 0;
-  const ratio = sp.maxW > 0 ? clamp(w / sp.maxW, 0, 1) : 0;
-  // Even a final-island giant must fit between the hands and on a phone screen.
-  // Keep the actual saved weight/value; this is just the model's display width.
-  return 0.95 + Math.min(0.55, Math.log2(1 + w) * 0.055) + ratio * 0.2;
+  // Absolute pounds, not a percentage of a species' maximum. No trophy-size cap:
+  // a 1,500 lb catch is ~25.6 world units long beside a ~2-unit angler.
+  // Saved fish are already validated by the save codec; never edit their weight.
+  return 0.45 + 0.65 * Math.sqrt(w);
 }
 
-export function frontViewPose({ x, z, ground, yaw, pitch = 0, aspect = 1.5 }, blockers = []){
+const dimension = n => Number.isFinite(n) ? Math.max(0, n) : 0;
+export function heldFishLayout(size){
+  const width=dimension(size.x),height=dimension(size.y),depth=dimension(size.z);
+  // Reserve the tiny tail/holding sway as well as the static mesh bounds.
+  const halfX=width*.525+.02,halfY=height*.525+width*.01+.025,halfZ=depth*.54+.02;
+  const lift=width>=1.85||height>=.95?1:0;
+  // Use the actual belly contact, not padded fin bounds, to meet the hands.
+  // Otherwise a broad-finned giant looks as if it is floating above the angler.
+  const gripY=Number.isFinite(size.gripY)?size.gripY:-height/2;
+  const gripZ=Number.isFinite(size.gripZ)?size.gripZ:-depth/2;
+  return {
+    halfX,halfY,halfZ,lift,
+    y:lift?2.14-gripY:1.15,
+    // Switch cleanly to a trophy hold before a fish obscures the face. Its
+    // belly meets the raised hands; the angler remains a clear size reference.
+    z:lift?.04-gripZ:-.62,
+  };
+}
+
+function viewTangents(aspect, fov){
+  const a=Number.isFinite(aspect)&&aspect>0?aspect:1;
+  const v=Math.tan(clamp(Number.isFinite(fov)?fov:60,10,120)*Math.PI/360);
+  return {horizontal:v*a,vertical:v};
+}
+
+export function firstPersonFishPose(size,{aspect=1.5,fov=58}={}){
+  const {halfX,halfY,halfZ}=heldFishLayout(size),tan=viewTangents(aspect,fov);
+  // Keep the full-sized mesh: pull its presentation distance back instead of
+  // scaling it down on phones. The eye/aim camera itself never moves or zooms.
+  const y=-.12;
+  const distance=Math.max(1.8,halfZ+Math.max(halfX/(tan.horizontal*.86),(halfY+Math.abs(y))/(tan.vertical*.72)));
+  return {x:0,y,z:-distance,distance};
+}
+
+function trophyBounds(fish){
+  const p=heldFishLayout(fish);
+  return {
+    minX:Math.min(-.65,-p.halfX),maxX:Math.max(.65,p.halfX),
+    minY:Math.min(-.08,p.y-p.halfY-.02),maxY:Math.max(2.2,p.y+p.halfY+.02),
+    minZ:Math.min(-.72,p.z-p.halfZ),maxZ:Math.max(.6,p.z+p.halfZ),
+  };
+}
+function fitRadius(bounds,targetY,angle,tan,minimum){
+  const c=Math.cos(angle),s=Math.sin(angle);
+  let radius=minimum;
+  // Fit all eight corners of the player + fish volume, including depth. Width
+  // alone is insufficient for tall fish, flat rays, portrait and tilted views.
+  for(const x of [bounds.minX,bounds.maxX])for(const y of [bounds.minY,bounds.maxY])for(const z of [bounds.minZ,bounds.maxZ]){
+    const up=(y-targetY)*c+z*s,toward=(y-targetY)*s-z*c;
+    radius=Math.max(radius,toward+.25,toward+Math.abs(x)/(tan.horizontal*.84),toward+Math.abs(up)/(tan.vertical*.72));
+  }
+  return radius;
+}
+
+export function frontViewPose({ x, z, ground, yaw, pitch = 0, aspect = 1.5, fov = aspect<1?60:52, fish = null }, blockers = []){
   const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
   const portrait = aspect < 1;
   let distance = portrait ? 4.6 : 4.1;
-  // Shorten the camera boom before trees, stalls or large rocks, not through them.
-  // These are the same island-local footprints that block player movement.
+  if(fish){
+    const bounds=trophyBounds(fish),tan=viewTangents(aspect,fov);
+    const targetY=(bounds.minY+bounds.maxY)/2+(portrait?.12:0);
+    const baseAngle=Math.atan(.16-clamp(pitch,-.62,.42)*.15);
+    const minimum=distance/Math.cos(baseAngle);
+    const fit=angle=>{
+      const radius=fitRadius(bounds,targetY,angle,tan,minimum);
+      return {distance:radius*Math.cos(angle),height:targetY+radius*Math.sin(angle),radius};
+    };
+    // A big fish must never force the boom inward through its own model. Where
+    // a stall/tree blocks the fitted shot, lift the camera over it instead. Top
+    // heights are presentation metadata, independent of movement collisions.
+    const clear=p=>blockers.every(b=>{
+      const dx=b.x-x,dz=b.z-z,r=b.r+.15;
+      const along=dx*fx+dz*fz,side2=dx*dx+dz*dz-along*along;
+      if(along+r<=0||side2>=r*r)return true;
+      const entry=Math.max(.025,along-Math.sqrt(Math.max(0,r*r-side2)));
+      if(entry>=p.distance)return true;
+      const top=Number.isFinite(b.top)?b.top:ground+Math.max(3,b.r*3);
+      return ground+p.height*entry/p.distance>top+.3;
+    });
+    let angle=baseAngle,p=fit(angle);
+    if(!clear(p)){
+      let low=angle,high=Math.PI/2-.0001;
+      // Find the lowest unobstructed elevation, rather than jumping to a
+      // top-down view or shrinking a giant just because a wall is nearby.
+      for(let n=0;n<14;n++){
+        const middle=(low+high)/2;
+        if(clear(fit(middle)))high=middle;else low=middle;
+      }
+      angle=high;p=fit(angle);
+    }
+    return {x:x+fx*p.distance,y:ground+p.height,z:z+fz*p.distance,
+      targetX:x,targetY:ground+targetY,targetZ:z,distance:p.distance,zoomDistance:p.radius,elevation:angle};
+  }
+  // Unchanged idle/fishing view: shorten the boom before nearby solid objects.
   for(const b of blockers){
     const dx = b.x - x, dz = b.z - z;
     const along = dx * fx + dz * fz, perpendicular2 = dx * dx + dz * dz - along * along;
@@ -76,13 +164,15 @@ export function createPlayerModel(THREE, sourceRod){
   rod.name='third-person-rod';rod.position.set(.43,.97,-.36);root.add(rod);
   const rodTip=rod.getObjectByName('rod-tip'), rodBend=rod.getObjectByName('rod-bend');
   const pitchRotation=new THREE.Quaternion(), pitchEuler=new THREE.Euler();
-  function pose({ x, z, ground, yaw, pitch, time, stride, moving, holding, rodRotation, bend }){
+  function pose({ x, z, ground, yaw, pitch, time, stride, moving, holding, carry, rodRotation, bend }){
     root.position.set(x,ground,z);root.rotation.y=yaw;
     const walk=moving?Math.sin(stride)*.38:0;
     legs[0].rotation.x=walk;legs[1].rotation.x=-walk;
-    arms[0].rotation.x=holding?1.04:-walk*.65;
-    arms[1].rotation.x=holding?1.04:.65;
-    fishMount.position.y=1.15+Math.sin(time*1.8)*.012;
+    const lift=holding&&carry?carry.lift:0,holdAngle=1.04+(Math.PI-1.04)*lift;
+    arms[0].rotation.x=holding?holdAngle:-walk*.65;
+    arms[1].rotation.x=holding?holdAngle:.65;
+    for(const arm of arms)arm.position.y=1.43+lift*.09;
+    fishMount.position.set(0,(holding&&carry?carry.y:1.15)+Math.sin(time*1.8)*.012,holding&&carry?carry.z:-.62);
     rod.visible=!holding;
     pitchRotation.setFromEuler(pitchEuler.set(pitch,0,0));
     rod.quaternion.copy(pitchRotation).multiply(rodRotation);

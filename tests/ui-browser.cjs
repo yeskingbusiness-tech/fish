@@ -23,12 +23,14 @@ module.exports=async function testUI(browser,url,shots){
     await page.evaluate(()=>__reelDeal.saveGame());
   }
   async function pier(page){
-    await page.evaluate(()=>{const a=__reelDeal;a.spawnAtIsland(0);a.G.pz=-1.5;a.G.yaw=0;a.G.pitch=-.1;a.camera.position.set(a.G.px,a.G.camY,a.G.pz);a.camera.rotation.set(-.1,0,0,'YXZ');a.updateStats();});
-    await page.waitForTimeout(80);
+    const time=await page.evaluate(()=>{const a=__reelDeal;a.spawnAtIsland(0);a.G.pz=-1.5;a.G.yaw=0;a.G.pitch=-.1;a.camera.position.set(a.G.px,a.G.camY,a.G.pz);a.camera.rotation.set(-.1,0,0,'YXZ');a.updateStats();return a.G.time;});
+    // Contextual hints/vendor proximity update on the next simulation frame;
+    // an 80ms sleep can expire before that frame on a busy software renderer.
+    await page.waitForFunction(time=>__reelDeal.G.time>time,time);
   }
   async function vendor(page,kind){
-    await page.evaluate(kind=>{const a=__reelDeal,s=a.world.stalls.find(s=>s.zone===a.G.zone&&s.kind===kind);a.G.px=s.x;a.G.pz=s.z-3.8;},kind);
-    await page.waitForTimeout(80);
+    const time=await page.evaluate(kind=>{const a=__reelDeal,s=a.world.stalls.find(s=>s.zone===a.G.zone&&s.kind===kind);a.G.px=s.x;a.G.pz=s.z-3.8;return a.G.time;},kind);
+    await page.waitForFunction(time=>__reelDeal.G.time>time,time);
   }
   const fits=el=>{const r=el.getBoundingClientRect();return r.left>=0&&r.top>=0&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1&&el.scrollWidth<=el.clientWidth+1;};
   async function capture(page,name){await page.evaluate(()=>document.getElementById('toast').classList.add('hidden'));await page.screenshot({path:`${shots}/${name}.png`});}
@@ -142,7 +144,7 @@ module.exports=async function testUI(browser,url,shots){
     await page.keyboard.press('x');await page.keyboard.press('v');await pier(page);
     assert.match(await page.locator('#prompt').textContent(),/Hold click \/ Space.*release to cast/);
     assert.equal(await page.locator('#prompt').isVisible(),true);
-    await page.keyboard.down('w');await page.waitForTimeout(80);assert.equal(await page.locator('#prompt').isVisible(),false);await page.keyboard.up('w');
+    await page.keyboard.down('w');await page.locator('#prompt').waitFor({state:'hidden'});assert.equal(await page.locator('#prompt').isVisible(),false);await page.keyboard.up('w');
     for(const kind of ['rod','line','bait','market','port']){
       await vendor(page,kind);
       assert.equal(await page.locator('#shopBtn:visible, #marketBtn:visible, #portBtn:visible').count(),1);

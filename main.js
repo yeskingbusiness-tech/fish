@@ -13,13 +13,13 @@ const hexc  = c => '#' + c.toString(16).padStart(6,'0');
 const fmt   = n => n.toLocaleString('en-US');
 
 import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow, sortFishIndex, castLuckModifier, effectiveLuck,
-  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=35';
+  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=36';
 import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, hasIslandLicense, travelRequirement,
-  ISLAND_COLLECTION_BONUS, islandCollectionProgress, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=35';
-import { createWorld } from './world.mjs?v=35';
-import { createPlayerModel, heldFishSpan, frontViewPose } from './player-view.mjs?v=35';
-import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=35';
-import { BAG_TABS, bagGearKind, nextBagTab, contextualHint, HELP_CONTROLS } from './ui-state.mjs?v=35';
+  ISLAND_COLLECTION_BONUS, islandCollectionProgress, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=36';
+import { createWorld } from './world.mjs?v=36';
+import { createPlayerModel, heldFishSpan, heldFishLayout, firstPersonFishPose, frontViewPose } from './player-view.mjs?v=36';
+import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=36';
+import { BAG_TABS, bagGearKind, nextBagTab, contextualHint, HELP_CONTROLS } from './ui-state.mjs?v=36';
 
 const pickSpecies = () => drawSpecies(G.zone, G.gear.bait, Math.random, G.castPower);
 const rollWeight = sp => drawWeight(sp, G.gear.bait, Math.random, G.castPower);
@@ -162,6 +162,7 @@ camera.rotation.order = 'YXZ';
 camera.position.set(0, 2.77, 5.0);
 // Keep fishing aim at the player's eyes; the front camera is presentation only.
 const frontCamera = new THREE.PerspectiveCamera(PORTRAIT() ? 60 : 52, innerWidth/innerHeight, 0.1, 1400);
+frontCamera.layers.enable(1); // Full-size carried fish have their own presentation layer.
 
 // Lights (no shadows)
 scene.add(new THREE.HemisphereLight(0xd8f4ff, 0x4a8a6a, 1.15));
@@ -171,6 +172,7 @@ scene.add(sun);
 const fill = new THREE.DirectionalLight(0x9ad6ff, 0.45);
 fill.position.set(-16, 12, -14);
 scene.add(fill);
+for(const light of scene.children.filter(o=>o.isLight))light.layers.enable(1);
 
 // ---------- Shared geometry + helpers ----------
 const UNIT = new THREE.BoxGeometry(1,1,1);
@@ -343,6 +345,7 @@ const bag = G.bag;
 // Keep the actual bag object, not an index: selling another fish cannot change
 // which specimen is being held, including identical species/weight duplicates.
 let heldCatch = null, carriedModel = null;
+const carriedSize = {x:0,y:0,z:0,gripY:0,gripZ:0}; // Cached mesh bounds/contact, never saved fish stats.
 const activeCamera = () => G.thirdPerson && !voyage && G.state !== 'menu' ? frontCamera : camera;
 const activeRodTip = () => activeCamera() === frontCamera ? playerModel.rodTip : rodTipObj;
 const bobberPos = new THREE.Vector3(0, 0.1, -6);
@@ -563,7 +566,7 @@ function makeFish3D(sp, scale){
   const long=/Eel|Wyrm|Serpent|Oarfish/.test(sp.name),flat=/Manta|Stingray/.test(sp.name),giant=/Whale|Leviathan|God|World-Eater/.test(sp.name);
   const length=long?2.25:giant?1.6:1.15,height=flat?.2:giant?.7:.5,width=flat?1.3:.38;
   g.add(box(length,height,width,bodyMat));
-  g.add(box(length*.78,height*.36,width*1.03,bellyMat,.05,-height*.35,0));
+  const belly=box(length*.78,height*.36,width*1.03,bellyMat,.05,-height*.35,0);g.add(belly);
   const tail=box(.34,flat?.18:.46,flat?.6:.12,darkMat,-length/2-.14,0,0);g.add(tail);
   g.add(box(.34,.26,.09,darkMat,.05,height/2+.1,0));
   for(const side of [-1,1]){
@@ -575,7 +578,7 @@ function makeFish3D(sp, scale){
     if(sp.pattern==='whiskers')g.add(box(.52,.025,.025,darkMat,length/2+.1,-.1,side*.19));
   }
   if(/Marlin|Gar|Pike|Sturgeon/.test(sp.name))g.add(box(.4,.18,.22,bodyMat,length/2+.13,0,0));
-  g.userData={tail};g.scale.setScalar(scale*sp.size);return g;
+  g.userData={tail,belly};g.scale.setScalar(scale*sp.size);return g;
 }
 // ---------- Fish bag, carried catches and front-facing third person ----------
 function updateCarryUI(){
@@ -598,20 +601,25 @@ function updateCarryUI(){
 }
 function updatePlayerView(moving=false){
   const third=activeCamera()===frontCamera, ground=G.camY-EYE;
+  const carry=heldCatch?heldFishLayout(carriedSize):null;
   playerModel.root.visible=third;
   rodRig.visible=!third&&!heldCatch&&!voyage;
   heldFishRig.visible=!!heldCatch&&!voyage&&G.state!=='menu';
   playerModel.pose({x:G.px,z:G.pz,ground,yaw:G.yaw,pitch:G.pitch,time:G.time,stride:G.bob,moving,
-    holding:!!heldCatch,rodRotation:rodRig.quaternion,bend:tipJoint.rotation.x});
+    holding:!!heldCatch,carry,rodRotation:rodRig.quaternion,bend:tipJoint.rotation.x});
   if(third){
-    const p=frontViewPose({x:G.px,z:G.pz,ground,yaw:G.yaw,pitch:G.pitch,aspect:frontCamera.aspect},world.cameraBlockers[G.zone]);
+    const p=frontViewPose({x:G.px,z:G.pz,ground,yaw:G.yaw,pitch:G.pitch,aspect:frontCamera.aspect,fov:frontCamera.fov,fish:heldCatch?carriedSize:null},world.cameraBlockers[G.zone]);
     frontCamera.position.set(p.x,p.y,p.z);frontCamera.lookAt(p.targetX,p.targetY,p.targetZ);
   }
   if(heldCatch){
     const parent=third?playerModel.fishMount:camera;
     if(heldFishRig.parent!==parent)parent.add(heldFishRig);
-    heldFishRig.position.set(0,third?0:-.12,third?0:-1.8);
-    heldFishRig.scale.setScalar(third?1:PORTRAIT()?.6:.85);
+    if(third)heldFishRig.position.set(0,0,0);
+    else{
+      const p=firstPersonFishPose(carriedSize,{aspect:camera.aspect,fov:camera.fov});
+      heldFishRig.position.set(p.x,p.y,p.z);
+    }
+    heldFishRig.scale.setScalar(1); // Same huge model in either view; only the framing changes.
     heldFishRig.rotation.set(0,0,Math.sin(G.time*1.7)*.018);
     carriedModel.userData.tail.rotation.y=Math.sin(G.time*3)*.12;
   }
@@ -675,7 +683,7 @@ function renderFishBag(){
 }
 function stowFish(){
   if(!heldCatch)return false;
-  disposeFishModel(carriedModel);carriedModel=null;heldCatch=null;heldFishRig.visible=false;
+  disposeFishModel(carriedModel);carriedModel=null;heldCatch=null;Object.assign(carriedSize,{x:0,y:0,z:0,gripY:0,gripZ:0});heldFishRig.visible=false;
   $('putAwayBtn').blur();
   updateCarryUI();updatePlayerView();
   if(G.state==='aim'&&!uiBusy())setState('aim');
@@ -689,7 +697,10 @@ function holdFish(index){
   const model=makeFish3D(entry.sp,1),bounds=new THREE.Box3().setFromObject(model),size=new THREE.Vector3();
   bounds.getSize(size);
   model.scale.multiplyScalar(heldFishSpan(entry.sp,entry.weight)/Math.max(.01,size.x));
-  bounds.setFromObject(model);model.position.sub(bounds.getCenter(new THREE.Vector3()));
+  bounds.setFromObject(model);bounds.getSize(size);Object.assign(carriedSize,{x:size.x,y:size.y,z:size.z});
+  model.position.sub(bounds.getCenter(new THREE.Vector3()));model.updateMatrixWorld(true);
+  bounds.setFromObject(model.userData.belly);carriedSize.gripY=bounds.min.y;carriedSize.gripZ=bounds.min.z;
+  model.traverse(o=>{o.layers.set(1);if(o.isMesh)o.material.fog=false;});
   carriedModel=model;heldCatch=entry;heldFishRig.add(model);
   closeFishBag();updateCarryUI();updatePlayerView();
   return true;
@@ -1871,6 +1882,17 @@ function tick(){
   world.update(G.time, dt, G.zone, activeCamera(), voyage);
   updateParticles(dt);
   renderer.render(scene, activeCamera());
+  if(heldFishRig.visible&&activeCamera()===camera){
+    // A giant first-person model needs a longer presentation distance. Render
+    // it like a held tool, after the world, so water/terrain cannot cut it in
+    // half. Its own depth buffer still resolves eyes, fins and body correctly;
+    // the character stays invisible, and the eye/aim camera is not displaced.
+    const background=scene.background,autoClear=renderer.autoClear,mask=camera.layers.mask;
+    try{
+      scene.background=null;renderer.autoClear=false;renderer.clearDepth();
+      camera.layers.set(1);renderer.render(scene,camera);
+    }finally{camera.layers.mask=mask;renderer.autoClear=autoClear;scene.background=background;}
+  }
 }
 
 // ---------- boot ----------
@@ -1893,7 +1915,7 @@ window.__reelDeal = window.__reelLife = {
   get bagOpen(){return bagOpen;},get bagTab(){return bagTab;},get helpOpen(){return helpOpen;},get hudHidden(){return hudHidden;},
   get fishBagOpen(){return bagOpen&&bagTab==='fish';},get heldCatch(){return heldCatch;},get carriedModel(){return carriedModel;},
   openBag,closeBag,selectBagTab,renderBag,openHelp,closeHelp,setHudHidden,updateContextHint,
-  playerModel,frontCamera,heldFishRig,activeCamera,activeRodTip,toggleView,openFishBag,closeFishBag,holdFish,stowFish,renderFishBag,updatePlayerView,
+  playerModel,frontCamera,heldFishRig,carriedSize,heldFishSpan,heldFishLayout,firstPersonFishPose,frontViewPose,activeCamera,activeRodTip,toggleView,openFishBag,closeFishBag,holdFish,stowFish,renderFishBag,updatePlayerView,
   openShop,closeShop,openKit,openMarket,closeMarket,buyGear,sellAll,sellFish,
   openChart,closeChart,renderChart,buyBoat,sailTo,finishVoyage,openIndex,closeIndex,renderIndex,
   renderShop,renderMarket,fightSetup,pickSpecies,paintTensionBand,eligibleSpecies,

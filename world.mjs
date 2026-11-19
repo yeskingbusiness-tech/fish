@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ISLANDS, BOATS } from './archipelago.mjs?v=35';
+import { ISLANDS, BOATS } from './archipelago.mjs?v=36';
 
 const UNIT = new THREE.BoxGeometry(1, 1, 1);
 const scratch = new THREE.Object3D();
@@ -121,7 +121,7 @@ export function createWorld(scene){
     const S=[],glows=[];
     const glow=(w,h,d,x,y,z,c)=>glows.push({w,h,d,x,y,z,c});
     const add=(w,h,d,x,y,z,c,more={})=>S.push({w,h,d,x,y,z,c,...more});
-    const block=(x,z,r)=>colliders.push({zone:zone.id,x:x+zone.x,z:z+zone.z,r});
+    const block=(x,z,r,top)=>colliders.push({zone:zone.id,x:x+zone.x,z:z+zone.z,r,top});
     // Stepped, genuinely walkable island footprint. No invisible terrain walls.
     add(60,3.2,48,0,-1.2,34,zone.rock);
     add(60,.5,48,0,.25,34,zone.sand);
@@ -172,7 +172,7 @@ export function createWorld(scene){
         }
       }
       add(3.8*s,.03,3.8*s,x,.98,z,zone.theme==='ice'?0xc5dddf:zone.theme==='lunar'?0x6c6a91:0x628c63);
-      block(x,z,.65*s);
+      block(x,z,.65*s,.95+6.6*s);
     }
     [[-23,23,1.2],[-25,38,1.5],[-18,49,1.35],[-8,53,1.6],[10,52,1.6],[22,46,1.2],[25,35,1.1],[25,18,1]].forEach(v=>tree(...v));
     // Cubic grasses, mushrooms / coral / crystals around the edges.
@@ -192,19 +192,19 @@ export function createWorld(scene){
     }
     for(const x of [-5,5]){ add(2.5,.25,.8,x,1.55,32,0xa58863); add(2.5,.75,.15,x,2,32.4,0xa58863); for(const dx of [-.85,.85]) add(.18,.65,.6,x+dx,1.25,32,0x5b665f); }
     // Dock props, all collidable where appropriate.
-    add(.75,.6,.7,-1.4,1.45,8,0x6f9ca3); add(.8,.14,.75,-1.4,1.81,8,0xe4e7cd); block(-1.4,8,.6);
-    add(.6,.5,.6,1.5,1.4,6.8,0xcc8d65); block(1.5,6.8,.55);
+    add(.75,.6,.7,-1.4,1.45,8,0x6f9ca3); add(.8,.14,.75,-1.4,1.81,8,0xe4e7cd); block(-1.4,8,.6,1.9);
+    add(.6,.5,.6,1.5,1.4,6.8,0xcc8d65); block(1.5,6.8,.55,1.7);
 
     // A distinct silhouette for every island, visible from its fishing pier.
     const landmarkStart=S.length,colliderStart=colliders.length;
     if(zone.theme==='harbor'){
-      block(-22,6,2.8);
+      block(-22,6,2.8,15.8);
       for(let j=0;j<5;j++) add(3.6-j*.35,2.2,3.6-j*.35,-22,2+j*2.1,6,j%2?0xc47765:0xf1e5ce);
       add(3.7,.3,3.7,-22,11.8,6,0x3e6874); glow(2.5,1.5,2.5,-22,12.7,6,0xffdb84); add(3.8,.5,3.8,-22,13.6,6,0x3e6874);
       add(.4,2,.4,-22,14.7,6,0x536875); add(2,.8,.12,-21,15.3,6,zone.accent);
       for(let i=0;i<12;i++){add(.15,1.4,.15,-7-i*.65,.65,1+i%3,0x659c64);add(.3,.5,.3,-7-i*.65,1.4,1+i%3,0x9b7955);}
     }else if(zone.theme==='forest'){
-      block(-22,7,3.3);
+      block(-22,7,3.3,7.1);
       add(5,5,6,-22,3.4,7,0x786b54); add(6,.6,7,-22,6.2,7,0x3c6f60); add(4.8,.5,7,-22,6.75,7,0x457e6a);
       add(2.6,1.7,.13,-22,4,3.95,0xc0dcce); add(.18,2,.2,-22,4,3.8,0x685842);
       const wheel=new THREE.Group();
@@ -212,16 +212,16 @@ export function createWorld(scene){
       bars.push({w:4.8,h:.24,d:.24,x:0,y:0,z:0,c:0xb99461},{w:.24,h:4.8,d:.24,x:0,y:0,z:0,c:0xb99461});
       wheel.add(mergeBoxes(bars)); wheel.position.set(-19,3.6,7);wheel.rotation.y=Math.PI/2; group.add(wheel); group.userData.wheel=wheel;
     }else if(zone.theme==='tropical'){
-      for(const x of [-25,-18]){add(2.7,8,3.2,x,4.9,6,0xd3b582);add(3.1,.45,3.7,x,7.7,6,0xe8cc92);block(x,6,1.8);}
+      for(const x of [-25,-18]){add(2.7,8,3.2,x,4.9,6,0xd3b582);add(3.1,.45,3.7,x,7.7,6,0xe8cc92);block(x,6,1.8,11);}
       add(10,2.1,3.7,-21.5,9.3,6,0xe1c28c);add(8.6,.6,3.3,-21.5,10.65,6,0xf0d6a2);
       for(let i=0;i<12;i++)add(.7,.8+(i%3)*.35,.7,-13+i,0,-9-(i%3),i%2?0xe0a09b:0x8dc8be);
     }else if(zone.theme==='ice'){
-      block(-22,6,3.2);
+      block(-22,6,3.2,15);
       for(let k=0;k<5;k++)add(7-k,2.2,6-k*.7,-22,1+k*1.8,6,k%2?0xaadce7:0xc5e9ed);
       add(3.4,4,3.4,-22,11,6,0x6d8f9d);add(4.2,.6,4.2,-22,13,6,0xe4f4ef);glow(2,1.5,2,-22,14,6,0xc4efff);
       for(let i=0;i<6;i++)add(4-i*.35,2+i*.6,3,-20+i*6,0,-15-i%2*4,0xc5e9ed);
     }else if(zone.theme==='volcanic'){
-      block(-22,6,4.8);
+      block(-22,6,4.8,18.5);
       for(let k=0;k<6;k++){
         add(10-k*1.4,2.3,9-k*1.2,-22,1.2+k*1.8,6,k%2?0x575869:0x4e4f61);
         glow(.65,2.35,.2,-21+k*.1,1.3+k*1.8,1.4+k*.6,0xee9b65);
@@ -230,7 +230,7 @@ export function createWorld(scene){
       glow(2.2,.3,2.2,-22,11.6,6,0xffbd72);
       for(let k=0;k<4;k++)add(1.4+k*.5,.9,1.3+k*.4,-22+k*.3,13+k*1.6,6,0x9b949a);
     }else{
-      for(const x of [-25,-18]){add(2,8.5,2.4,x,5,6,0x6b678f);add(2.5,.4,2.8,x,8.7,6,0xc9c0e7);block(x,6,1.5);}
+      for(const x of [-25,-18]){add(2,8.5,2.4,x,5,6,0x6b678f);add(2.5,.4,2.8,x,8.7,6,0xc9c0e7);block(x,6,1.5,11.5);}
       add(9.4,1.6,2.4,-21.5,10,6,0xa59dcd);add(7.4,.5,2.7,-21.5,11.1,6,0xd5cbed);
       glow(.35,2,2,-21.5,6.7,6,0xd3e7f5);add(1.1,1.1,.45,-21.5,6.7,5.85,0xa6a1cc);
       for(let k=0;k<8;k++){const x=-27+(k%4)*3.5,z=k<4?0:12;add(.8,1.7+k%3,.8,x,1.7,z,0xb4a5e0);add(1.2,.45,1.2,x,2.4+k%3*.5,z,0xcbd5ef);}
@@ -252,7 +252,7 @@ export function createWorld(scene){
       add(13,h,11,x,.8+h/2,54,zone.rock);
       add(10,h*.65,8,x,.8+h*1.3,54,zone.land);
       add(6,h*.3,5,x,.8+h*1.72,54,zone.theme==='ice'?0xf2f6ef:zone.land);
-      block(x,53,5.6);
+      block(x,53,5.6,.8+h*1.9);
     }
     // Stalls, merchandise and friendly cube vendors. Separate stock, no tabs of remote purchases.
     for(const st of STALL_LAYOUT){
@@ -274,7 +274,7 @@ export function createWorld(scene){
       if(st.kind==='market'){add(1.65,.1,.8,x-.8,base+1.26,z-.1,0xe6e5d3);add(.85,.24,.3,x-.8,base+1.4,z-.1,0x84aeb9);add(.25,.34,.16,x-1.3,base+1.4,z-.1,0x61919c);}
       if(st.kind==='port'){add(.55,.18,.95,x-1.1,base+1.35,z-.1,0x759b9e);add(.05,.6,.05,x-1.1,base+1.7,z-.1,0xe4d5ad);add(.3,.25,.08,x-.95,base+1.8,z-.1,0xe9c476);}
       group.add(label(st.banner,x,base+2.95,z-1.83,4.9,.65));
-      block(x,z,2.7);
+      block(x,z,2.7,4.5);
       stalls.push({...st,zone:zone.id,x:x+zone.x,z:z+zone.z});
     }
     add(.2,2,.2,-4.1,2,11,0x62716a);
