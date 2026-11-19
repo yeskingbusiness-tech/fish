@@ -23,10 +23,12 @@ module.exports=async function testTrophies(browser,url,shots){
       if(!await page.evaluate(()=>__reelDeal.G.thirdPerson))await page.click('#viewBtn');
       samples.push(await page.evaluate(async()=>{
         const a=__reelDeal,T=await import('three'),size={...a.carriedSize};
-        a.updatePlayerView();a.carriedModel.userData.tail.rotation.y=0;a.frontCamera.updateMatrixWorld(true);a.playerModel.root.updateWorldMatrix(true,true);
+        a.updatePlayerView();a.animateFishModel(a.carriedModel,0,0);a.frontCamera.updateMatrixWorld(true);a.playerModel.root.updateWorldMatrix(true,true);
         const pose=a.frontViewPose({x:a.G.px,z:a.G.pz,ground:a.G.camY-1.62,yaw:a.G.yaw,pitch:a.G.pitch,aspect:a.frontCamera.aspect,fov:a.frontCamera.fov,fish:size},a.world.cameraBlockers[a.G.zone]);
         const inverse=a.heldFishRig.matrixWorld.clone().invert(),bounds=new T.Box3();
-        a.carriedModel.traverse(o=>{if(o.isMesh)for(const x of [-.5,.5])for(const y of [-.5,.5])for(const z of [-.5,.5])bounds.expandByPoint(new T.Vector3(x,y,z).applyMatrix4(o.matrixWorld).applyMatrix4(inverse));});
+        a.carriedModel.traverse(o=>{if(!o.isMesh)return;const vertices=o.geometry.attributes.position;
+          for(let i=0;i<vertices.count;i++)bounds.expandByPoint(new T.Vector3().fromBufferAttribute(vertices,i).applyMatrix4(o.matrixWorld).applyMatrix4(inverse));
+        });
         const head=a.playerModel.root.getObjectByName('head').getWorldPosition(new T.Vector3());
         const ray=new T.Raycaster(a.frontCamera.position,head.clone().sub(a.frontCamera.position).normalize());ray.layers.set(1);
         const blocked=ray.intersectObject(a.carriedModel,true).some(hit=>hit.distance<a.frontCamera.position.distanceTo(head)-.01);
@@ -54,8 +56,9 @@ module.exports=async function testTrophies(browser,url,shots){
         const a=__reelDeal,T=await import('three'),original=[...a.bag],failures=[];
         const check=o=>{
           if(!o.isMesh)return;for(let n=o;n;n=n.parent)if(!n.visible)return;
-          for(const x of [-.5,.5])for(const y of [-.5,.5])for(const z of [-.5,.5]){
-            const p=new T.Vector3(x,y,z).applyMatrix4(o.matrixWorld).project(a.activeCamera());
+          const vertices=o.geometry.attributes.position;
+          for(let i=0;i<vertices.count;i++){
+            const p=new T.Vector3().fromBufferAttribute(vertices,i).applyMatrix4(o.matrixWorld).project(a.activeCamera());
             if(Math.abs(p.x)>1||Math.abs(p.y)>1||p.z< -1||p.z>1)failures.push(`${a.heldCatch.sp.name}: ${a.G.thirdPerson}: ${p.toArray()}`);
           }
         };

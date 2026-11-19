@@ -2,8 +2,8 @@ import * as THREE from 'three';
 
 // ============================================================
 //  REEL DEAL 3D — blocky first-person fishing
-//  Everything is built from boxes, one shared geometry,
-//  Lambert materials, no shadow pass, instanced clutter.
+//  Cube-built islands, species-authored faceted fish,
+//  batched geometry, no shadow pass, instanced clutter.
 // ============================================================
 
 const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
@@ -13,71 +13,22 @@ const hexc  = c => '#' + c.toString(16).padStart(6,'0');
 const fmt   = n => n.toLocaleString('en-US');
 
 import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow, sortFishIndex, castLuckModifier, effectiveLuck,
-  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=38';
+  eligibleSpecies, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=39';
 import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, hasIslandLicense, travelRequirement,
-  ISLAND_COLLECTION_BONUS, islandCollectionProgress, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=38';
-import { createWorld } from './world.mjs?v=38';
-import { createPlayerModel, heldFishSpan, heldFishLayout, firstPersonFishPose, frontViewPose } from './player-view.mjs?v=38';
-import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=38';
-import { BAG_TABS, bagGearKind, nextBagTab, contextualHint, HELP_CONTROLS } from './ui-state.mjs?v=38';
+  ISLAND_COLLECTION_BONUS, islandCollectionProgress, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=39';
+import { createWorld } from './world.mjs?v=39';
+import { fishSVG } from './fish-geometry.mjs?v=39';
+import { createFishModel, animateFishModel, disposeFishModel } from './fish-model.mjs?v=39';
+import { createPlayerModel, heldFishSpan, heldFishLayout, firstPersonFishPose, frontViewPose } from './player-view.mjs?v=39';
+import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=39';
+import { BAG_TABS, bagGearKind, nextBagTab, contextualHint, HELP_CONTROLS } from './ui-state.mjs?v=39';
 
 const pickSpecies = () => drawSpecies(G.zone, G.gear.bait, Math.random, G.castPower);
 const rollWeight = sp => drawWeight(sp, G.gear.bait, Math.random, G.castPower);
 const coinBonus = () => collectionCoinBonus(G.discoveries);
 const saleValue = (sp,weight) => fishSaleValue(sp,Number(weight),G.discoveries);
 
-// ---------- Pixel-art fish (UI icons) ----------
-const FISH_BASE = [
-  '................',
-  '..............XX',
-  '.....oooo....XXX',
-  '...oooooooo..XXX',
-  '..oooooooooXXXXX',
-  '.oooooooooooXXXX',
-  '.oooooooooooXXXX',
-  '..obbbbbbbboXXXX',
-  '...oooooooo..XXX',
-  '.....oooo....XXX'
-];
-function lighten(hex, t){
-  const r = (hex >> 16) & 255, g = (hex >> 8) & 255, b = hex & 255;
-  const m = v => Math.round(v + (255 - v) * t);
-  return (m(r) << 16) | (m(g) << 8) | m(b);
-}
-function shade(hex, f){
-  const r = Math.round(((hex >> 16) & 255) * f);
-  const g = Math.round(((hex >> 8) & 255) * f);
-  const b = Math.round((hex & 255) * f);
-  return hexc((r << 16) | (g << 8) | b);
-}
-function fishSVG(sp){
-  const grid = FISH_BASE.map(r => r.split(''));
-  // eye
-  grid[4][3] = 'e';
-  grid[4][2] = 'w';
-  grid[3][4] = 'w';
-  const dark = shade(sp.color, 0.62);
-  // patterns paint over belly cells
-  const paint = (x,y,g) => { if(grid[y] && grid[y][x] && 'obw'.includes(grid[y][x])) grid[y][x] = g; };
-  if(sp.pattern === 'stripes'){ [5,7,9].forEach(x => { for(let y=3;y<=7;y++) paint(x,y,'a'); }); }
-  if(sp.pattern === 'spots'){ [[5,4],[7,6],[9,4],[6,7],[10,6]].forEach(([x,y])=>paint(x,y,'a')); }
-  if(sp.pattern === 'rainbow'){ for(let x=3;x<=10;x++){ paint(x,5,'a'); } }
-  if(sp.pattern === 'patches'){ [[4,4],[6,6],[8,3],[9,7]].forEach(([x,y])=>paint(x,y,'a')); }
-  if(sp.pattern === 'scales'){ [[4,4],[6,6],[8,4],[9,7],[6,4],[8,7]].forEach(([x,y])=>paint(x,y,'a')); }
-  const cols = { o:hexc(sp.color), b:hexc(sp.belly), X:dark, a:shade(sp.color,0.78), e:'#10242a', w:'#ffffff' };
-  let out = '';
-  for(let y=0;y<grid.length;y++){
-    for(let x=0;x<grid[y].length;x++){
-      const c = cols[grid[y][x]];
-      if(c) out += `<rect x="${x*4}" y="${y*4}" width="4" height="4" fill="${c}"/>`;
-    }
-  }
-  const whisk = sp.pattern === 'whiskers'
-    ? `<rect x="2" y="24" width="4" height="12" fill="${dark}"/><rect x="4" y="20" width="4" height="24" fill="${dark}"/>`
-    : '';
-  return `<svg viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" role="img" aria-label="${sp.name}">${out}${whisk}</svg>`;
-}
-
+// UI illustrations and 3D catches use the same species-authored anatomy.
 const ICON = {
   soundOn: `<svg viewBox="0 0 24 24" shape-rendering="crispEdges"><rect x="4" y="9" width="4" height="6" fill="currentColor"/><rect x="8" y="6" width="3" height="12" fill="currentColor"/><rect x="15" y="8" width="2" height="8" fill="currentColor"/><rect x="19" y="10" width="2" height="4" fill="currentColor"/></svg>`,
   soundOff:`<svg viewBox="0 0 24 24" shape-rendering="crispEdges"><rect x="4" y="9" width="4" height="6" fill="currentColor"/><rect x="8" y="6" width="3" height="12" fill="currentColor"/><rect x="15" y="9" width="2" height="2" fill="currentColor"/><rect x="17" y="11" width="2" height="2" fill="currentColor"/><rect x="19" y="13" width="2" height="2" fill="currentColor"/><rect x="17" y="15" width="2" height="2" fill="currentColor"/><rect x="15" y="17" width="2" height="2" fill="currentColor"/><rect x="19" y="9" width="2" height="2" fill="currentColor"/><rect x="15" y="13" width="2" height="2" fill="currentColor"/></svg>`,
@@ -345,7 +296,7 @@ const bag = G.bag;
 // Keep the actual bag object, not an index: selling another fish cannot change
 // which specimen is being held, including identical species/weight duplicates.
 let heldCatch = null, carriedModel = null;
-const carriedSize = {x:0,y:0,z:0,gripY:0,gripZ:0}; // Cached mesh bounds/contact, never saved fish stats.
+const carriedSize = {x:0,y:0,z:0,gripY:0,gripZ:0,centerX:0}; // Cached mesh bounds/contact, never saved fish stats.
 const activeCamera = () => G.thirdPerson && !voyage && G.state !== 'menu' ? frontCamera : camera;
 const activeRodTip = () => activeCamera() === frontCamera ? playerModel.rodTip : rodTipObj;
 const bobberPos = new THREE.Vector3(0, 0.1, -6);
@@ -552,34 +503,10 @@ function triggerBite(){
   sfx.bite();
   spawnSplash(bobberPos, 8, 0.5);
 }
-function disposeFishModel(model){
-  if(!model)return;
-  const materials=new Set();model.traverse(o=>{if(o.isMesh)materials.add(o.material);});
-  materials.forEach(m=>m.dispose());model.removeFromParent(); // UNIT geometry is shared.
-}
 function disposeHookedFish(){
   disposeFishModel(hookedFish);hookedFish=null;
 }
-function makeFish3D(sp, scale){
-  const g = new THREE.Group();
-  const bodyMat=mat(sp.color),bellyMat=mat(sp.belly),darkMat=mat(shade(sp.color,.66)),eyeMat=mat(0x10242a);
-  const long=/Eel|Wyrm|Serpent|Oarfish/.test(sp.name),flat=/Manta|Stingray/.test(sp.name),giant=/Whale|Leviathan|God|World-Eater/.test(sp.name);
-  const length=long?2.25:giant?1.6:1.15,height=flat?.2:giant?.7:.5,width=flat?1.3:.38;
-  g.add(box(length,height,width,bodyMat));
-  const belly=box(length*.78,height*.36,width*1.03,bellyMat,.05,-height*.35,0);g.add(belly);
-  const tail=box(.34,flat?.18:.46,flat?.6:.12,darkMat,-length/2-.14,0,0);g.add(tail);
-  g.add(box(.34,.26,.09,darkMat,.05,height/2+.1,0));
-  for(const side of [-1,1]){
-    g.add(box(.055,.1,.05,eyeMat,length/2-.12,height*.2,side*(width/2+.01)));
-    g.add(box(.38,.09,flat?.55:.23,darkMat,.05,-.08,side*width*.6));
-    if(sp.pattern==='stripes'||sp.pattern==='scales')for(let k=0;k<3;k++)g.add(box(.075,height*.7,.012,darkMat,-.35+k*.27,0,side*(width/2+.01)));
-    if(sp.pattern==='spots'||sp.pattern==='patches')for(let k=0;k<4;k++)g.add(box(.09,.09,.012,darkMat,-.35+k*.21,k%2?.1:-.06,side*(width/2+.01)));
-    if(sp.pattern==='rainbow')g.add(box(length*.8,.07,.014,mat(0xe6a4b8),0,.02,side*(width/2+.01)));
-    if(sp.pattern==='whiskers')g.add(box(.52,.025,.025,darkMat,length/2+.1,-.1,side*.19));
-  }
-  if(/Marlin|Gar|Pike|Sturgeon/.test(sp.name))g.add(box(.4,.18,.22,bodyMat,length/2+.13,0,0));
-  g.userData={tail,belly};g.scale.setScalar(scale*sp.size);return g;
-}
+function makeFish3D(sp, scale){return createFishModel(THREE,sp,scale);}
 // ---------- Fish bag, carried catches and front-facing third person ----------
 function updateCarryUI(){
   $('bagCount').textContent=fmt(bag.length);
@@ -621,7 +548,7 @@ function updatePlayerView(moving=false){
     }
     heldFishRig.scale.setScalar(1); // Same huge model in either view; only the framing changes.
     heldFishRig.rotation.set(0,0,Math.sin(G.time*1.7)*.018);
-    carriedModel.userData.tail.rotation.y=Math.sin(G.time*3)*.12;
+    animateFishModel(carriedModel,G.time,.22);
   }
 }
 function toggleView(){
@@ -683,7 +610,7 @@ function renderFishBag(){
 }
 function stowFish(){
   if(!heldCatch)return false;
-  disposeFishModel(carriedModel);carriedModel=null;heldCatch=null;Object.assign(carriedSize,{x:0,y:0,z:0,gripY:0,gripZ:0});heldFishRig.visible=false;
+  disposeFishModel(carriedModel);carriedModel=null;heldCatch=null;Object.assign(carriedSize,{x:0,y:0,z:0,gripY:0,gripZ:0,centerX:0});heldFishRig.visible=false;
   $('putAwayBtn').blur();
   updateCarryUI();updatePlayerView();
   if(G.state==='aim'&&!uiBusy())setState('aim');
@@ -694,12 +621,21 @@ function holdFish(index){
   const entry=bag[index];
   if(heldCatch===entry){stowFish();closeFishBag();return true;}
   stowFish();
-  const model=makeFish3D(entry.sp,1),bounds=new THREE.Box3().setFromObject(model),size=new THREE.Vector3();
+  const model=makeFish3D(entry.sp,1);
+  model.rotation.set(...model.userData.displayRotation); // See ray wings and real 3D heads, not an edge-on silhouette.
+  // Precise vertex bounds matter for angled rays and sculpted fins: rotating
+  // a coarse mesh AABB would otherwise inflate the reported trophy dimensions.
+  const bounds=new THREE.Box3().setFromObject(model,true),size=new THREE.Vector3();
   bounds.getSize(size);
   model.scale.multiplyScalar(heldFishSpan(entry.sp,entry.weight)/Math.max(.01,size.x));
-  bounds.setFromObject(model);bounds.getSize(size);Object.assign(carriedSize,{x:size.x,y:size.y,z:size.z});
-  model.position.sub(bounds.getCenter(new THREE.Vector3()));model.updateMatrixWorld(true);
-  bounds.setFromObject(model.userData.belly);carriedSize.gripY=bounds.min.y;carriedSize.gripZ=bounds.min.z;
+  bounds.setFromObject(model,true);bounds.getSize(size);Object.assign(carriedSize,{x:size.x,y:size.y,z:size.z});
+  const center=bounds.getCenter(new THREE.Vector3());
+  model.position.sub(center);
+  // Support the actual trunk, not the midpoint of an eel's tail, a squid's
+  // tentacles or a koi's long fins. The asymmetry is retained in camera framing.
+  const gripX=new THREE.Vector3(model.userData.gripX,0,0).applyQuaternion(model.quaternion).multiplyScalar(model.scale.x).x-center.x;
+  model.position.x-=gripX;carriedSize.centerX=-gripX;model.updateMatrixWorld(true);
+  bounds.setFromObject(model.userData.belly,true);carriedSize.gripY=bounds.min.y;carriedSize.gripZ=bounds.min.z;
   model.traverse(o=>{o.layers.set(1);if(o.isMesh)o.material.fog=false;});
   carriedModel=model;heldCatch=entry;heldFishRig.add(model);
   closeFishBag();updateCarryUI();updatePlayerView();
@@ -1814,7 +1750,7 @@ function tick(){
       );
       hookedFish.rotation.y = G.time * 2.4;
       hookedFish.rotation.z = Math.sin(G.time * 14) * 0.35;
-      hookedFish.userData.tail.rotation.y = Math.sin(G.time * 18) * 0.6;
+      animateFishModel(hookedFish,G.time,1);
       const toCamX = camera.position.x - bobberPos.x, toCamZ = camera.position.z - bobberPos.z;
       const d = Math.hypot(toCamX, toCamZ);
       if(d > 2.5){
@@ -1920,6 +1856,8 @@ window.__reelDeal = window.__reelLife = {
   renderShop,renderMarket,fightSetup,pickSpecies,paintTensionBand,eligibleSpecies,
   updateStats,fishValue,rollWeight,catchXP,xpForLevel,level,hasLicense,saveGame,levelProgress,
   castLuckModifier,effectiveLuck,updateCastMeter,
+  makeFish3D,disposeFishModel,animateFishModel,fishSVG,
+  get hookedFish(){return hookedFish;},
   saleValue,bagTotal,collectionCoinBonus,islandCollectionProgress,fishSaleValue,sortFishIndex,
   walkable,groundAt,landBobber,triggerBite,hookFish,catchFish,SHOP_POS,MARKET_POS,
   startCharge,releaseCast,landingPoint,inWater,spawnAtIsland,nearestVendor

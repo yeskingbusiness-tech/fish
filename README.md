@@ -4,9 +4,10 @@ A cube-built fishing adventure with first-person and front-facing third-person v
 **Six explorable islands, 120 fish, three 24-tier gear ladders, six boats, and a persistent fish index.** Walk the docks
 and villages, sell your catches, earn island licenses, and sail to better waters.
 
-Everything in the world is made from cuboids: islands, trees, fish, boats, vendors,
-landmarks, clouds, snow, even the square ripples. No model downloads, external fonts,
-image services, build step, or runtime dependencies. Three.js is vendored.
+The islands, trees, boats, vendors, landmarks and ripples are cube-built. Fish are
+individually art-directed, faceted low-poly sculpts with anatomical fins and details
+that complement that blocky world. No model downloads, external fonts, image
+services, build step, or runtime dependencies. Three.js is vendored.
 
 ## Run
 
@@ -18,6 +19,68 @@ npm test                  # dependency-free data/progression/save regression tes
 
 Node 18 or newer. Any static HTTP server also works; opening `index.html` as `file://`
 does not support the module imports.
+
+## Species anatomy & model quality · v39
+
+**All 120 species have been remodelled.** The former generic body box, tail box
+and recoloured pixel icon are gone. Every stable species ID has an explicit art
+record with its own proportions, palette, field markings, head and fin choices.
+There are **36 anatomical construction families**, with individually authored
+variants rather than a name-regex body or random recolours. Even with colours and
+surface markings removed, all 120 trunk geometries are different.
+
+The goal is recognisable, stylised animals—not photorealism at odds with the world:
+
+- **Panfish and bass:** deep, laterally compressed sunfish; opercular ear flaps,
+  blue cheek lines and species-specific bars/spots; bulkier bass with large jaws.
+- **Trout and salmon:** tapered bodies, adipose fins, pink lateral stripes, red
+  halo spots, brook-trout vermiculations, white fin edges and hooked salmon jaws.
+- **Catfish and carp:** broad, flattened catfish heads, curved barbels, different
+  forked/square tails; humped/scaled carp, mirror scales, smooth leather carp and
+  flowing koi fins. Adult Mekong giant catfish correctly lack long barbels.
+- **Specialists:** flattened pike/gar jaws and teeth, a broad paddlefish rostrum,
+  sturgeon scutes and asymmetric tails, wrasse forehead humps, gourami feelers,
+  coelacanth lobe fins and three-part tails, and the sunfish's short clavus.
+- **Ocean shapes:** flat rays with wings, top-mounted eyes and whip tails; manta
+  cephalic lobes; sharks with five gill slits; marlin bills; ribbon-like oarfish
+  with red crests and pelvic streamers. Whales have horizontal flukes, not fish tails.
+- **Cephalopods:** a mantle, large eyes, eight articulated-looking tapered arms
+  and suckers; the squid also has two longer feeding tentacles with clubs.
+- **Mythical catches:** distinct lure fish, armored guardians, serpents, crowned
+  rays, antlered creatures, ribbon ghosts and star-marked whales. Selective
+  luminous lures/photophores accent the designs without washing out entire fish.
+
+Bevelled cross-sections, solid polygon fins, fin rays, layered eyes, jaw details,
+raised plates and countershading add depth. Field marks follow the actual body
+facets rather than cutting through curved heads. A lightly reflective, flat-shaded
+material preserves the angular style. Tail/fin motion is rigged; whale flukes move
+vertically, and ray wings gently flex.
+
+### One design everywhere
+
+The **index, Bag, catch card, Catch Log, market and identified-fish reel display**
+use cached vector illustrations projected from those same sculpted surfaces.
+There is no separate generic icon fallback. **Undiscovered index entries still
+use one anonymous silhouette**: no real outline, name, model ID or anatomy is
+exposed before landing. Illustrations scale cleanly on desktop and mobile.
+
+Holding uses exact mesh-vertex bounds, including angled fins, bills and tentacles.
+Flat rays are tilted to reveal their wings. The hands support the actual trunk,
+not the midpoint of an exceptionally long tail; cameras account for that asymmetric
+placement. **Absolute-weight trophy scaling remains uncapped**, with automatic
+framing in both views and no body/hands in first person. No catch weight is edited.
+
+The shared CPU geometry/illustrations are deterministic and cached. GPU meshes
+are batched to **at most six draw calls and currently fewer than 4,000 triangles
+per fish**; there are no textures, model downloads or per-scale draw calls. Each
+instance owns its GPU geometry/materials and disposes them exactly once when
+stowed, sold or removed after a fight. The world, controls and mobile resolution
+behaviour are unchanged.
+
+This is a presentation update: **fish IDs/numbers, weights, rarity, catch odds,
+XP, gear, prices, boats and the v8 save schema are unchanged**. Existing catches
+receive their new appearance automatically; nothing needs to be caught again.
+The v38 bait-eligibility correction and return-trip #040 catch remain intact.
 
 ## The six islands
 
@@ -511,11 +574,11 @@ Use a **Static Site**—no server or build is necessary:
 Alternatively, a Node Web Service can use `npm install` / `npm start`; `serve.js` honors
 Render's `PORT`. Static hosting avoids the need for a running Node process.
 
-For other static hosts, deploy `index.html`, `style.css`, `main.js`, **all six `.mjs`
+For other static hosts, deploy `index.html`, `style.css`, `main.js`, **all nine `.mjs`
 modules**, and `vendor/`. Every browser-facing path is relative and every dependency is
 local. `.mjs` must be served as JavaScript (already handled by `serve.js`).
 
-Cache stamps are currently **`v=38`** in the HTML and module imports. Bump the corresponding
+Cache stamps are currently **`v=39`** in the HTML and module imports. Bump the corresponding
 stamps when changing a cached module. Render's blueprint also sends `Cache-Control: no-cache`.
 
 ## Testing
@@ -553,6 +616,10 @@ range, no species losses when a range broadens, Pinewater’s 14/15 species coun
 #040’s local-bait exclusion and next-area access, and real weighted spawn
 frequencies at minimum, neutral and full charge. They also check unchanged
 local/arrival pools and natural fish weight bounds.
+Fish-model tests enforce explicit coverage of all 120 IDs, distinct uncoloured
+trunks, biological feature presence/absence, unique bounded illustrations,
+complete concave triangulation, immutable data and deterministic geometry. They
+also cap triangles/draw calls and test asymmetric trunk-supported framing.
 
 `npm run economy` prints the deterministic income estimates and saving goals for
 every gear tier and boat, including the local gear ceiling and boat premium, using
@@ -600,7 +667,13 @@ free re-equips/reloads, and phone/landscape scrolling with touch purchases.
 14→15 Pinewater correction, no premature #040 spoilers, and an actual cast, hook,
 tension fight and landing using each of Cheese Cube, Powerbait and Live Minnow.
 It also checks the 19→20 discovery reward, save/reload persistence, and free
-touch re-equips with phone/short-landscape labels and scrolling:
+touch re-equips with phone/short-landscape labels and scrolling.
+`tests/fish-model-browser.cjs` builds all 120 real GPU meshes, checks complete
+attributes and independent resources, animation, actual index/Bag/held/catch
+art, unknown-entry secrecy, exact-once disposal and no geometry growth across
+24 rendered swaps. It also exercises a real squid cast/hook/reel/landing,
+matching saved/reloaded anatomy, and responsive phone/landscape presentation.
+The trophy/player suites now check every actual vertex, not unit-cube proxies:
 
 ```sh
 # Use an installed Chromium/Chrome:
@@ -620,7 +693,10 @@ required to run or deploy the game.
 | --- | --- |
 | `main.js` | Fishing, input, UI, shops, carried catches, collection, voyage playback, saves |
 | `ui-state.mjs` | Pure bag-tab navigation, contextual hint rules and Help controls |
-| `player-view.mjs` | Basic cuboid player, weight-scaled trophies and volume-aware camera framing |
+| `player-view.mjs` | Basic cuboid player, weight-scaled trophies and asymmetric volume-aware framing |
+| `fish-appearance.mjs` | 120 immutable art records across 36 anatomical construction families |
+| `fish-geometry.mjs` | Deterministic faceted sculpts, field markings, triangulation and matching SVG illustrations |
+| `fish-model.mjs` | Batched Three.js meshes, species-appropriate rig animation and private GPU disposal |
 | `game-data.mjs` | 120 species, 72 gear tiers, shared gear/boat pricing, fish pools and weight rolls |
 | `archipelago.mjs` | Island / boat definitions, XP and travel requirements |
 | `world.mjs` | Merged cube terrain and props, collision, distant-island LOD, sea routing |
@@ -633,4 +709,4 @@ required to run or deploy the game.
 
 The world uses merged vertex-colored cuboids, instanced particles, simple lighting,
 no shadow pass and reduced-detail distant islands. Resolution adapts on slow devices.
-Fish materials are disposed after encounters instead of accumulating in GPU memory.
+Fish geometries and materials are disposed after encounters instead of accumulating in GPU memory.

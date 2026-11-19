@@ -14,7 +14,8 @@ const dimension = n => Number.isFinite(n) ? Math.max(0, n) : 0;
 export function heldFishLayout(size){
   const width=dimension(size.x),height=dimension(size.y),depth=dimension(size.z);
   // Reserve the tiny tail/holding sway as well as the static mesh bounds.
-  const halfX=width*.525+.02,halfY=height*.525+width*.01+.025,halfZ=depth*.54+.02;
+  const centerX=Number.isFinite(size.centerX)?size.centerX:0;
+  const halfX=width*.525+Math.abs(centerX)+.02,halfY=height*.525+width*.01+.025,halfZ=depth*.54+.02;
   const lift=width>=1.85||height>=.95?1:0;
   // Use the actual belly contact, not padded fin bounds, to meet the hands.
   // Otherwise a broad-finned giant looks as if it is floating above the angler.
@@ -36,12 +37,12 @@ function viewTangents(aspect, fov){
 }
 
 export function firstPersonFishPose(size,{aspect=1.5,fov=58}={}){
-  const {halfX,halfY,halfZ}=heldFishLayout(size),tan=viewTangents(aspect,fov);
+  const {halfX,halfY,halfZ}=heldFishLayout({...size,centerX:0}),tan=viewTangents(aspect,fov);
   // Keep the full-sized mesh: pull its presentation distance back instead of
   // scaling it down on phones. The eye/aim camera itself never moves or zooms.
   const y=-.12;
   const distance=Math.max(1.8,halfZ+Math.max(halfX/(tan.horizontal*.86),(halfY+Math.abs(y))/(tan.vertical*.72)));
-  return {x:0,y,z:-distance,distance};
+  return {x:Number.isFinite(size.centerX)?-size.centerX:0,y,z:-distance,distance};
 }
 
 function trophyBounds(fish){

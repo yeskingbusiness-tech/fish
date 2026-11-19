@@ -77,6 +77,22 @@ test('front camera fits the full player and fish volume at every aspect, pitch, 
   }
 });
 
+test('anatomical trunk support preserves and frames asymmetric tails, rostra and tentacles',()=>{
+  for(const centerX of [-8,-2,0,2,8])for(const aspect of [16/9,390/844,844/390]){
+    const size={...dimensions(500),centerX},before={...size},fov=aspect<1?72:58;
+    const b=heldFishLayout(size),p=firstPersonFishPose(size,{aspect,fov}),tan=Math.tan(fov*Math.PI/360);
+    assert.ok(b.halfX>size.x/2+Math.abs(centerX));close(p.x+centerX,0);
+    // The first-person rig recentres this same full-sized sculpt, without
+    // moving the gameplay camera. Third person keeps the trunk over the hands.
+    const neutral=heldFishLayout({...size,centerX:0});
+    for(const x of [centerX-neutral.halfX,centerX+neutral.halfX])for(const z of [-b.halfZ,b.halfZ]){
+      assert.ok(Math.abs((p.x+x)/(p.distance-z)/tan/aspect)<=.860001);
+    }
+    checkFrame(size,{x:0,z:0,ground:1.15,yaw:.35,pitch:-.1,aspect,fov:aspect<1?60:52});
+    close(b.y+size.gripY,2.14);close(b.z+size.gripZ,.04);assert.deepEqual(size,before);
+  }
+});
+
 test('zoom follows trophy size and portrait width, not a fixed distance or a smaller fish model',()=>{
   let previous=0;
   for(const weight of [.2,1,3.6,6.3,25,100,500,1637.7]){

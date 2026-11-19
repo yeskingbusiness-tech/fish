@@ -22,8 +22,9 @@ module.exports=async function testPlayerView(browser,url,shots){
   const page=await browser.newPage({viewport:{width:1100,height:760}});watch(page);
   try{
     await boot(page);
-    assert.deepEqual(await page.evaluate(()=>{const a=__reelDeal;let rods=0;a.rodRig.traverse(o=>{if(o.isMesh)rods++;});window.bodyDraws=0;a.playerModel.root.traverse(o=>{if(o.isMesh)o.onBeforeRender=()=>window.bodyDraws++;});return[a.G.thirdPerson,a.playerModel.root.visible,a.activeCamera()===a.camera,rods];}),[false,false,true,6]);
-    await page.waitForTimeout(120);assert.equal(await page.evaluate(()=>window.bodyDraws),0,'first person never draws a body or hands');
+    assert.deepEqual(await page.evaluate(()=>{const a=__reelDeal;let rods=0;a.rodRig.traverse(o=>{if(o.isMesh)rods++;});window.bodyDraws=0;window.bodyFrameStart=a.G.time;a.playerModel.root.traverse(o=>{if(o.isMesh)o.onBeforeRender=()=>window.bodyDraws++;});return[a.G.thirdPerson,a.playerModel.root.visible,a.activeCamera()===a.camera,rods];}),[false,false,true,6]);
+    await page.waitForFunction(()=>__reelDeal.G.time>window.bodyFrameStart+.04);
+    assert.equal(await page.evaluate(()=>window.bodyDraws),0,'first person never draws a body or hands');
     await page.keyboard.press('b');assert.equal(await page.locator('#bagOverlay').isVisible(),true);
     assert.equal(await page.locator('[data-hold-fish]').count(),0);assert.match(await page.locator('#bagBody').textContent(),/No fish in your bag yet/);
     const pos=await page.evaluate(()=>[__reelDeal.G.px,__reelDeal.G.pz]);
@@ -35,10 +36,14 @@ module.exports=async function testPlayerView(browser,url,shots){
     assert.deepEqual(await page.evaluate(()=>[__reelDeal.G.px,__reelDeal.G.pz]),pos);
     assert.deepEqual(await page.evaluate(()=>[__reelDeal.G.state,__reelDeal.G.thirdPerson]),['aim',false]);
     assert.equal(await page.locator('#viewBtn').isDisabled(),true);await page.keyboard.press('Escape');
-    await page.click('#viewBtn');await page.waitForTimeout(120);
+    await page.click('#viewBtn');
+    // Wait for an actual rendered character, not an assumed 120 ms frame budget
+    // (first-use shader compilation can exceed that on software/mobile GPUs).
+    await page.waitForFunction(()=>window.bodyDraws>0&&__reelDeal.G.thirdPerson&&__reelDeal.playerModel.root.visible);
     assert.ok(await page.evaluate(()=>window.bodyDraws)>0,'front view actually draws the character');
     await page.screenshot({path:`${shots}/third-person-character.png`});
-    await page.click('#viewBtn');await page.evaluate(()=>window.bodyDraws=0);await page.waitForTimeout(120);
+    await page.click('#viewBtn');await page.evaluate(()=>{window.bodyDraws=0;window.bodyFrameStart=__reelDeal.G.time;});
+    await page.waitForFunction(()=>__reelDeal.G.time>window.bodyFrameStart+.04);
     assert.equal(await page.evaluate(()=>window.bodyDraws),0);
 
     await seed(page);
@@ -83,10 +88,12 @@ module.exports=async function testPlayerView(browser,url,shots){
             a.bag.splice(0,a.bag.length,{sp,weight:sp.maxW});a.updateStats();a.openFishBag();a.holdFish(0);
             for(const third of [false,true]){
               a.G.thirdPerson=third;a.updatePlayerView();const camera=a.activeCamera();camera.updateMatrixWorld(true);a.heldFishRig.updateWorldMatrix(true,true);
-              a.carriedModel.traverse(o=>{if(!o.isMesh)return;for(const x of [-.5,.5])for(const y of [-.5,.5])for(const z of [-.5,.5]){
-                const p=new THREE.Vector3(x,y,z).applyMatrix4(o.matrixWorld).project(camera);
-                if(Math.abs(p.x)>1||Math.abs(p.y)>1||p.z< -1||p.z>1)failures.push(`${sp.id}:${third}:${p.toArray()}`);
-              }});
+              a.carriedModel.traverse(o=>{if(!o.isMesh)return;const vertices=o.geometry.attributes.position;
+                for(let i=0;i<vertices.count;i++){
+                  const p=new THREE.Vector3().fromBufferAttribute(vertices,i).applyMatrix4(o.matrixWorld).project(camera);
+                  if(Math.abs(p.x)>1||Math.abs(p.y)>1||p.z< -1||p.z>1)failures.push(`${sp.id}:${third}:${p.toArray()}`);
+                }
+              });
             }
             if(a.heldFishRig.children.length!==1)throw Error('Duplicate fish mesh');a.stowFish();
           }
