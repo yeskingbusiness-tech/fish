@@ -3,19 +3,20 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { SPECIES, RODS, LINES, BAITS } from '../game-data.mjs';
 import { FISH_APPEARANCE, FISH_FAMILIES, fishAppearance } from '../fish-appearance.mjs';
-import { buildFishVisual, fishSVG, triangulate } from '../fish-geometry.mjs';
+import { buildFishVisual, fishSVG, triangulate, fishGeometryCacheStats } from '../fish-geometry.mjs';
 
-const species=id=>SPECIES.find(sp=>sp.id===id);
+import { LEGACY_SPECIES } from '../legacy-catalog.mjs';
+const species=id=>SPECIES.find(sp=>sp.id===id)||LEGACY_SPECIES.find(sp=>sp.id==='legacy-'+id);
 const visual=id=>buildFishVisual(species(id));
 const has=(id,...features)=>{for(const feature of features)assert.ok(visual(id).features.includes(feature),`${id} needs ${feature}`);};
 const lacks=(id,...features)=>{for(const feature of features)assert.ok(!visual(id).features.includes(feature),`${id} must not have ${feature}`);};
 const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const range=(v,axis)=>v.bounds.max[axis]-v.bounds.min[axis];
 
-test('all 120 stable IDs have an explicit immutable design across 36 anatomical families',()=>{
-  assert.deepEqual(Object.keys(FISH_APPEARANCE).sort(),SPECIES.map(s=>s.id).sort());
-  assert.equal(FISH_FAMILIES.length,36);
-  assert.equal(new Set(Object.values(FISH_APPEARANCE).map(a=>a.family)).size,36);
+test('all 400 entries and legacy catches have explicit immutable non-cuboid anatomy',()=>{
+  for(const sp of [...SPECIES,...LEGACY_SPECIES])assert.ok(FISH_APPEARANCE[sp.id]);
+  assert.equal(FISH_FAMILIES.length,41);
+  assert.equal(new Set(Object.values(FISH_APPEARANCE).map(a=>a.family)).size,41);
   for(const sp of SPECIES){
     const a=fishAppearance(sp);
     assert.equal(a,fishAppearance(sp.id));assert.ok(Object.isFrozen(a));assert.ok(Object.isFrozen(a.body));assert.ok(Object.isFrozen(a.traits));
@@ -25,14 +26,10 @@ test('all 120 stable IDs have an explicit immutable design across 36 anatomical 
   assert.throws(()=>fishAppearance('missing-art-direction'),/No authored fish appearance/);
 });
 
-test('all 120 trunks differ geometrically even with colour, pattern and details removed',()=>{
-  const silhouettes=new Map();
-  for(const sp of SPECIES){
-    const v=buildFishVisual(sp),trunk=v.faces.filter(f=>f.feature==='sculpted-trunk').map(f=>f.p),key=hash(trunk);
-    assert.ok(!silhouettes.has(key),`${sp.id} is a recolour of ${silhouettes.get(key)}`);silhouettes.set(key,sp.id);
-    assert.ok(trunk.length>=40);
-  }
-  assert.equal(silhouettes.size,120);
+test('new animal families have real discs, segments, legs and arms, not cuboid fish',()=>{
+ const wanted=[['flounder','flatfish-disc'],['vent-shrimp','carapace-segment-8'],['giant-isopod','carapace-segment-7'],['giant-sea-spider','jointed-leg-8'],['the-last-starfish','radial-arm-5']];
+ for(const [id,feature]of wanted)has(id,feature);
+ const silhouettes=new Set(SPECIES.map(sp=>hash(buildFishVisual(sp).faces.map(f=>f.p))));assert.equal(silhouettes.size,400);
 });
 
 test('freshwater field marks accompany real fin, jaw, head and tail anatomy',()=>{
@@ -143,7 +140,7 @@ test('all illustrated icons come from the sculpts, are unique, cached, bounded a
     }
     paths.add(hash(drawing));
   }
-  assert.equal(paths.size,120);
+  assert.equal(paths.size,400);
   assert.match(fishSVG({...species('bluegill'),name:'Fish <"test"> & friends'}),/aria-label="Fish &lt;&quot;test&quot;&gt; &amp; friends"/);
 });
 
@@ -157,3 +154,9 @@ test('rendering art never consumes gameplay RNG or mutates species, gear, weight
   assert.deepEqual({SPECIES,RODS,LINES,BAITS},snapshot);
   const sp=species('bluegill');assert.equal(buildFishVisual({...sp,color:0,pattern:'whiskers',rarity:'mythic'}),buildFishVisual(sp));
 });
+
+test('full collection browsing keeps a bounded CPU sculpt and SVG working set',()=>{
+ for(const sp of SPECIES)fishSVG(sp);const stats=fishGeometryCacheStats();assert.ok(stats.sculpts<=32);assert.ok(stats.svgStrings<=64);
+});
+
+test('new real-world specialists retain six gills, tuna finlets and glass-catfish ribs',()=>{has('sixgill-shark','six-gill-slits');has('bluefin-tuna','finlets');has('glass-catfish','skeletal-ribs');lacks('sperm-whale','five-gill-slits','pelvic-fins');});

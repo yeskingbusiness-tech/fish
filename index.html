@@ -4,11 +4,11 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>Reel Deal 3D — The Archipelago</title>
-<meta name="description" content="A cube-built fishing adventure. Explore six islands, buy boats, master 72 gear upgrades and discover all 120 fish." />
+<meta name="description" content="A cube-built fishing adventure. Explore twenty unique cube-built islands, freely drive eight boats and discover 400 anatomically shaped catches." />
 <meta name="theme-color" content="#193d45" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23193d45'/%3E%3Crect x='14' y='24' width='28' height='16' fill='%23f0d49a'/%3E%3Crect x='42' y='16' width='8' height='10' fill='%23f0d49a'/%3E%3Crect x='42' y='38' width='8' height='10' fill='%23f0d49a'/%3E%3Crect x='48' y='26' width='6' height='12' fill='%23f0d49a'/%3E%3Crect x='20' y='28' width='4' height='4' fill='%23193d45'/%3E%3C/svg%3E" />
-<link rel="stylesheet" href="style.css?v=40" />
-<script type="importmap">{"imports":{"three":"./vendor/three.module.js?v=40"}}</script>
+<link rel="stylesheet" href="style.css?v=41" />
+<script type="importmap">{"imports":{"three":"./vendor/three.module.js?v=41"}}</script>
 </head>
 <body>
 <div id="app">
@@ -26,7 +26,7 @@
       </div>
     </div>
     <div class="location-card">
-      <span class="eyebrow" id="zoneNumber">ISLAND 01 / 06</span>
+      <span class="eyebrow" id="zoneNumber">TERRITORY 01 / 20</span>
       <h2 id="zoneName">Reedhaven</h2>
       <p id="zoneWaters">Panfish, bass &amp; carp</p>
       <div class="level-line"><b id="levelNum">LV. 1</b><span id="xpText">0 / 112 XP</span></div>
@@ -35,7 +35,7 @@
     </div>
     <div class="hud-actions">
       <button id="mapBtn" class="nav-btn"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5l6-2 6 2 6-2v16l-6 2-6-2-6 2zM9 3v16m6-14v16"/></svg></span> Sea chart <kbd>M</kbd></button>
-      <button id="indexBtn" class="nav-btn"><span class="nav-icon">▤</span> Fish index <small id="indexCount">0/120</small><kbd>F</kbd></button>
+      <button id="indexBtn" class="nav-btn"><span class="nav-icon">▤</span> Fish index <small id="indexCount">0/400</small><kbd>F</kbd></button>
       <button id="bagBtn" class="nav-btn" aria-haspopup="dialog"><span class="nav-icon" aria-hidden="true">▱</span> Bag <small id="bagCount">0</small><kbd>B</kbd></button>
       <button id="viewBtn" class="nav-btn" aria-pressed="false" aria-label="Switch to front-facing third-person view (V)"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h5l2-3h4l2 3h5v14H3z"/><rect x="9" y="10" width="6" height="6"/></svg></span><span id="viewLabel">Front view</span><kbd>V</kbd></button>
     </div>
@@ -51,11 +51,15 @@
     </div>
     <button id="shopBtn" class="shop-btn hidden">Rod Works <b>E</b></button>
     <button id="marketBtn" class="shop-btn market hidden">Fish Market <b>E</b></button>
-    <button id="portBtn" class="shop-btn port hidden">Boat Shop &amp; Voyages <b>E</b></button>
+    <button id="portBtn" class="shop-btn port hidden">Boatyard &amp; Dock <b>E</b></button>
     <div id="lockHint" class="lock-hint hidden">Click to look around</div>
     <div id="stick" class="stick hidden"><div class="stick-knob"></div></div>
-    <div id="voyageHUD" class="voyage-hud hidden"><span class="eyebrow">OUT ON THE WATER</span><h2 id="voyageName"></h2><p id="voyageDetail"></p><div class="voyage-track"><div id="voyageFill"></div></div><button id="skipVoyage" class="ghost-btn">Skip crossing →</button></div>
-    <div id="arrivalBanner" class="arrival-banner hidden"><span class="eyebrow">LAND AHOY</span><h2 id="arrivalName"></h2><p id="arrivalDesc"></p></div>
+    <button id="boardBoatBtn" class="board-boat hidden">Board your boat →</button>
+    <div id="boatControls" class="boat-controls hidden"><button id="boatModeBtn">Stop &amp; fish · Q</button><button id="dockBoatBtn">Approach a dock</button></div>
+    <div id="boatReadout" class="boat-readout hidden"><b id="boatSpeed">0 m/s</b><span>W/S throttle · A/D steer</span></div>
+    <div id="shoreLuck" class="shore-luck">SHORE LUCK −95% · HEAD OFFSHORE</div>
+    <button id="minimapButton" class="minimap-button" aria-label="Expand minimap to full sea chart (M)"><canvas id="minimap" width="240" height="240" aria-hidden="true"></canvas><span id="waypointLabel">Tap to expand chart</span><small>M · SEA CHART ↗</small></button>
+    <div id="arrivalBanner" class="arrival-banner hidden" role="status" aria-live="polite"><span class="eyebrow">ENTERING TERRITORY</span><h2 id="arrivalName"></h2><p id="arrivalDesc"></p></div>
   </div>
 
   <div id="shopOverlay" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="shopTitle">
@@ -84,7 +88,7 @@
       <div id="helpBody" class="help-body" tabindex="0">
         <p class="help-intro">Keep the needle in <b>green</b> to reel automatically. Yellow makes no progress; either red end loses the fish.</p>
         <dl id="helpControls" class="help-controls"></dl>
-        <p class="help-note">Hold fish from Bag → Fish; they stay there until sold at a market. Equip owned tackle anywhere. New gear is sold at local stalls.</p>
+        <p class="help-note"><b>Boating:</b> board at the dock. W/S accelerates/reverses; A/D steers (or use the joystick). Q stops to fish or resumes driving. E docks when nearby. Any boat can enter any level-unlocked territory; locked territories have invisible circular barriers. Click the minimap or M for the full chart and a waypoint.</p><p class="help-note"><b>Shore luck:</b> −95% within 8m of shore, gradually recovering to full luck at 55m. Luck is measured at your position when you release the cast, not the bobber—take the boat offshore. Between territories, cruise onward to find fishing waters.</p><p class="help-note">Hold fish from Bag → Fish; they stay there until sold at a market. Equip owned tackle anywhere. New gear is sold at local stalls.</p>
         <p class="help-note">For a clean screenshot, frame your shot, then choose <b>Hide HUD</b>. Tap or click anywhere to return—your first tap only restores the interface.</p>
         <p id="helpKeyboardNote" class="help-note">Use Tab to navigate panels, and Left / Right or Home / End to switch Bag tabs.</p>
       </div>
@@ -101,10 +105,10 @@
     </div>
   </div>
   <div id="indexOverlay" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="indexTitle">
-    <div class="index-card"><div class="shop-head"><div><span class="eyebrow">AN ANGLER'S FIELD GUIDE</span><h2 id="indexTitle">The fish index</h2></div><div class="collection-total"><strong id="collectionTotal">0 / 120</strong><small>SPECIES DISCOVERED</small></div><button id="indexClose" class="shop-close" aria-label="Close fish index">✕</button></div>
+    <div class="index-card"><div class="shop-head"><div><span class="eyebrow">AN ANGLER'S FIELD GUIDE</span><h2 id="indexTitle">The fish index</h2></div><div class="collection-total"><strong id="collectionTotal">0 / 400</strong><small>SPECIES DISCOVERED</small></div><button id="indexClose" class="shop-close" aria-label="Close fish index">✕</button></div>
       <div class="collection-track"><div id="collectionFill"></div></div>
       <div id="indexIslands" class="index-islands"></div>
-      <div class="index-toolbar"><p id="indexHint">By island, then rarity · common → mythic.</p><label class="sr-only" for="indexFilter">Filter fish index</label><select id="indexFilter"><option value="all">All entries</option><option value="found">Discovered</option><option value="missing">Undiscovered</option></select></div>
+      <div class="index-toolbar"><p id="indexHint">By island, then rarity · common → unfathomable.</p><label class="sr-only" for="indexFilter">Filter fish index</label><select id="indexFilter"><option value="all">All entries</option><option value="found">Discovered</option><option value="missing">Undiscovered</option></select></div>
       <div id="collectionBonus" class="collection-bonus"><strong id="collectionBonusTitle">Permanent coin bonus: +0%</strong><span id="collectionBonusDetail">Complete an island’s 20 fish to earn +5% on every sale.</span></div>
       <div id="fishGrid" class="fish-grid"></div>
       <div class="index-foot"><span>Land a fish to reveal its name, colors and story.</span><span id="indexIslandCount"></span></div>
@@ -114,9 +118,9 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
   <aside id="logDrawer" class="drawer hidden" role="dialog" aria-modal="true" aria-label="Catch log"><div class="drawer-head"><h3>Catch Log</h3><div class="drawer-actions"><button id="resetBtn" class="ghost-btn">Reset</button><button id="closeLog" aria-label="Close catch log">✕</button></div></div><dl class="log-records"><div><dt>TOTAL CATCHES</dt><dd id="caughtCount">0</dd></div><div><dt>BEST FISH</dt><dd id="bestNum">—</dd><dd id="bestFishName" class="best-fish-name">No catches yet</dd></div></dl><div id="logList"><p class="empty">No fish yet. Cast your line!</p></div><div class="drawer-foot" id="logSummary"></div></aside>
   <div id="startOverlay" class="start-overlay">
-    <div class="start-card"><span class="update-badge">THE ARCHIPELAGO UPDATE</span><div class="start-art" id="startArt"></div><h2>REEL DEAL <span>3D</span></h2><p class="start-lead">A little boat. A bigger world.</p><p>Six cube-built islands. One hundred and twenty secrets beneath the surface. Your next great catch is out there.</p><div class="start-features"><span>06 <small>ISLANDS</small></span><span>120 <small>FISH</small></span><span>72 <small>GEAR TIERS</small></span></div><ul><li><b>WASD</b> to walk · mouse to look</li><li><b>Hold &amp; release</b> to cast · Space to hook</li><li><b>Green</b> reels in · avoid red tension</li><li><b>Catch</b> to level up · sell to buy gear &amp; boats</li><li><b>E</b> at stalls · <b>M</b> chart · <b>F</b> index · <b>B</b> bag</li><li><b>V</b> front view · <b>X</b> put fish away · <b>?</b> Help</li></ul><button id="startBtn" class="primary-btn big">Let’s go fishing →</button><p class="tiny">Progress saves automatically on this device.</p></div>
+    <div class="start-card"><span class="update-badge">THE OPEN WATER UPDATE</span><div class="start-art" id="startArt"></div><h2>REEL DEAL <span>3D</span></h2><p class="start-lead">A little boat. A bigger world.</p><p>Twenty distinct islands. Four hundred secrets beneath the surface. Take the helm and find your own fishing spot.</p><div class="start-features"><span>20 <small>ISLANDS</small></span><span>400 <small>FISH</small></span><span>8 <small>BOATS</small></span></div><ul><li><b>WASD</b> to walk or steer · <b>Q</b> stop &amp; fish</li><li><b>Hold &amp; release</b> to cast · Space to hook</li><li><b>Green</b> reels in · avoid red tension</li><li><b>Catch</b> to level up · sell to buy gear &amp; boats</li><li><b>E</b> at stalls / dock · <b>M</b> chart · <b>F</b> index · <b>B</b> bag</li><li><b>V</b> front view · <b>X</b> put fish away · <b>?</b> Help</li></ul><button id="startBtn" class="primary-btn big">Let’s go fishing →</button><p class="tiny">Progress saves automatically on this device.</p></div>
   </div>
 </div>
-<script type="module" src="main.js?v=40"></script>
+<script type="module" src="main.js?v=41"></script>
 </body>
 </html>

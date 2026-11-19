@@ -1,4 +1,4 @@
-import { buildFishVisual, triangulate } from './fish-geometry.mjs?v=40';
+import { buildFishVisual, triangulate } from './fish-geometry.mjs?v=41';
 
 // THREE is injected; the authored model/illustration can be audited in Node
 // without a browser or external packages. At most six draw calls per fish,

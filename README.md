@@ -1,765 +1,168 @@
-# Reel Deal 3D — The Archipelago
+# Reel Deal 3D · Open Water
 
-A cube-built fishing adventure with first-person and front-facing third-person views.
-**Six explorable islands, 120 fish, three 24-tier gear ladders, six boats, and a persistent fish index.** Walk the docks
-and villages, sell your catches, earn island licenses, and sail to better waters.
+**20 unique cube-built islands · 400 collection entries · 12 rarities · 8 manually driven boats.**
 
-The islands, trees, boats, vendors, landmarks and ripples are cube-built. Fish are
-individually art-directed, faceted low-poly sculpts with anatomical fins and details
-that complement that blocky world. No model downloads, external fonts, image
-services, build step, or runtime dependencies. Three.js is vendored.
+The environment, shops, boats and basic angler are cuboid-built. **The fish are not cubes:** anatomical sculpts, fins, jaws, tails, shells, legs and tentacles also generate their matching illustrated thumbnails.
+
+Version **2.1.0**, browser cache **v41**, save schema **v9**. Static browser game; no build, account, backend or runtime dependency installation required.
 
 ## Run
 
 ```sh
 npm start                 # http://localhost:3100
-PORT=3000 npm start        # alternate port; binds 0.0.0.0 for hosted previews
-npm test                  # dependency-free data/progression/save regression tests
+npm test                  # dependency-free Node regression tests
+npm run economy           # deterministic purchase-effort audit
+npm run progression       # deterministic repeat-catch XP audit
 ```
 
-Node 18 or newer. Any static HTTP server also works; opening `index.html` as `file://`
-does not support the module imports.
-
-## Smoother menus & rendering · v40
-
-Performance improvements **without reducing fish model detail or changing the game**:
-
-- **Shared, lazy illustrations:** each discovered species uses one page-local SVG
-  image URL containing the exact v39 artwork. Inventory, index, log and market
-  rows reuse it instead of duplicating hundreds of live SVG paths per fish.
-  Only visible rows plus a small scroll-ahead margin generate/load illustrations;
-  names, weights, buttons and all index entries remain available to keyboard and
-  assistive technology. Catch/reel icons load eagerly. Unknown fish still use the
-  same anonymous silhouette, with no anatomy or real name in their markup.
-- **No hidden Catch Log rebuild:** landings mark history dirty, then render it on
-  the next opening. Reopening unchanged history reuses its rows. Full history,
-  records, sale bonuses and saves are retained. Closing/replacing a panel cancels
-  its pending image observers; the bounded 120-image cache is reused across panels
-  and released on page teardown (retained for browser back/forward cache).
-- **Continuous adaptive resolution:** one-second sample windows run throughout
-  play, not only twice during startup. Sustained slow frames step down canvas
-  pixel ratio, with a three-second cooldown. Ten good windows restore one step.
-  Menus, hidden tabs and isolated long interruptions do not drive quality down;
-  resizing preserves an existing reduction. The range is 0.6 to the device's DPR
-  (capped at 1.5; never upscales devices below 0.6). **HTML text and artwork stay
-  sharp.** Models, camera framing, simulation timing and input frequency stay the same.
-- **Less idle work:** vendor proximity is recomputed only when island/position
-  changes; UI bait pools are cached by island and bait using the original rule.
-  Context hints reuse unchanged aim/state inputs, shop labels and reel text are
-  written only when changed, hidden first-person avatars are not posed, and empty
-  splash/ripple pools stop matrix updates/uploads. Live splashes still animate.
-
-Structural browser budgets verify **1,680 elements instead of 43,701** in a fully
-revealed index, and **1,920 instead of 85,962** in a 240-fish Bag. The closed
-200-entry log creates no fish rows at boot or on a catch; a stationary 30-frame
-sample has no HUD mutations, repeated vendor/hint/pool calculations or inactive
-particle uploads. These are reproducible work reductions, not an FPS promise for
-every device. Regression tests also compare all 120 image sources byte-for-byte
-with the original illustrations and exercise real renderer scaling/recovery.
-
-No shader/model prewarming, fishing rebalance, save migration or UI redesign is
-part of this update. **Huge fish remain huge; fish anatomy and saved progress are unchanged.**
-
-## Species anatomy & model quality · v39
-
-**All 120 species have been remodelled.** The former generic body box, tail box
-and recoloured pixel icon are gone. Every stable species ID has an explicit art
-record with its own proportions, palette, field markings, head and fin choices.
-There are **36 anatomical construction families**, with individually authored
-variants rather than a name-regex body or random recolours. Even with colours and
-surface markings removed, all 120 trunk geometries are different.
-
-The goal is recognisable, stylised animals—not photorealism at odds with the world:
-
-- **Panfish and bass:** deep, laterally compressed sunfish; opercular ear flaps,
-  blue cheek lines and species-specific bars/spots; bulkier bass with large jaws.
-- **Trout and salmon:** tapered bodies, adipose fins, pink lateral stripes, red
-  halo spots, brook-trout vermiculations, white fin edges and hooked salmon jaws.
-- **Catfish and carp:** broad, flattened catfish heads, curved barbels, different
-  forked/square tails; humped/scaled carp, mirror scales, smooth leather carp and
-  flowing koi fins. Adult Mekong giant catfish correctly lack long barbels.
-- **Specialists:** flattened pike/gar jaws and teeth, a broad paddlefish rostrum,
-  sturgeon scutes and asymmetric tails, wrasse forehead humps, gourami feelers,
-  coelacanth lobe fins and three-part tails, and the sunfish's short clavus.
-- **Ocean shapes:** flat rays with wings, top-mounted eyes and whip tails; manta
-  cephalic lobes; sharks with five gill slits; marlin bills; ribbon-like oarfish
-  with red crests and pelvic streamers. Whales have horizontal flukes, not fish tails.
-- **Cephalopods:** a mantle, large eyes, eight articulated-looking tapered arms
-  and suckers; the squid also has two longer feeding tentacles with clubs.
-- **Mythical catches:** distinct lure fish, armored guardians, serpents, crowned
-  rays, antlered creatures, ribbon ghosts and star-marked whales. Selective
-  luminous lures/photophores accent the designs without washing out entire fish.
-
-Bevelled cross-sections, solid polygon fins, fin rays, layered eyes, jaw details,
-raised plates and countershading add depth. Field marks follow the actual body
-facets rather than cutting through curved heads. A lightly reflective, flat-shaded
-material preserves the angular style. Tail/fin motion is rigged; whale flukes move
-vertically, and ray wings gently flex.
-
-### One design everywhere
-
-The **index, Bag, catch card, Catch Log, market and identified-fish reel display**
-use cached vector illustrations projected from those same sculpted surfaces.
-There is no separate generic icon fallback. **Undiscovered index entries still
-use one anonymous silhouette**: no real outline, name, model ID or anatomy is
-exposed before landing. Illustrations scale cleanly on desktop and mobile.
-
-Holding uses exact mesh-vertex bounds, including angled fins, bills and tentacles.
-Flat rays are tilted to reveal their wings. The hands support the actual trunk,
-not the midpoint of an exceptionally long tail; cameras account for that asymmetric
-placement. **Absolute-weight trophy scaling remains uncapped**, with automatic
-framing in both views and no body/hands in first person. No catch weight is edited.
-
-The shared CPU geometry/illustrations are deterministic and cached. GPU meshes
-are batched to **at most six draw calls and currently fewer than 4,000 triangles
-per fish**; there are no textures, model downloads or per-scale draw calls. Each
-instance owns its GPU geometry/materials and disposes them exactly once when
-stowed, sold or removed after a fight. The world and controls are unchanged;
-v40 improves resolution adaptation separately without changing the fish geometry.
-
-This is a presentation update: **fish IDs/numbers, weights, rarity, catch odds,
-XP, gear, prices, boats and the v8 save schema are unchanged**. Existing catches
-receive their new appearance automatically; nothing needs to be caught again.
-The v38 bait-eligibility correction and return-trip #040 catch remain intact.
-
-## The six islands
-
-| Island | Level | Local gear tiers | Landmark / character | Fish |
-| --- | ---: | --- | --- | ---: |
-| **Reedhaven** | 1 | 1–4 | Reed beds, a striped lighthouse, sunny fishing village | 20 |
-| **Pinewater Isle** | 10 | 5–8 | Tall spruce, mossy terraces, working timber waterwheel | 20 |
-| **Sunscar Atoll** | 25 | 9–12 | Palms, coral, sandstone sun gate | 20 |
-| **Frostfall Isle** | 45 | 13–16 | Snow-capped pines, icebergs, frozen watchtower | 20 |
-| **Emberforge** | 65 | 17–20 | Basalt, glowing lava, smoking volcano, floating embers | 20 |
-| **Moontide Sanctum** | 90 | 21–24 | Luminous moon gate, amethyst-colored stone, drifting lights | 20 |
-
-Each island has **five separate stalls**: Rod Works, Line & Spool, Bait Shack,
-Fish Market, and Boat Shop & Voyages. Each of the three gear vendors stocks only
-**four local tiers**, not the entire ladder. Follow the paths and approach the
-counter; **E** opens the nearest stall. Shop buttons never overlap.
-
-Catch XP unlocks island licenses. Coins buy equipment and boats. There are no tolls,
-consumable bait charges, or boat fuel costs. You can always return to an earlier island
-once you have an appropriate boat. The sea chart shows the exact missing requirement.
-
-**Wider island milestones · v27:** licenses now require levels **1 / 10 / 25 / 45 /
-65 / 90**, with gaps of **9 / 15 / 20 / 20 / 25 levels**. Every gap is larger than the
-previous 4 / 7 / 10 / 13 / 15. Boat licenses use the same milestones. This level-gate
-update did not change XP rewards, the XP curve or shop prices. Existing earned licenses
-are retained, even for destinations not yet visited; only future unlocks use the new gates.
-
-### Boats and travel
-
-| Boat | Level | Priciest departure gear | Boat price | Farthest destination |
-| --- | ---: | ---: | ---: | --- |
-| Harbor Skiff | 1 | — | Free | Home harbor |
-| Pinewood Dinghy | 10 | Reedhaven · 360c | 550c | Pinewater |
-| Sunrunner | 25 | Pinewater · 2,500c | 4,500c | Sunscar |
-| Frostbreaker | 45 | Sunscar · 17,000c | 22,500c | Frostfall |
-| Cinderwake | 65 | Frostfall · 70,000c | 130,000c | Emberforge |
-| Astral Voyager | 90 | Emberforge · 255,000c | 320,000c | Moontide |
-
-**Next-voyage premium · v29:** each next-island boat costs **at least 25% more than
-any rod, line or bait sold on the island you are leaving**. The price floor is derived
-from the actual local stock, not an unrelated fixed minimum. The remaining premium
-keeps later saving goals progressive. Prices remain fixed for everyone, and an owned
-boat never needs to be bought again. The starter skiff stays free.
-
-These are saving goals of roughly **12 / 20 / 26 / 33 / 42 landed-and-sold fish**
-using the **departure island's top local bait**. Boats are not priced against the
-better fish that remain locked on their destination island.
-
-Open **M** anywhere to study the sea chart. To purchase/equip a boat or depart, visit a
-physical Boat Shop. Choose a destination and sail. Crossings are **automatic, animated
-voyages**, not free-steering boat controls, and can be skipped. Routes navigate around
-islands using a visibility graph rather than cutting straight through land. Arrival
-places you safely on the destination's fishing pier. Water is not walkable.
-
-### Fish selection and gear
-
-**Current island + equipped bait** determine the eligible fish pool. Cast charge
-adjusts luck within that pool; it never unlocks another island's fish or bypasses
-the bait's advertised rarity window. Species size is not an extra eligibility
-filter. Longer rods do not add eligibility or luck beyond the same charge bonus.
-
-The local bait shop and Bag → Bait show how many local species each bait can attract.
-If a bait has no valid fish here, casting is blocked with an explanation—there is no
-silent fallback to an incorrect species. Every local bait has at least one local fish,
-and the previous island's top bait works when arriving on the next island.
-
-- **Rods:** cast reach, reel speed, and control. Bamboo Pole → Mythril Rod.
-- **Lines:** weight rating and reduced strain. Cotton Twine → 3400lb Mythril.
-- **Bait:** rarity window, luck, and a gentle weight bonus. Garden Worm → Moonbait.
-- **Bag → Rods / Lines / Bait (I):** equip any already-owned tier from anywhere for free. The bag cannot buy stock; visit a local vendor for new gear.
-
-Some collection entries reward revisiting an island with a different bait. For example,
-Pinewater's Golden Koi requires a legendary-capable bait from a later island; Sunscar's
-American Eel takes an earlier uncommon-capable bait. Keep your old tackle!
-
-### Honest bait eligibility & Pinewater's last entry · v38
-
-Removed the old minimum-species-size gate. It made a broader rarity range secretly
-exclude smaller species: **Cheese Cube omitted two Pinewater Rare fish**, and
-**Live Minnow could not hook #040 at all**, even though its Rare–Legendary label
-included that fish's rarity. This was an eligibility problem, not just bad luck.
-
-Eligibility is now exactly **current island + the bait's inclusive rarity range**.
-All matching species are eligible at every natural size. A later bait with the
-same or wider range cannot silently lose species. A bait that explicitly **drops
-lower rarities** can still have fewer possible species; early and late rarity
-windows remain strict. Luck and cast power only change odds inside that pool.
-
-| Bait | Sold in | Rarity range | Possible species in Pinewater | Can hook #040? |
-| --- | --- | --- | ---: | --- |
-| Salmon Egg | Pinewater | Rare–Epic | 14 | No |
-| Dough Ball | Sunscar | Rare–Epic | 14 | No |
-| Cheese Cube | Sunscar | Rare–Legendary | 15 | **Yes** |
-| Powerbait | Sunscar | Rare–Legendary | 15 | **Yes** |
-| Live Minnow | Sunscar | Rare–Legendary | 15 | **Yes** |
-
-**#040 is still a return-trip catch.** Its rarity was not lowered, and Pinewater's
-local bait did not gain a new rarity. Buy an appropriate bait in Sunscar, then
-return to Pinewater and equip it in **Bag → Bait**. You must fish in the species'
-home island; casting in Sunscar will not catch Pinewater fish.
-
-#040 remains rare: with Live Minnow, its chance is about **6.7% per hook at neutral
-charge** or **7.6% at full charge**. That is not a guarantee within a fixed number
-of attempts. No pity counter, forced discovery or automatic collection completion
-was added. The last entry stays unnamed in the index until actually landed.
-
-The Bag/shop count uses the exact same pool as the fish picker. Labels now say
-**ALL SIZES**, and the notes explain the rule instead of advertising an extra
-size cutoff. Bait luck, weight bonuses, natural species weight bounds and roll
-formulas are unchanged. All local/arrival-bait pools used by the economy and XP
-audits are unchanged; the correction fixes return-trip eligibility. Prices,
-equipment strength, boats, island levels, saves, discoveries and earned rewards
-are not reset or rebalanced. Landing the final missing species still earns the
-existing permanent +5% island collection bonus, once.
-
-### Cast power and luck · v30
-
-Charge now contributes **−10 to +10 percentage points** to equipped bait luck:
-
-| Released cast power | Luck adjustment |
-| --- | ---: |
-| Minimum · 0% | −10 points |
-| 25% | −5 points |
-| Halfway · 50% | No adjustment |
-| 75% | +5 points |
-| Full · 100% | +10 points |
-
-The change is linear, additive and capped: +30% bait luck becomes +20% at minimum
-charge or +40% at full charge. Even starter bait responds (−10% to +10% effective
-luck); these are weighting bonuses, **not catch probabilities**. The live charge
-meter shows the modifier, and a successful release locks it until the next cast.
-Failed casts never replace it, and the modifier is not stored as a permanent upgrade.
-
-Effective luck controls the existing eligible-fish rarity weights, specimen-weight
-bias and bite wait. It does not change species eligibility, the separate bait weight
-bonus, prices, or saves. Each rod has the same −10/+10 limits; absolute metres do not
-stack another bonus on top. The economy audit uses neutral 50% charge by default.
-
-**Reeling progress has no cast-power or distance factor.** For the same rod and time
-spent in green, minimum- and full-power casts reel at exactly the same rate. Fish
-strength, weight and player control can still make individual fights feel different.
-The bobber's outward flight time still reflects how far it travels.
-
-### Bait luck upgrades · v29 / v37
-
-The starter island remains **0% → 3% → 7% → 11%** luck. Ordinary local upgrades
-add **3–6 percentage points**. In v37, each island boundary adds eight extra
-points on top of that normal step, giving a **12–13-point jump** when moving from
-the previous island's best bait to the new island's first bait. Moonbait now has
-**+153% luck** (previously +113%). The shop and Bag → Bait show the actual bonus
-and its difference from your equipped bait.
-
-Luck is a **relative weighting modifier**, not a literal catch percentage or a
-guaranteed rare fish. It favors rarer fish only within the bait's existing eligible
-pool; it cannot bypass island or rarity restrictions. Its bite-speed
-and weight-bias effects still apply. Even Moonbait at full charge keeps a positive
-bite wait (at least about 0.64 seconds). The separate half-point-per-tier weight
-bonus and natural fish weight limits are unchanged.
-
-### Slightly heavier catches · v28
-
-Every bait upgrade adds **0.5 percentage points** to its maximum rolled-weight bonus:
-Garden Worm **0%**, Bread Ball **up to +0.5%**, Salmon Egg **up to +3.5%**, and Moonbait
-**up to +11.5%**. This is a small extra benefit on top of bait's existing luck-based
-weight bias. The bait shop and Bag → Bait show the bonus and upgrade comparison.
-
-The bonus tapers as a fish approaches its species' natural maximum, rather than
-clamping many rolls into identical maximum-size trophies. Fish stay within their
-species' weight range. Better bait yields slightly heavier fish **on average**, not
-a guaranteed heavier fish on every catch. The natural species weight range
-remains unchanged; no bait can roll beyond that species' maximum.
-
-Only **new catches with the equipped bait** receive the boost. Switching back to a
-lower tier lowers the bonus immediately; already-caught fish, saved records and coins
-are not rewritten. The weight update did not change island/bait exclusivity, prices,
-or sale/XP formulas.
-Heavier catches naturally earn a little more through the existing formulas. The income
-audit includes the current weights and prices when checking saving goals.
-
-### Island-priced equipment & bigger upgrades · v37
-
-Each destination island's **first rod, first line and first bait cost exactly 30%
-more than the minimum boat required to reach that island**: `entry price = boat
-price × 13 / 10`. This is a fixed shop price, **not** a markup based on the player's
-wallet, currently equipped boat, where they sailed from, or previous purchases.
-Arriving in a more expensive boat or revisiting never changes the price.
-
-| Island | Required boat price | First rod / line / bait, each |
-| --- | ---: | ---: |
-| Pinewater | 550c | **715c** |
-| Sunscar | 4,500c | **5,850c** |
-| Frostfall | 22,500c | **29,250c** |
-| Emberforge | 130,000c | **169,000c** |
-| Moontide | 320,000c | **416,000c** |
-
-The **starter island is unchanged**: free starter equipment, first paid rod
-**100c** (about six starter catches), line **80c**, and bait **140c**. Every ladder
-still has 24 tiers, four per island. Within an island, prices rise geometrically;
-after the shared entry price, lines cost less than rods and bait costs more.
-Island boundaries intentionally have much larger steps, replacing the old v26
-all-islands smooth curve and fixed 80% / 140% category-price ratios.
-
-| Island's highest local tier | Rod | Line | Bait |
-| --- | ---: | ---: | ---: |
-| Reedhaven · tier 4 | 260c | 210c | 360c |
-| Pinewater · tier 8 | 1,800c | 1,450c | 2,500c |
-| Sunscar · tier 12 | 12,000c | 9,600c | 17,000c |
-| Frostfall · tier 16 | 50,000c | 40,000c | 70,000c |
-| Emberforge · tier 20 | 240,000c | 225,000c | 255,000c |
-| Moontide · tier 24 | 720,000c | 600,000c | 900,000c |
-
-Boat and gear prices are calculated together in travel order: departure gear →
-boat → destination entry gear. Every next-island boat remains **at least 25% above
-all departure stock**. All six current boat prices are unchanged; later gear was
-retuned to meet both rules without cascading boat-price inflation.
-
-**A new island is a genuine equipment power jump**, not just a new name/color:
-
-- **Rods:** the first rod is about **70–89% stronger** by the shop's combined power
-  score than the previous island's top rod. It has **26–27% faster reeling**, at
-  least **30% more reach**, and about **18–19% less tension**. Local rungs keep
-  their smaller 3–4m reach / roughly 3.5% reel improvements.
-- **Lines:** arrival ratings jump **70–100%** and strain drops **17–18%**. The
-  successive boundary ratings are **15 → 30**, **55 → 100**, **165 → 300**,
-  **500 → 850**, and **1,250 → 2,200 lb**. Names display their real rating;
-  final Mythril line now supports **3,400 lb**.
-- **Bait:** the boundary jump is **12–13 luck points**, versus 3–6 within an island.
-  Bait rarity windows and the gentle separate weight-bonus cap are unchanged.
-  The old species-size gate was subsequently removed in v38. Better luck can
-  improve future catch sizes, rarity, income and XP; it never rewrites fish
-  already in a bag or save.
-
-The stronger stats affect actual fishing: faster green-zone reeling, a wider safe
-band and reduced strain, plus better bait odds/weight bias/bite wait. **Cast power
-still adds only −10 to +10 luck points, and reeling has no cast-distance factor.**
-No change was made to the green/yellow/red rules, fish roster, sale/XP formulas,
-island license levels, collection rewards or giant-fish presentation.
-
-Prices are audited against fish available with the **previous bait on the shop's
-island**, not income from an unpurchased upgrade. Entry gear takes approximately
-**8 / 15 / 15 / 23 / 34 landed-and-sold catches per item** on the five destination
-islands. Final Moontide rod / line / bait goals are about **58 / 48 / 73 catches**
-per item; these are optional purchases, not a requirement to buy every intervening
-tier. Estimates use neutral charge and no collection bonuses; they are neither
-catch-attempt counts nor elapsed-time guarantees. Run `npm run economy` for the
-full price, boundary-stat and income audit.
-
-**Existing ownership, coins, XP and saves are retained.** Owned gear automatically
-uses its improved stats without a repurchase; re-equipping owned equipment and
-boats stays free. Stable tier IDs and the v8 save key are unchanged. Shop notes
-explain the 30% rule, upgrade comparisons show actual gains, displayed prices are
-exactly what is charged, and one-coin-short purchases remain blocked.
-
-### Catch XP that keeps pace · v33
-
-Better fish now award **substantially more XP**, instead of only six extra XP per
-rarity step and 22 per island. Base rewards for **Common / Uncommon / Rare / Epic /
-Legendary / Mythic** are **20 / 28 / 42 / 64 / 100 / 155 XP**, multiplied by each
-island's reward scale: **1× / 4× / 5× / 6× / 7× / 9×**.
-
-Specimen size adds up to **40%** of that scaled base (`weight / species maximum`,
-capped at one). A **new species adds a 50% discovery bonus**, with a single rounding
-to whole XP after all bonuses. Common starter rewards are unchanged; every other
-fish earns at least as much as before. Rarer and larger fish are more rewarding,
-and better bait improves average XP through its real eligible pool and weight rolls.
-
-With v37 bait, Pinewater repeat catches average about **177 XP with arrival bait**
-and **251 XP with its best local bait**, versus about 56–62 using the legacy reward
-formula on those same catches. From **level 15 to 25**, that is roughly
-**37–53 landed repeat catches**, before any new discoveries.
-
-| Fishing island | Level stretch | Previous repeat catches, arrival / top local bait | New repeat catches, arrival / top local bait |
-| --- | --- | ---: | ---: |
-| Reedhaven | 1 → 10 | 101.0 / 81.8 | 98.4 / 70.2 |
-| Pinewater | 10 → 25 | 218.0 / 198.9 | 69.3 / 48.8 |
-| Sunscar | 25 → 45 | 371.4 / 356.0 | 88.8 / 66.9 |
-| Frostfall | 45 → 65 | 426.7 / 415.4 | 65.0 / 51.2 |
-| Emberforge | 65 → 90 | 604.0 / 601.9 | 65.8 / 64.3 |
-| Moontide | 90 → 99 | 227.2 / 226.8 | 20.6 / 20.4 |
-
-These are rounded **expected successful landings**, not attempts, guarantees or minutes.
-The audit uses actual bait eligibility, rarity odds and 1,024 weight quantiles with
-one-decimal gameplay weights at **50% cast charge**. Arrival means the previous
-island's best bait (starter worms in Reedhaven); local means the current island's
-best bait. No destination fish, inaccessible Golden Koi, or repeated discovery
-bonuses are used to make the estimates look faster. Run `npm run progression` for
-the full comparison and Pinewater's remaining level-15-to-25 budget by bait.
-
-**Only new landings receive the new rewards.** Existing XP, levels, earned licenses,
-coins, gear, boat prices, and collection bonuses are not rewritten. The save key
-stays v8; legacy v6 XP inference keeps its original reward calculation. Island gates
-remain **1 / 10 / 25 / 45 / 65 / 90**, not closer together. Total XP for level `L` is
-still `90 × (L−1) + 22 × (L−1)²`, and levels cap at 99. Selling never awards XP.
-The level meter and next island milestone remain visible.
-
-### The field guide
-
-The **fish index (F)** contains all 120 numbered entries. Entries stay grouped by
-island and sort **Common → Uncommon → Rare → Epic → Legendary → Mythic** within
-each island, including when filters are applied. **Entry numbers follow this same
-order, #001–#120:** Reedhaven has #001–#020, Pinewater #021–#040, and so on.
-All old number assignments have been removed: fresh labels are generated only
-after sorting by island, rarity and authored species order. Sorting never reads an
-old label. Numbers stay fixed when filtering; species IDs, saved discoveries, catch
-counts and personal-best weights stay attached to the same fish.
-
-- Undiscovered fish have an **opaque dark silhouette and `???`**, with no species name,
-  colors, rarity, description, tooltip, or accessible-label spoiler in the entry markup.
-- Land a fish to reveal its name, colors, rarity, home island, story, catch count, and
-  personal-best weight. Hooking or losing it is not enough.
-- Filter by island and discovered/undiscovered status. Expand a discovered entry for details.
-- Selling fish or trimming the recent catch log **never removes discoveries**.
-
-The full spoiler roster is in **[FISH_ROSTER.md](FISH_ROSTER.md)**.
-
-### Island index completion rewards · v32
-
-Discover **all 20 unique fish from an island** to earn a **permanent +5% coin bonus**
-on **every fish sale at every market**. Each of the six islands contributes once:
-**+5% / +10% / +15% / +20% / +25% / +30%**. Bonuses add together rather than compound.
-Repeated catches and reopening the index cannot award another copy of the same reward.
-Hooking or losing the last missing fish does not count—you must land it.
-
-The final catch shows an unlock banner. The index shows each island's progress,
-checkmarks for completed islands, and your total permanent bonus. The coin HUD and
-market also display the active bonus. Market prices, single sales, Sell All, catch
-values and log values use the same bonus-aware calculation. Coins are rounded per
-fish, so bulk sales pay exactly the sum of the displayed individual prices.
-
-The reward is calculated from **saved lifetime discoveries**, not the contents of
-your bag, recent log, equipped gear or current island. It survives sales, log trimming,
-travel and reloads. Existing saves with complete islands qualify automatically; no
-new save key or reset is needed. An explicit fresh-game reset clears the rewards.
-
-Fish already in your bag receive the boost when sold, including the fish that
-completes an island. Existing wallet coins are not multiplied or retroactively paid.
-Shop prices, fish eligibility, XP and the cast-luck/reeling rules are unchanged.
-
-## Huge trophies & automatic framing · v36
-
-Held fish now grow with their **actual weight**, not their weight relative to that
-species' maximum. Equal pounds produce equal display lengths across species while
-retaining their different body shapes. There is no arm-span cap: the stylized length
-is `0.45 + 0.65 × sqrt(weight in lb)` in world units. A 1 lb fish is 1.1 units long;
-a 100 lb fish is 6.95, and a 1,500 lb trophy is about **25.6 units** beside the roughly
-2-unit-tall angler. The heaviest current catch can reach about 26.8 units.
-
-- Choose **Bag → Fish → Hold**, then **V / Front view** to see that scale beside
-  your character. Small catches stay at chest height; larger trophies are raised
-  overhead, with the belly aligned to the hands instead of floating above them.
-- The front camera fits the **entire fish and character**, using real width,
-  height and depth, field of view, screen aspect and a margin for animated fins.
-  It pulls farther back on narrow phones rather than shrinking the fish model.
-  Turning, tilting and rotating/resizing the screen recompute the fit automatically.
-- Near obstacles, the trophy camera elevates over the blocking stall/tree instead
-  of pushing inside a giant. Putting the fish away restores the normal camera.
-- First person also fits the full-size fish at an appropriate display distance,
-  with its own foreground depth pass so terrain/water cannot slice through it.
-  **No body or hands appear in first person.** The actual eye/aim camera is not
-  moved or zoomed, so cast direction, luck, distance and reeling remain unchanged.
-- Weight, value, coins, XP, discoveries and bag identity are untouched. Display
-  bounds/pose/zoom are transient and rebuilt from the selected specimen; there
-  are **no new save fields, save-key changes or migrations**. Selling, voyages,
-  view switching and Hide HUD retain their existing behavior.
-
-## Quieter interface · v35
-
-- **One Bag:** the **Fish · Rods · Lines · Bait** tabs replace the two separate bags.
-  **B** opens Fish (or closes the bag); **I** opens your last gear tab. In the Fish
-  tab, I switches to gear; in a gear tab, I closes the bag. All owned tiers remain
-  freely equippable, including earlier bait. Purchases still require local vendors.
-- **Essential HUD:** coins, level and XP stay visible. Total catches and your best
-  fish's name/weight live in **Catch Log**, including lifetime records older than
-  the latest 200 log entries. The large logo appears only on the title screen.
-  The island card, sea chart, fish index and camera navigation keep their layout.
-- **Contextual instructions:** nearby stalls show their interaction button; open
-  water offers a cast hint; waiting, bites, charging and reeling show only their
-  relevant controls. A held fish shows its own Put away action instead. Full
-  desktop/touch controls are in **Help (?)**, not a permanent row of labels.
-- **Compact catch strip:** for example, **Rainbow Trout · 3.6 lb — Put away**.
-  Holding, front view, fish values and saved progress are unchanged.
-- **Hide HUD (H):** frame a screenshot first, then hide the entire interface. A
-  brief restoration hint disappears after two seconds. **Tap/click anywhere,
-  press H or Escape** to bring it back. That first action only restores the UI;
-  it cannot cast or move the player. Movement/look and other actions are blocked
-  while hidden, but the world keeps animating. This mode is not saved on reload.
-
-Bag and Help support Tab focus trapping and Escape/backdrop closing. Bag tabs
-also support Left/Right (including wraparound), Home and End. Opening a panel
-clears movement, joystick and fishing input. Help and Hide HUD, like the Bag,
-are idle-only: finish the current cast, catch or voyage first. No economy, XP,
-fish-pool, island-gate or save-format changes are part of this UI update.
-
-## Hold your catch and front view · v34
-
-Open **Bag → Fish (B)** from anywhere to see each **unsold, landed fish**, including
-its species, rarity and actual weight. Choose **Hold** to close the bag and hold that
-fish in front of you. Fish and owned tackle now share one bag; the lifetime fish
-index (F) is separate. Sold fish and undiscovered species are not selectable.
-
-Press **V**, or the **Front view** button, to see your character **from the front**.
-Press the same key/button again to return to first person. The character is a very
-simple cuboid angler with a cap, vest, arms and legs, a small walk animation, and a
-two-handed fish-holding pose. **Your body, hands and sleeves are never rendered in
-first person**—only the rod, or the held fish. No character assets are downloaded.
-
-- **X / Put away** stows the fish without removing it from your bag. Put it away
-  before casting again. Touch look-drags never accidentally stow or cast it.
-- Holding is display-only: no extra XP, coins, discoveries, weight changes or sale
-  charges. Heavier fish display larger; the camera now backs up to fit giants
-  instead of shrinking them to arm-span size (see v36 above).
-- Selling the held specimen (including Sell All) clears the display. Selling a
-  different fish does not change what is held, even for identical duplicates.
-- Walking and fishing work in either view. The front camera is separate from the
-  player’s aim, so it never reverses casts or changes bait luck, reach or reeling.
-  Finish an active cast/fight before switching views or opening the bag.
-- The camera follows the player, shortening its distance near island obstacles
-  when not holding a fish; a held trophy instead uses v36's size-aware fit and
-  obstacle elevation. Voyages use the boat camera, then restore your view and fish.
-- Reloading returns to first person with the fish put away; the actual bag and all
-  earned progress remain saved. There is **no save-key change or migration**.
-
-## Controls
-
-| Action | Desktop | Touch |
+The development server binds `0.0.0.0`, serves `.mjs` with module MIME types, and works through preview proxies. For static hosting publish the repository root; `render.yaml` is included. Three.js is vendored locally. Keep all root `.mjs` files with `main.js`, `index.html`, `style.css` and `vendor/` when deploying.
+
+## Explore under your own power
+
+- Walk to the **Boatyard & Dock**, then choose **Board your boat**. The Harbor Skiff is free.
+- **W/S** accelerates/reverses; **A/D** steers. Touch uses the joystick.
+- **Q / Stop & fish** stops the engine and returns to fishing controls. Q again takes the helm. Boats cannot move during a cast or fight.
+- **E / Dock** disembarks when close to an unlocked island's berth. Shops and markets require walking up to their actual counters; no remote selling from the water.
+- The **minimap** shows heading, territory boundaries, nearby islands and a waypoint. Click it or press **M** for the full north-up chart. Mark a destination and steer there yourself.
+- Entering a new island's surrounding water displays its name and environment briefly.
+- There is **no automatic sailing, skip-crossing button or boat-range gate**. Every boat, including the starter, can reach every level-unlocked territory.
+- Locked territories have **invisible circular collision barriers** extending through the water column. Swept movement prevents high-speed tunnelling. Land, docks, icebergs and the outer sea edge also block boats.
+- Eight optional vessels increase in **size and top speed**, not access. The larger physical footprint needs more space around shore. Boat prices are independent of local gear; the former “required boat / 130% entry gear” pricing relationship no longer applies.
+
+### Shore luck
+
+The shore penalty is **−95% within 8 world metres** of terrain/docks/solid reef or ice obstacles. It eases linearly to **no penalty at 55 metres**, within the surrounding territory. This penalty multiplies the entire luck factor, so expensive bait cannot cancel it while standing on the pier.
+
+Luck is sampled at the **angler's position on cast release**, not the bobber's landing point. A long shore cast does not bypass it. Shore fishing remains possible, but rarer fish, specimen weight and bite timing favor heading offshore. The final all-Unfathomable territory still has the weight/timing effect. Between territories, cruise into an unlocked territory before casting.
+
+## The twenty territories
+
+Each has **20 numbered entries, two rods, two lines and two baits**. That's **40 of each equipment category**, with meaningful control and luck jumps rather than four small local steps. Premium local bait keeps the entire local rarity range; no hidden weight gate excludes small species.
+
+| # | Island | Level | Environment / landmark |
+| --- | --- | --- | --- |
+| 01 | Reedhaven | 1 | Freshwater lake · striped lighthouse, reeds |
+| 02 | Pinewater Isle | 10 | Forest lakes and streams · timber mill and working waterwheel |
+| 03 | Ironwood River | 20 | River cliffs and waterfalls · stone aqueduct |
+| 04 | Brackwater Marsh | 35 | Swamp · root cathedral, cypress, hanging moss |
+| 05 | Sunscar Atoll | 50 | Tropical lagoons · sandstone sun gate, palms |
+| 06 | Coralreach | 65 | Reefs · branching coral crown and reef gardens |
+| 07 | Breaker Coast | 80 | Rocky coast · sea stacks and broken stone arch |
+| 08 | Stormbreak Isles | 100 | Stormy open water · copper beacon and rain |
+| 09 | Thornwild Delta | 120 | Jungle rivers · stepped overgrown ruin |
+| 10 | Emberforge | 140 | Volcanic water · cinder peak and luminous lava seams |
+| 11 | Frostfall Isle | 160 | Frozen freshwater · snow pines and Icewatch |
+| 12 | Skyglass Fjord | 180 | Glacial ocean · tall glacier walls and icebergs |
+| 13 | Shattered Shelf | 200 | Deep canyon · fractured slate spires |
+| 14 | Leviathan's Grave | 225 | Wrecks and ancient bones · broken ship inside giant ribs |
+| 15 | Ashen Trench | 250 | Volcanic deep sea · hydrothermal black smokers |
+| 16 | Moontide Sanctum | 275 | Ancient temples · luminous moon gate |
+| 17 | Starfall Basin | 300 | Celestial water · fallen stellar orrery |
+| 18 | The Null Trench | 325 | Otherworldly abyss · split obsidian monoliths |
+| 19 | Eternity's Reach | 350 | Ancient cosmic ocean · enormous hourglass ruin |
+| 20 | Origin's End | 400 | Primordial ocean · first spring and concentric terraces |
+
+Landform shapes, elevations, plants, landmarks, water/sky palettes and local building details differ. Shared village paths keep shops easy to find. Roofs use local craft: timber, vines, coral, snow/icicles, forge chimneys or stone temple details.
+
+## Collection and fishing
+
+The exact authored order is **#001–#400** in [`FISH_ROSTER.md`](FISH_ROSTER.md); `collection-roster.mjs` is the runtime source. Duplicate names are distinct island entries with distinct save IDs.
+
+| Rarity | Color | Islands |
 | --- | --- | --- |
-| Walk / jog | WASD or arrows / Shift | On-screen stick |
-| Look | Mouse; click canvas to capture | Drag the scene |
-| Charge and cast | Hold click or Space, then release | Hold still, then release |
-| Hook a bite | Click / Space | Tap |
-| Raise tension | Hold click / Space | Hold |
-| Lower tension | Release | Release |
-| Interact at a stall | E or its on-screen button | Tap its button |
-| Sea chart / boats | M | Sea chart button |
-| Fish index | F | Fish index button |
-| Bag / choose a catch to hold | B | Bag → Fish → Hold |
-| Owned tackle | I (last gear tab) | Bag → Rods / Lines / Bait |
-| Front-facing third person / first person | V (toggle) | Front view / First person button |
-| Put held fish away | X | Put away button |
-| Full controls / Help | ? | Help button |
-| Hide / restore HUD | H; Escape or click to restore | Hide HUD; tap anywhere to restore |
-| Close panel / release cursor | Escape | Close button / backdrop |
+| Common | Gray | 1–2 |
+| Uncommon | Green | 1–4 |
+| Rare | Blue | 1–6 |
+| Epic | Purple | 2–8 |
+| Legendary | Orange | 4–9 |
+| Mythic | Red | 6–11 |
+| Exotic | Pink | 8–13 |
+| Divine | Gold | 10–15 |
+| Ancient | Brown | 12–17 |
+| Celestial | Light blue | 14–19 |
+| Transcendent | Rainbow | 16–19 |
+| Unfathomable | Black | 20 only |
 
-If pointer lock is unavailable, **drag with the mouse to look**; this still supports a
-full turn. Touch joystick releases cannot accidentally cast or hook a fish. Menus
-block movement/casting, support keyboard focus, and close with Escape. Fish encounters
-must finish before opening another panel. Hidden browser tabs pause the simulation.
+Unknown entries contain **no real name, silhouette, rarity, image metadata or anatomical outline**. They reveal only their number and territory. Filtered views retain the same numbers. Every completed island grants a permanent **+5% sale bonus**, additive to **+100%** for twenty rewards. Selling never erases discoveries.
 
-### The tension fight
+Bait rarity windows and territory determine eligibility. Cast distance does not select species. Full power adds **+10 luck percentage points** and minimum power subtracts **10**, before the environmental penalty. Luck reweights only eligible species.
 
-The rule is unchanged: **green auto-reels, yellow stalls, red immediately loses the fish**.
-Holding raises the needle; releasing lowers it. Random surges and yanks keep it active.
-Better rods and lines widen the safe band and reduce strain; an overloaded line makes
-the fight harder. Unknown fish remain unidentified in the reel HUD until landed.
+Hold click / Space and release to cast; click / Space on a bite to hook. During a fight, hold to raise tension and release to lower it. **Green reels automatically, yellow stalls, and either red end immediately loses the fish.** Green progress depends on reel speed, never charge, cast distance or shore penalty.
 
-## Save compatibility
+### Weights, sizing and rewards
 
-Progress is saved to this browser and site origin under **`reel-deal-save-v8`**:
-coins, gear, boats, XP, earned licenses, island, visited islands, bag, best catch, discoveries, and the
-latest 200 catches. There are no accounts or cross-device/cloud saves.
+- Weight ranges and maximum display spans are authored **per species**, not generated from island, rarity or progression. A cosmic fry can be tiny and an ordinary whale enormous.
+- Heavier individuals of the **same species** look larger. Different species do not share one pounds-to-length curve. Body proportions remain anatomical; the camera backs up rather than shrinking genuine giants.
+- Catch weights persist to **six decimal places**, so millipound fish never round down to zero. The HUD, Bag, index and market use readable precision.
+- The expanded economy has an explicit **×0.85 default sale multiplier**. Collection bonuses apply afterward at sale time, including to fish already in the Bag.
+- Future catch XP has an explicit **×0.90 multiplier**, larger-specimen bonuses and a **one-time +50% discovery reward**. Higher-rarity local catches give better XP even when physically small.
+- The original cumulative XP curve is extended to **level 400**. Existing coins and XP are never reduced. Audits budget actual repeat-catch pools and weight quantiles, not guaranteed discoveries or destination-only bait.
+- Offshore audits exclude sailing time, missed catches and collection bonuses. Returning to the market and choosing an offshore spot add play time; the scripts do not claim fixed minutes per level.
 
-The v7 key (`reel-deal-save-v7`) migrates automatically, keeping exact XP, coins,
-owned items, current island and visited history. Licenses earned under the old levels
-are saved permanently, so the wider gaps never lock returning players out. The next
-unearned license still requires its new level; migration never boosts a v7 player's
-XP or unlocks additional islands. The chart labels below-level licenses **RETAINED**.
+## Bag, camera and controls
 
-Both v6 keys (`reel-deal-save-v6` and `reel-life-3d-save-v6`) also migrate automatically:
+**B** opens the unified Bag: Fish / Rods / Lines / Bait. **I** opens the last owned-equipment tab. Owned tackle re-equips freely anywhere; new items are bought only at local stalls.
 
-- Coins, equipped/owned gear, bag, best fish and catch count are retained.
-- Discoveries are reconstructed from the saved log, bag and best catch.
-- Returning veterans receive XP and a boat appropriate to their highest already-owned
-  gear chunk using the original milestones; their earned licenses are then retained.
-  Previously earned equipment does not become stranded behind a new gate.
-- Old keys are removed **only after** the new save is successfully written.
+Choose **Hold** on a Bag specimen. It remains in the Bag until sold. **V** toggles front-facing third person; **X** puts the fish away. There are **no first-person arms or body**. Actual sculpt bounds, asymmetric trunk support and camera fitting accommodate rays, long tails, squid and whales on phones as well as desktop.
 
-The catch log's **Reset** button asks for confirmation before clearing progress. Storage
-failures show a warning instead of silently pretending the session was saved.
+**? / Help** lists controls. **H / Hide HUD** clears the scene for screenshots; the first tap/click, H or Escape restores it without also casting. Dialogs trap focus and clear movement/joystick input. Bag tabs support arrows and Home/End. The Catch Log retains total catches, the best catch and recent history without building a hidden 200-row list every frame.
 
-## Deploy to Render
+## Saved games
 
-Use a **Static Site**—no server or build is necessary:
+Saves use **`reel-deal-save-v9`**, local to this browser and site origin. Free-driving position is saved periodically and restores only if it is valid, unlocked water; invalid positions fall back to the dock.
 
-1. Push this branch to GitHub.
-2. Render → **New + → Static Site**, select this repository.
-3. Select the branch **containing this update**. Use `arena/ac060c44-fish` until its work
-   has been merged into `main`; selecting an older `main` will not deploy these changes.
-4. **Build Command:** leave empty. **Publish Directory:** `.`.
-5. Create/deploy the site. `render.yaml` also supports deployment as a Blueprint.
+Migration from v8/v7/v6 uses **frozen original definitions**, not the new catalog:
 
-Alternatively, a Node Web Service can use `npm install` / `npm start`; `serve.js` honors
-Render's `PORT`. Static hosting avoids the need for a running Node process.
+- Coins, existing XP, catch totals, records, earned licenses and completed-island rewards are preserved.
+- Old islands map **by identity**: Sunscar → island 5, Frostfall → 11, Emberforge → 10, Moontide → 16.
+- Four old local equipment tiers map into the two corresponding new tiers. Original ownership indices remain archived; no owned item is charged again.
+- Old owned boats remain owned. They no longer impose an access limit.
+- Original catches retain their original names and weights as **Legacy catches**—including removed fish and historical weights outside today's natural ranges. They remain viewable, holdable and sellable. They do not enter the new spawn pool.
+- Matching new species retain discovery credit; duplicate names do not unlock multiple island entries accidentally.
+- Completed-island bonuses stay permanent even if the new roster is incomplete. Completing that same island again does not double-award its reward.
+- Original save keys are retained as recovery copies. Reset creates a clean v9 game and does not re-import those backups on reload.
 
-For other static hosts, deploy `index.html`, `style.css`, `main.js`, **all eleven `.mjs`
-modules**, and `vendor/`. Every browser-facing path is relative and every dependency is
-local. `.mjs` must be served as JavaScript (already handled by `serve.js`).
+## Geometry and performance
 
-Cache stamps are currently **`v=40`** in the HTML and module imports. Bump the corresponding
-stamps when changing a cached module. Render's blueprint also sends `Cache-Control: no-cache`.
+- Terrain, buildings and props are merged into **vertex-colored cuboid batches**, not one mesh per block. Identical sign materials are shared across islands. Far islands use reduced geometry; off-screen/distant detail is culled. No shadow pass or external models/textures are needed.
+- `voxel-geometry.mjs` subtracts hidden and **partially overlapping coplanar faces before batching**. Neighboring blocks share edges, not coincident depth-fighting surfaces. Paths use unique grid cells. Trim, water sheets and signs have intentional depth separation. The sky is pinned behind world geometry to avoid far-plane clipping artifacts.
+- Fish use **41 anatomical construction families**, selective glowing details and private batched GPU resources. Current + legacy sculpts are checked for finite triangles, complete concave triangulation and at most **6 draw calls / 4,500 triangles per catch**.
+- Shared Blob-image thumbnails are generated lazily and reused across the index, Bag, market and log. Unknown fish never request their art. Closed/replaced panels cancel their observers.
+- The CPU sculpt cache is limited to **32**, SVG-string cache to **64**; browsing 400 entries does not retain all face arrays. The per-species image URLs remain shared until page teardown.
+- Adaptive resolution continuously responds to sustained load, with hysteresis and gradual recovery. It ignores menus and long interruptions, preserves reductions on resize and never changes simulation time or CSS/UI sharpness.
+- Idle HUD values and empty particle pools do not update/upload every frame. The minimap updates at **5 Hz** with one small 2D canvas.
 
-## Testing
-
-`npm test` checks 144,000 seeded fish draws, all-species reachability, local bait pools,
-gear locations, smooth local prices, exact 130%-of-boat entry prices, catch-income
-budgets, larger island-boundary stats, unchanged starter equipment, increasing island sale
-values, XP thresholds, wider level gaps, matching boat licenses, both travel gates,
-retained v7 access, one-time save migration, persistent discoveries, and malformed
-save handling. Weight tests cover every species and bait tier, bounded bonuses,
-strictly heavier averages after display rounding, and unchanged saved catches. Luck
-tests check every widened gap, improved rare-fish weighting and the actual picker.
-Cast/index tests cover the −10/0/+10 luck scale, strict pools at every power,
-cast-adjusted weights/income, and consecutive #001–#120 island/rarity numbering.
-They also verify fixed numbers across filters, roster-document parity, and unchanged
-saved discoveries and catches after renumbering. Collection reward tests cover
-all 64 completed-island combinations, distinct-species requirements, +5% to +30%
-sale values, duplicate protection, invalid records, existing saves and reset behavior.
-XP balance tests cover all rarity/size/island rewards, unchanged starter XP, exact
-discovery rounding, repeat-catch budgets for every arrival/local bait at low/mid/full
-power, and audit agreement with the actual picker. They also check exact saved XP
-and licenses at all 99 levels, the unchanged v8 key, and frozen v6 XP reconstruction.
-Player-view tests cover absolute-weight growth across all species, equal-weight
-lengths, giant belly/hand contact, eight-corner volume fitting, every camera heading,
-obstacle elevation, first-person inspection and portrait framing without changing
-fish/aim data.
-UI-rule tests check the single bag tab order, roving-key behavior, contextual hint
-priority, correct desktop/touch controls and the complete Help reference.
-Economy tests compare prices to published baselines, enforce both the destination
-30% entry rule and the departure 25% boat premium, and verify ownership and coins.
-Island-gear tests check meaningful rod/line/bait stat jumps, truthful line names,
-fixed prices, all 24 saved tier IDs and improved owned gear without repurchases.
-Bait-eligibility tests check all 144 island/bait pools against the exact rarity
-range, no species losses when a range broadens, Pinewater’s 14/15 species counts,
-#040’s local-bait exclusion and next-area access, and real weighted spawn
-frequencies at minimum, neutral and full charge. They also check unchanged
-local/arrival pools and natural fish weight bounds.
-Fish-model tests enforce explicit coverage of all 120 IDs, distinct uncoloured
-trunks, biological feature presence/absence, unique bounded illustrations,
-complete concave triangulation, immutable data and deterministic geometry. They
-also cap triangles/draw calls and test asymmetric trunk-supported framing.
-Performance tests cover lazy thumbnail creation, exact vector/URL reuse, accessible
-markup, observer cancellation/fallback/disposal, all 144 cached bait pools, and
-immediate cache invalidation. Deterministic frame sequences verify continuous
-quality reduction/recovery, hysteresis, interruption handling, extreme slowdowns,
-DPR bounds and preserving reduced quality through resizes.
-
-`npm run economy` prints the deterministic income estimates and saving goals for
-every gear tier and boat, including the local gear ceiling and boat premium, using
-fixed weight quantiles rather than lucky random runs. These targets assume neutral
-50% cast power and **no collection rewards**; earning a completion bonus improves
-income without raising prices. `expectedCatchIncome` also accepts cast power for targeted audits.
-
-`npm run progression` audits XP at the same weight precision and cast power. It
-compares old/new repeat-catch effort for all six level stretches, including level
-90 → 99, and reports Pinewater 15 → 25 for arrival bait and all four local tiers.
-`expectedCatchXP` accepts `samples`, `castPower`, and `legacy` options for targeted
-checks. No new-species bonuses are included in these pacing budgets.
-
-Optional browser tests exercise all **69 paid gear purchases and five boat purchases**,
-including one-coin-short rejection, displayed-versus-charged prices and free re-equips.
-They also cover all five new level boundaries, retained old-save access, displayed
-bait bonuses and actual equipped-bait hook weights, index order across all filters,
-locked cast-luck snapshots, identical green reeling rates at every cast power, and
-yellow stalls. The real cast/hook/tension/catch/sale loop, all 30 sailing routes,
-old-save boot, and mobile controls are also covered. `tests/collection-browser.cjs`
-adds a last-species unlock, pre-existing bag bonuses, exact single/bulk payouts,
-global stacking, save/reload persistence, reset, and responsive reward UI checks.
-`tests/xp-browser.cjs` verifies exact awarded/displayed/saved XP, rarity/weight
-improvements, the one-time discovery bonus, no XP from sales or duplicate landings,
-all five catch-triggered island unlocks, the level-99 cap, and mobile mythic payouts.
-`tests/player-view-browser.cjs` checks real/empty bags, keyboard focus and input
-isolation, selecting individual specimens, identical-fish sales, resource disposal,
-actual character render visibility, all 120 fish shapes in both views at desktop and
-phone sizes, a real third-person cast/hook/reel/catch, travel/reload/reset, and touch
-look/joystick/Put away controls. `tests/ui-browser.cjs` covers the unified bag,
-all three remote re-equip paths, purchase/ownership guards, B/I aliases, accessible
-tabs and Help, native Space activation, pointer/keyboard/joystick isolation,
-contextual fishing/vendor hints, lifetime Catch Log records, clean screenshot mode
-and safe click/tap/H/Escape restoration. It also checks reload/reset, all 24 owned
-gear tiers, and scrolling/layout at desktop, phone and short-landscape sizes.
-`tests/trophy-browser.cjs` checks actual mesh length against pounds, giant-vs-player
-scale, raised grip and visible heads, all 120 models plus the angler at four viewport
-sizes and both pitch limits, resize-aware zoom, first-person foreground rendering
-without body/hands, all 30 vendor camera clearances, and travel/stow/reload/save
-invariants. `tests/island-gear-browser.cjs` covers all 15 destination entry prices,
-advanced-boat price independence, displayed/charged costs, one-coin shortages,
-actual green-zone reel speed and rod/line control, bait wait/weight improvements,
-free re-equips/reloads, and phone/landscape scrolling with touch purchases.
-`tests/bait-eligibility-browser.cjs` verifies all 144 displayed bait counts, the
-14→15 Pinewater correction, no premature #040 spoilers, and an actual cast, hook,
-tension fight and landing using each of Cheese Cube, Powerbait and Live Minnow.
-It also checks the 19→20 discovery reward, save/reload persistence, and free
-touch re-equips with phone/short-landscape labels and scrolling.
-`tests/fish-model-browser.cjs` builds all 120 real GPU meshes, checks complete
-attributes and independent resources, animation, actual index/Bag/held/catch
-art, unknown-entry secrecy, exact-once disposal and no geometry growth across
-24 rendered swaps. It also exercises a real squid cast/hook/reel/landing,
-matching saved/reloaded anatomy, and responsive phone/landscape presentation.
-`tests/performance-browser.cjs` adds DOM budgets for a complete index and 240-fish
-Bag, exact lazy image loading/reuse across all 120 species, a 200-catch closed-log
-no-op/reopen/update check, observer cleanup, phone/landscape layout, save invariance,
-zero idle HUD/particle work and live cast splashes. It also drives controlled frame
-intervals through the real renderer to verify post-startup resolution reduction,
-recovery, menu/long-pause exclusions and orientation-preserving quality.
-The trophy/player suites check every actual vertex, not unit-cube proxies:
+## Validation
 
 ```sh
-# Use an installed Chromium/Chrome:
+npm test
+npm run economy
+npm run progression
+
+# Optional real browser suite (game server must already be running):
 npm install --no-save playwright-core
 CHROMIUM_PATH=/path/to/chrome npm run test:browser
-
-# Or install @sparticuz/chromium as well on a compatible Linux system.
-# Override TEST_URL if the game is not served on port 3100.
+# Or add @sparticuz/chromium on a compatible Linux system.
+# TEST_URL can override http://127.0.0.1:3100.
 ```
 
-Screenshots go to `.artifacts/` (ignored by Git). The optional test dependencies are not
-required to run or deploy the game.
+Node tests cover the full catalog, rarity availability, 800 bait/territory combinations, precise weights, reward multipliers, level gates, 40-tier equipment, save migration, swept boat collisions, shore luck, camera fitting, coplanar face removal and performance utilities.
 
-## Project layout
+The current browser runner replaces the superseded automatic-voyage/four-tier fixtures. It exercises all **60 local shops**, exact purchases, eight boats, every level boundary, manual throttle/steering/docking, mobile controls, minimap/chart waypoints, real tiny-fish catches, red/yellow/green fights, one-time rewards, original-save migration, all **520 current/legacy GPU models**, all **400 production holding/camera paths**, twenty environment captures, accessible UI and continuous renderer adaptation.
 
-| File | Purpose |
+Screenshots and audit logs go to `.artifacts/expansion/` (ignored by Git). Software-GPU measurements are regression checks, not an FPS promise for every device.
+
+## Source map
+
+| File | Responsibility |
 | --- | --- |
-| `main.js` | Fishing, input, UI, shops, carried catches, collection, voyage playback, saves |
-| `ui-state.mjs` | Pure bag-tab navigation, contextual hint rules and Help controls |
-| `player-view.mjs` | Basic cuboid player, weight-scaled trophies and asymmetric volume-aware framing |
-| `fish-appearance.mjs` | 120 immutable art records across 36 anatomical construction families |
-| `fish-geometry.mjs` | Deterministic faceted sculpts, field markings, triangulation and matching SVG illustrations |
-| `fish-model.mjs` | Batched Three.js meshes, species-appropriate rig animation and private GPU disposal |
-| `fish-icons.mjs` | Shared exact-vector image URLs, lazy list loading and observer/resource cleanup |
-| `render-performance.mjs` | Adaptive resolution with hysteresis, last-input memoization and cached UI bait pools |
-| `game-data.mjs` | 120 species, 72 gear tiers, shared gear/boat pricing, fish pools and weight rolls |
-| `archipelago.mjs` | Island / boat definitions, XP and travel requirements |
-| `world.mjs` | Merged cube terrain and props, collision, distant-island LOD, sea routing |
-| `save-state.mjs` | Validated save normalization and legacy migration |
-| `index.html`, `style.css` | Responsive HUD, unified Bag, Help, chart, index and shop panels |
-| `serve.js`, `render.yaml` | Zero-dependency local server / static hosting blueprint |
-| `tests/` | Pure logic, economy and optional browser regression suites |
-| `scripts/economy.mjs` | Deterministic tier/boat pricing audit (`npm run economy`) |
-| `scripts/progression.mjs` | Eligible-pool XP pacing audit (`npm run progression`) |
-
-The world uses merged vertex-colored cuboids, instanced particles, simple lighting,
-no shadow pass and reduced-detail distant islands. Resolution adapts on slow devices.
-Fish geometries and materials are disposed after encounters instead of accumulating in GPU memory.
+| `collection-roster.mjs`, `FISH_ROSTER.md` | Exact authored collection, species weights and display spans |
+| `island-data.mjs` | Destination order, levels, environments and authored landforms |
+| `game-data.mjs`, `archipelago.mjs` | Equipment, rarity/weight rolls, prices, XP, rewards and boats |
+| `navigation.mjs`, `minimap.mjs` | Manual navigation, swept barriers, shore proximity and mini chart |
+| `world.mjs`, `voxel-geometry.mjs` | Batched cube environments, face subtraction, collision and LOD |
+| `fish-appearance.mjs`, `fish-geometry.mjs`, `fish-model.mjs` | Non-cuboid anatomy, shared illustrations and GPU rigs |
+| `fish-icons.mjs`, `render-performance.mjs` | Lazy shared thumbnails, adaptive quality and idle-work caches |
+| `player-view.mjs`, `ui-state.mjs` | Character, species-specific sizing, framing, Bag and Help rules |
+| `legacy-v8-data.mjs`, `legacy-catalog.mjs`, `save-state.mjs` | Frozen historical identities and explicit migration |
+| `main.js`, `index.html`, `style.css` | Gameplay, controls, responsive panels and HUD |

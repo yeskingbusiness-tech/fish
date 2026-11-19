@@ -1,4 +1,4 @@
-import { fishAppearance } from './fish-appearance.mjs?v=40';
+import { fishAppearance } from './fish-appearance.mjs?v=41';
 
 // Dependency-free, deterministic sculpting. Faceted, bevelled volumes and thick
 // polygon fins keep the block-world style without making every animal a cuboid.
@@ -18,6 +18,11 @@ const blend=(a,b,t)=>hex(rgb(a).map((n,i)=>mix(n,rgb(b)[i],t)));
 const colour=c=>'#'+c.toString(16).padStart(6,'0');
 const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const cache=new Map(),icons=new Map();
+// The 400-entry guide reuses Blob thumbnails. Keep only a small working set of
+// CPU sculpts / SVG strings, not hundreds of thousands of hidden face arrays.
+const remember=(map,key,value,limit)=>{map.delete(key);map.set(key,value);while(map.size>limit)map.delete(map.keys().next().value);return value;};
+const cached=(map,key)=>{const value=map.get(key);map.delete(key);map.set(key,value);return value;};
+export const fishGeometryCacheStats=()=>({sculpts:cache.size,svgStrings:icons.size,sculptLimit:32,svgLimit:64});
 const OCT=[[1,.55],[.55,1],[-.55,1],[-1,.55],[-1,-.55],[-.55,-1],[.55,-1],[1,-.55]];
 
 // Ear clipping, rather than a triangle fan, is important for notched/forked
@@ -52,7 +57,7 @@ export function triangulate(points){
 
 export function buildFishVisual(species){
   const id=typeof species==='string'?species:species.id;
-  if(cache.has(id))return cache.get(id);
+  if(cache.has(id))return cached(cache,id);
   const a=fishAppearance(id),[L,H,W]=a.body,[back,flank,belly,baseFin,mark]=a.tones;
   const fin=a.finColor||baseFin,light=blend(fin,belly,.45),ink=0x152d32;
   const faces=[],features=new Set(),parts={body:{pivot:[0,0,0]},belly:{pivot:[0,0,0]},tail:{pivot:[-L*.5,0,0],motion:'tail'}};
@@ -87,6 +92,80 @@ export function buildFishVisual(species){
     for(const side of [-1,1]){const ring=rings[side===1?2:0];for(let k=0;k<8;k++)face([ring[k],ring[(k+1)%8],[x+side*rx,y,z]],c,feature,part,null,glow);}
   }
 
+
+  function finish(){
+  // Normalise longitudinal span, not pounds. The carried-fish system still
+  // applies the species-authored span and fits the complete anatomical volume.
+  const vertices=faces.flatMap(f=>f.p),min=[0,1,2].map(k=>Math.min(...vertices.map(p=>p[k]))),max=[0,1,2].map(k=>Math.max(...vertices.map(p=>p[k])));
+  const factor=1.8/(max[0]-min[0]),center=[(max[0]+min[0])/2,0,0];
+  for(const f of faces)f.p=f.p.map(v=>mul(sub(v,center),factor));
+  for(const part of Object.values(parts)){part.pivot=mul(sub(part.pivot,center),factor);if(part.span)part.span*=factor;}
+  const bounds={min:min.map((v,k)=>(v-center[k])*factor),max:max.map((v,k)=>(v-center[k])*factor)};
+  const result={id,family:a.family,faces,parts,bounds,displayRotation:[['ray','manta','flatfish','starfish','sea-spider'].includes(a.family)?.76:['squid','octopus'].includes(a.family)?.14:.055,a.mouth==='cavern'?-.32:-.12,0],gripX:-center[0]*factor,features:[...features],iconTilt:['ray','manta','flatfish','starfish','sea-spider'].includes(a.family)?.88:['squid','octopus'].includes(a.family)?.37:a.family==='whale'?.43:.19};
+  return remember(cache,id,result,32);
+  }
+  if(['flatfish','shrimp','isopod','sea-spider','starfish'].includes(a.family)){
+    // These animals are not fish-shaped recolours. They have their own disc,
+    // carapace, articulated legs or radial arms, with a real belly contact.
+    if(a.family==='flatfish'){
+      ellipsoid([0,0,0],[L*.52,H*.5,W*.52],flank,'flatfish-disc');
+      ellipsoid([0,-H*.2,0],[L*.36,H*.3,W*.42],belly,'flatfish-belly','belly');
+      for(let i=0;i<18;i++){
+        const t=i/18*Math.PI*2,u=(i+1)/18*Math.PI*2;
+        const p=t=>[Math.cos(t)*L*.51,0,Math.sin(t)*W*.58],q=t=>[Math.cos(t)*L*.58,0,Math.sin(t)*W*.7];
+        plate([p(t),q(t),q(u),p(u)],[0,H*.08,0],fin,'continuous-dorsal-anal-fringe');
+      }
+      plate([[-L*.46,0,-W*.1],[-L*.8,0,-W*.33],[-L*.85,0,W*.28],[-L*.46,0,W*.1]],[0,H*.13,0],fin,'flat-tail','tail');
+      for(const [x,z]of [[.25,.12],[.37,.06]]){
+        ellipsoid([L*x,H*.46,W*z],[L*.045,H*.18,W*.045],belly,'both-eyes-upper-side');
+        ellipsoid([L*x,H*.61,W*z],[L*.023,H*.08,W*.024],ink,'upper-pupils');
+      }
+      for(let i=0;i<16;i++){const t=i*2.4,r=.13+(i%4)*.07;ellipsoid([Math.cos(t)*L*r,H*.46,Math.sin(t)*W*r],[L*.025,H*.03,W*.03],mark,'upper-side-spots');}
+      line([[L*.45,H*.12,-W*.08],[L*.53,H*.12,0],[L*.45,H*.12,W*.08]],H*.04,ink,'flatfish-mouth');
+    }else if(a.family==='starfish'){
+      ellipsoid([0,0,0],[L*.19,H*.5,W*.19],flank,'central-disc');
+      ellipsoid([0,-H*.2,0],[L*.14,H*.24,W*.14],belly,'oral-disc','belly');
+      for(let k=0;k<5;k++){
+        const t=k*Math.PI*2/5,part=k===2?'tail':'body';
+        tube([[Math.cos(t)*L*.13,0,Math.sin(t)*W*.13],[Math.cos(t)*L*.36,H*.04,Math.sin(t)*W*.36],[Math.cos(t)*L*.62,0,Math.sin(t)*W*.62]], [H*.45,H*.3,H*.035],fin,'radial-arm-'+(k+1),part,6);
+        for(let j=1;j<=3;j++){
+          const x=Math.cos(t)*L*j*.14,z=Math.sin(t)*W*j*.14;
+          ellipsoid([x,-H*.2,z],[H*.12,H*.07,H*.12],belly,'tube-feet',part);
+          ellipsoid([x,H*.2,z],[H*.12,H*.08,H*.12],mark,'star-tubercles',part,true);
+        }
+      }
+    }else if(a.family==='sea-spider'){
+      ellipsoid([0,0,0],[L*.5,H*.45,W*.11],flank,'spider-trunk');
+      ellipsoid([0,-H*.12,0],[L*.35,H*.3,W*.09],belly,'spider-belly','belly');
+      for(const side of [-1,1])for(let k=0;k<4;k++){
+        const x=L*(-.3+k*.2),s=(k-1.5)*.28;
+        tube([[x,0,side*W*.07],[x+L*s,H*.8,side*W*.45],[x+L*s*1.6,-H*.4,side*W*.85]],[H*.16,H*.11,H*.025],fin,'jointed-leg-'+(side<0?k+1:k+5),'body',4);
+      }
+      for(const side of [-1,1]){
+        tube([[L*.38,H*.06,side*W*.045],[L*.65,H*.05,side*W*.13],[L*.73,-H*.16,side*W*.07]],[H*.13,H*.08,H*.02],flank,'chelicerae','tail',4);
+        ellipsoid([L*.3,H*.4,side*W*.045],[H*.12,H*.12,H*.12],ink,'spider-eyes');
+      }
+    }else{
+      const shrimp=a.family==='shrimp',segments=shrimp?8:7;
+      for(let k=0;k<segments;k++){
+        const x=L*(.39-k*.12),taper=1-k*.055,y=shrimp?-Math.sin(k*.45)*H*.24:0;
+        ellipsoid([x,y,0],[L*.15,H*.5*taper,W*.49*taper],k%2?flank:back,'carapace-segment-'+(k+1),k===segments-1?'tail':'body');
+      }
+      ellipsoid([0,-H*.16,0],[L*.36,H*.27,W*.31],belly,'crustacean-belly','belly');
+      const pairs=shrimp?5:7;
+      for(const side of [-1,1]){
+        for(let k=0;k<pairs;k++){
+          const x=L*(.3-k*.1);
+          tube([[x,-H*.12,side*W*.32],[x-L*.05,-H*.6,side*W*.65],[x+L*.08,-H*.78,side*W*.85]],[H*.075,H*.055,H*.018],fin,'jointed-leg-'+(side<0?k+1:k+1+pairs),'body',4);
+        }
+        tube([[L*.38,H*.1,side*W*.15],[L*.65,H*.45,side*W*.3],[L*(shrimp?1.05:.78),H*.6,side*W*.5]],[H*.045,H*.025,H*.007],mark,'antennae','body',4);
+        ellipsoid([L*.48,H*.24,side*W*.26],[H*.14,H*.13,H*.14],ink,'compound-eyes');
+      }
+      plate([[-L*.43,0,0],[-L*.7,-H*.12,-W*.5],[-L*.78,-H*.15,0],[-L*.7,-H*.12,W*.5]],[0,H*.12,0],fin,'tail-fan','tail');
+    }
+    return finish();
+  }
+
   let profile;
   const standard=[[-.5,.13,.16,0],[-.39,.48,.52,0],[-.22,.85,.87,0],[0,1,1,0],[.22,.94,.98,0],[.36,.74,.86,0],[.46,.46,.58,0],[.52,.23,.30,-.04]];
   const profiles={
@@ -116,6 +195,7 @@ export function buildFishVisual(species){
     });
   }else{
     profile=profiles[a.family]||standard;
+    if(a.family==='whale'&&a.head>=1.6)profile=[...profiles.whale.slice(0,4),[.32,1.02,.97,.03],[.47,1,.89,.02],[.58,.87,.74,-.03]];
     if(a.family==='shark'&&a.head>=1.45)profile=[...profiles.shark.slice(0,5),[.46,.65,.78,-.04],[.56,.46,.66,-.09]];
     if(isRay)profile=[[-.5,.32,.28,0],[-.3,.75,.40,0],[0,1,.43,0],[.26,.92,.35,.05],[.45,.55,.30,.06],[.53,.25,.20,0]];
     if(isCeph)profile=a.family==='squid'
@@ -281,6 +361,7 @@ export function buildFishVisual(species){
       case 'double':dorsal(.27,-.025,.6,'spiny');dorsal(-.18,-.39,.43);break;
       case 'long':dorsal(.26,-.43,.3);break;
       case 'rear':dorsal(-.14,-.44,.47);break;
+      case 'hump':dorsal(-.13,-.38,.19);break;
       case 'rear-long':dorsal(-.10,-.46,.31);break;
       case 'soft':dorsal(.12,-.14,.43);break;
       case 'cat':dorsal(.19,-.02,.62,'shark');break;
@@ -314,6 +395,8 @@ export function buildFishVisual(species){
       sagittal('anal-fin',[[x,floor(x)],[x-.08*L,floor(x)-h],[xx-.035*L,floor(xx)-h*.36],[xx,floor(xx)]],fin);
     }
   }
+
+  if(has('finlets'))for(const side of [-1,1])for(let i=0;i<6;i++){const x=L*(-.20-i*.045),y=side>0?roof(x):floor(x);sagittal('finlets',[[x,y],[x-L*.025,y+side*H*.1], [x-L*.045,y]],fin,'body',false);}
 
   function pairedFins(){
     const wide=['shark','sturgeon','paddlefish','whale','leviathan'].includes(a.family),lobed=has('lobed-fins');
@@ -449,7 +532,7 @@ export function buildFishVisual(species){
       circle(er*1.25,tint(back,.65),.002,'eye-socket');circle(er,iris,.004,'iris');circle(er*.62,0x10262b,.006,'eyes');
       face([[ex-er*.25,pos[1]+er*.41,pos[2]+side*.009],[ex+er*.1,pos[1]+er*.41,pos[2]+side*.009],[ex+er*.1,pos[1]+er*.12,pos[2]+side*.009],[ex-er*.25,pos[1]+er*.12,pos[2]+side*.009]],0xf8f3da,'eye-catchlight','body',[0,0,side]);
       if(!isCeph){
-        if(has('gill-slits'))for(let i=0;i<5;i++)stripe([[.29-i*.025,.45],[.26-i*.025,-.46]],.012,tint(back,.65),'five-gill-slits',side);
+        if(has('gill-slits'))for(let i=0;i<(a.gillCount||5);i++)stripe([[.29-i*.025,.45],[.26-i*.025,-.46]],.012,tint(back,.65),a.gillCount===6?'six-gill-slits':'five-gill-slits',side);
         else if(a.family!=='whale')stripe([[.23,.72],[.16,.35],[.17,-.17],[.26,-.57]],.014,blend(back,flank,.2),'operculum',side);
         const mx=a.mouth==='large'?.31:a.mouth==='wide'?.28:.41;
         if(a.mouth!=='cavern'){
@@ -542,7 +625,7 @@ export function buildFishVisual(species){
   }
   if(has('dorsal-spot'))ellipsoid([0,roof(0)+H*.17,0],[L*.035,H*.05,W*.027],back,'dorsal-spot');
   if(has('white-fin-edge')||has('fin-rim'))for(const side of [-1,1]){
-    const part=side<0?'fin-left':'fin-right';if(!parts[part])continue;
+    const part=side<0?'fin-left':'fin-right';if(!Number.isFinite(parts[part]?.span))continue;
     const z=side*sample(L*.2).w;
     line([[L*.2,-H*.015,z],[L*.06,-H*.18,z+side*parts[part].span*.72]],.008,belly,'pale-fin-leading-edge',part);
   }
@@ -579,22 +662,14 @@ export function buildFishVisual(species){
   }
   if(has('photophores'))for(const side of [-1,1])for(let i=0;i<9;i++)spot(-.38+i*.08,-.57,.011,.038,mark,'bioluminescent-organs',side,true);
 
-  // Normalise longitudinal span, not pounds. The carried-fish system still
-  // applies its uncapped absolute-weight scaling and fits the complete volume.
-  const vertices=faces.flatMap(f=>f.p),min=[0,1,2].map(k=>Math.min(...vertices.map(p=>p[k]))),max=[0,1,2].map(k=>Math.max(...vertices.map(p=>p[k])));
-  const factor=1.8/(max[0]-min[0]),center=[(max[0]+min[0])/2,0,0];
-  for(const f of faces)f.p=f.p.map(v=>mul(sub(v,center),factor));
-  for(const part of Object.values(parts)){part.pivot=mul(sub(part.pivot,center),factor);if(part.span)part.span*=factor;}
-  const bounds={min:min.map((v,k)=>(v-center[k])*factor),max:max.map((v,k)=>(v-center[k])*factor)};
-  const result={id,family:a.family,faces,parts,bounds,displayRotation:[isRay?.76:isCeph?.14:.055,a.mouth==='cavern'?-.32:-.12,0],gripX:-center[0]*factor,features:[...features],iconTilt:isRay?.88:isCeph?.37:a.family==='whale'?.43:.19};
-  cache.set(id,result);return result;
+  return finish();
 }
 
 // An illustrated orthographic view of the actual sculpt, not a separate generic
 // pixel template. No canvas/WebGL contexts or image downloads per index entry.
 export function fishSVG(species){
   const id=species.id,key=id+'|'+species.name;
-  if(icons.has(key))return icons.get(key);
+  if(icons.has(key))return cached(icons,key);
   const model=buildFishVisual(species),tilt=model.iconTilt,yaw=.13,c=Math.cos(tilt),s=Math.sin(tilt),cy=Math.cos(yaw),sy=Math.sin(yaw);
   const transform=p=>{
     const x=p[0]*cy-p[2]*sy,z=p[0]*sy+p[2]*cy;
@@ -617,5 +692,5 @@ export function fishSVG(species){
   const flush=()=>{if(segments.length)body+=`<path d="${segments.join('')}" fill="${colour(last)}" stroke="${colour(last)}" stroke-width=".22" stroke-linejoin="round"/>`;segments=[];};
   for(const f of projected){if(f.c!==last){flush();last=f.c;}segments.push(path(f.p));}flush();
   const svg=`<svg viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escape(species.name)}" data-fish-id="${escape(id)}" data-anatomy="${model.family}">${body}</svg>`;
-  icons.set(key,svg);return svg;
+  return remember(icons,key,svg,64);
 }

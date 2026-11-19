@@ -26,21 +26,21 @@ module.exports=async function testPerformance(browser,url,shots){
     assert.equal(await page.evaluate(()=>__reelDeal.performanceStats.icons.images),0);
     await page.click('#indexClose');
     await page.evaluate(()=>{
-      const a=__reelDeal,fish=Array.from({length:240},(_,i)=>({n:a.SPECIES[i%120].name,w:a.SPECIES[i%120].maxW}));
-      localStorage.setItem('reel-deal-save-v8',JSON.stringify({version:8,coins:1234,xp:a.xpForLevel(90),caught:240,
-        bag:fish,log:fish.slice(0,200),licenses:[0,1,2,3,4,5],
+      const a=__reelDeal,fish=Array.from({length:240},(_,i)=>({id:a.SPECIES[i%120].id,n:a.SPECIES[i%120].name,w:a.SPECIES[i%120].maxW}));
+      localStorage.setItem('reel-deal-save-v9',JSON.stringify({version:9,coins:1234,xp:a.xpForLevel(400),caught:240,
+        bag:fish,log:fish.slice(0,200),licenses:a.ISLANDS.map(i=>i.id),
         discoveries:Object.fromEntries(a.SPECIES.map(s=>[s.id,{count:2,best:s.maxW,first:''}]))}));
     });
     await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await page.click('#startBtn');
     assert.equal(await page.locator('#logList .log-item,#logList img,#logList path').count(),0,'closed history stays unbuilt at boot');
     assert.equal(await page.evaluate(()=>__reelDeal.performanceStats.icons.images),0);
-    await page.evaluate(()=>{__reelDeal.saveGame();window.perfSave=localStorage.getItem('reel-deal-save-v8');});
+    await page.evaluate(()=>{__reelDeal.saveGame();window.perfSave=localStorage.getItem('reel-deal-save-v9');});
 
     metrics.index=await page.evaluate(()=>{const start=performance.now();__reelDeal.openIndex();const e=document.getElementById('fishGrid');return {synchronousMs:performance.now()-start,elements:e.querySelectorAll('*').length,paths:e.querySelectorAll('path').length,markupBytes:e.innerHTML.length};});
-    assert.equal(await page.locator('#fishGrid img.fish-thumbnail').count(),120);assert.equal(metrics.index.paths,0);assert.ok(metrics.index.elements<2000);
+    assert.equal(await page.locator('#fishGrid img.fish-thumbnail').count(),400);assert.equal(metrics.index.paths,0);assert.ok(metrics.index.elements<6500);
     await ready(page,'fishGrid');
     const first=await page.evaluate(()=>({loaded:document.querySelectorAll('#fishGrid img[src]').length,cached:__reelDeal.performanceStats.icons.images}));
-    assert.ok(first.loaded>0&&first.loaded<40,JSON.stringify(first));assert.ok(first.cached<40,'do not generate all 120 sculpts on open');
+    assert.ok(first.loaded>0&&first.loaded<40,JSON.stringify(first));assert.ok(first.cached<40,'do not generate all 400 sculpts on open');
     await page.screenshot({path:`${shots}/performance-index.png`});
     await scrollAll(page,'fishGrid');
     const artwork=await page.evaluate(async()=>{
@@ -55,7 +55,7 @@ module.exports=async function testPerformance(browser,url,shots){
       }
       return {failures,images:a.performanceStats.icons.images};
     });
-    assert.deepEqual(artwork.failures,[]);assert.equal(artwork.images,120);await page.click('#indexClose');
+    assert.deepEqual(artwork.failures,[]);assert.equal(artwork.images,400);await page.click('#indexClose');
     assert.equal(await page.evaluate(()=>__reelDeal.performanceStats.icons.observers),0);
 
     metrics.bag=await page.evaluate(()=>{const start=performance.now();__reelDeal.openFishBag();const e=document.getElementById('bagBody');return {synchronousMs:performance.now()-start,elements:e.querySelectorAll('*').length,paths:e.querySelectorAll('path').length,markupBytes:e.innerHTML.length};});
@@ -81,8 +81,8 @@ module.exports=async function testPerformance(browser,url,shots){
     await page.setViewportSize({width:1280,height:800});await frame(page);
     await page.evaluate(()=>{const a=__reelDeal;for(let n=0;n<16;n++){a.openIndex();a.closeIndex();a.openFishBag();a.selectBagTab('rods');a.closeBag();}});
     await frame(page);
-    assert.deepEqual(await page.evaluate(()=>__reelDeal.performanceStats.icons),{images:120,observers:0,pending:0},'cancelled lazy callbacks neither leak observers nor rebuild images');
-    assert.equal(await page.evaluate(()=>{__reelDeal.saveGame();return localStorage.getItem('reel-deal-save-v8')===window.perfSave;}),true);
+    assert.deepEqual(await page.evaluate(()=>__reelDeal.performanceStats.icons),{images:400,observers:0,pending:0},'cancelled lazy callbacks neither leak observers nor rebuild images');
+    assert.equal(await page.evaluate(()=>{__reelDeal.saveGame();return localStorage.getItem('reel-deal-save-v9')===window.perfSave;}),true);
 
     await page.click('#logBtn');await ready(page,'logList');
     assert.equal(await page.locator('#logList .log-item').count(),200);assert.equal(await page.locator('#logList path').count(),0);
@@ -101,7 +101,7 @@ module.exports=async function testPerformance(browser,url,shots){
     await ready(page,'catchIcon');await page.click('#continueBtn');await page.click('#logBtn');await ready(page,'logList');
     assert.equal(await page.locator('#logList .log-item b').first().textContent(),catchResult.name);
     assert.equal(await page.locator('#logList .log-item').count(),200);await page.click('#closeLog');
-    console.log('PASS: all 120 thumbnails exactly match the original vectors; lazy index/240-fish Bag/market/200-entry log, duplicate image reuse, closed-log no-op, observer cleanup, mobile layout and unchanged saves');
+    console.log('PASS: all 400 thumbnails exactly match the original vectors; lazy index/240-fish Bag/market/200-entry log, duplicate image reuse, closed-log no-op, observer cleanup, mobile layout and unchanged saves');
 
     await page.evaluate(()=>{const a=__reelDeal,s=a.world.stalls.find(s=>s.zone===0&&s.kind==='rod');a.G.px=s.x;a.G.pz=s.z-3.8;});
     await page.waitForFunction(()=>__reelDeal.performanceStats.activeParticles===0);await frame(page,3);
@@ -129,7 +129,7 @@ module.exports=async function testPerformance(browser,url,shots){
     await page.evaluate(async()=>{const T=await import('three');window.originalDelta=T.Clock.prototype.getDelta;window.qualityDt=1/60;T.Clock.prototype.getDelta=function(){const real=window.originalDelta.call(this);return window.qualityDt??real;};});
     await page.click('#startBtn');await frame(page,180);
     assert.equal(await page.evaluate(()=>__reelDeal.renderer.getPixelRatio()),1.5);
-    await page.evaluate(()=>{__reelDeal.saveGame();window.qualitySave=localStorage.getItem('reel-deal-save-v8');window.qualityDt=1/25;});
+    await page.evaluate(()=>{__reelDeal.saveGame();window.qualitySave=localStorage.getItem('reel-deal-save-v9');window.qualityDt=1/25;});
     await page.waitForFunction(()=>__reelDeal.renderer.getPixelRatio()<1.5);
     const reduced=await page.evaluate(()=>__reelDeal.renderer.getPixelRatio());
     await page.setViewportSize({width:390,height:844});await page.waitForFunction(()=>Math.abs(__reelDeal.camera.aspect-innerWidth/innerHeight)<1e-9);
@@ -141,11 +141,11 @@ module.exports=async function testPerformance(browser,url,shots){
     const recovered=await page.evaluate(()=>__reelDeal.renderer.getPixelRatio());
     assert.ok(recovered>paused);
     await page.evaluate(()=>window.qualityDt=2);await frame(page,20);assert.equal(await page.evaluate(()=>__reelDeal.renderer.getPixelRatio()),recovered,'tab-resume/long-task-sized delta is ignored');
-    assert.equal(await page.evaluate(()=>{const a=__reelDeal;a.saveGame();const canvas=document.getElementById('scene'),q=a.renderer.getPixelRatio();return canvas.width===Math.floor(innerWidth*q)&&canvas.height===Math.floor(innerHeight*q)&&canvas.getBoundingClientRect().width===innerWidth&&localStorage.getItem('reel-deal-save-v8')===window.qualitySave;}),true,'only canvas resolution changes, not CSS/UI size or saves');
+    assert.equal(await page.evaluate(()=>{const a=__reelDeal;a.saveGame();const canvas=document.getElementById('scene'),q=a.renderer.getPixelRatio();return canvas.width===Math.floor(innerWidth*q)&&canvas.height===Math.floor(innerHeight*q)&&canvas.getBoundingClientRect().width===innerWidth&&localStorage.getItem('reel-deal-save-v9')===window.qualitySave;}),true,'only canvas resolution changes, not CSS/UI size or saves');
     await page.evaluate(async()=>{const T=await import('three');T.Clock.prototype.getDelta=window.originalDelta;});
     metrics.quality={reduced,recovered};assert.deepEqual(errors,[]);
     console.log('PASS: actual renderer continuously reduces/recovers resolution after startup, preserves reduction across orientation changes, ignores menu/long-pause frames and leaves sharp UI/save data alone');
-    fs.writeFileSync(`${shots}/v40-performance-browser.json`,JSON.stringify(metrics,null,2));
+    fs.writeFileSync(`${shots}/v41-performance-browser.json`,JSON.stringify(metrics,null,2));
   }catch(error){if(!page.isClosed())await page.screenshot({path:`${shots}/performance-failure.png`});throw error;}
   finally{await page.close();}
 };

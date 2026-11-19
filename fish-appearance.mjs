@@ -1,3 +1,5 @@
+import { COLLECTION_ROSTER } from './collection-roster.mjs?v=41';
+
 // Art direction, not game balance. Every roster ID has a deliberately authored
 // anatomy, proportions, fins and field marks. Related fish share construction
 // techniques, never a name-regex cube or a randomly recoloured generic mesh.
@@ -35,6 +37,11 @@ const families = {
   angler: { tail:'round', dorsal:'soft', mouth:'cavern', traits:['lure','fangs','feet-fins'] },
   squid: { tail:'arms', dorsal:'none', mouth:'beak', traits:['mantle','eight-arms','two-tentacles','suckers'] },
   octopus: { tail:'arms', dorsal:'none', mouth:'beak', traits:['eight-arms','suckers'] },
+  'flatfish': { tail:'none', dorsal:'none', mouth:'small', traits:[] },
+  'shrimp': { tail:'none', dorsal:'none', mouth:'small', traits:[] },
+  'isopod': { tail:'none', dorsal:'none', mouth:'small', traits:[] },
+  'sea-spider': { tail:'none', dorsal:'none', mouth:'small', traits:[] },
+  'starfish': { tail:'none', dorsal:'none', mouth:'small', traits:[] },
   whale: { tail:'flukes', dorsal:'shark', mouth:'wide', traits:['throat-pleats','blowhole','flippers'] },
   wyrm: { tail:'ribbon', dorsal:'ribbon', mouth:'fang', traits:['fangs','spines'] },
   leviathan: { tail:'lunate', dorsal:'shark', mouth:'large', traits:['lobed-fins','keel'] },
@@ -205,7 +212,110 @@ function freeze(value){
   if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}
   return value;
 }
-export const FISH_APPEARANCE=freeze(Object.fromEntries(designs));
+const originals=Object.fromEntries(designs);
+// Construction templates are anatomical, never rarity tiers. New entries choose
+// one explicitly in the collection catalog; the authored v39 sculpts remain
+// available for old catches even when that species leaves the collection.
+const aliases={
+  minnow:['creek-chub',{body:[1.35,.30,.22],traits:[],finSize:.7}],
+  trout:['rainbow-trout',{marks:'spots'}], whitefish:['lake-trout',{body:[1.5,.40,.30],marks:'fine-scales',mouth:'small'}],
+  grayling:['rainbow-trout',{dorsal:'sail',body:[1.5,.38,.28],finSize:1.25,marks:'fine-spots'}],
+  perch:['yellow-perch',{}],bass:['largemouth-bass',{}],catfish:['channel-catfish',{}],sunfish:['bluegill',{}],
+  gar:['alligator-gar',{body:[2.1,.29,.26],snout:.72,head:.8}],drum:['white-bass',{body:[1.5,.66,.40],head:1.2,tail:'truncate'}],
+  guppy:['creek-chub',{body:[.95,.32,.21],tail:'fan',tailSize:1.8,finSize:1.18,traits:['flowing-fins'],marks:'rainbow'}],
+  swordtail:['creek-chub',{body:[1.25,.32,.24],tail:'heterocercal',tailSize:1.8,marks:'lateral-band'}],
+  tetra:['yellow-bass',{body:[1.06,.39,.22],dorsal:'soft',marks:'rainbow',traits:['adipose'],tail:'fork'}],
+  angelfish:['giant-gourami',{body:[.94,.95,.19],dorsal:'vertical',tail:'fan',finSize:1.5,traits:['feelers'],marks:'bars'}],
+  discus:['black-pacu',{body:[.98,.96,.19],tail:'round',dorsal:'long',marks:'vermiculated',traits:[]}],
+  cichlid:['giant-gourami',{body:[1.26,.65,.34],head:1.07,marks:'broken-band',traits:['forehead']}],
+  arowana:['arapaima',{body:[2.0,.40,.30],tail:'round',dorsal:'rear-long',traits:['barbels-short','plate-scales'],mouth:'large'}],
+  tang:['black-pacu',{body:[1.04,.76,.19],dorsal:'long',tail:'notched',mouth:'small',traits:['lateral-scutes']}],
+  butterflyfish:['bluegill',{body:[.96,.86,.18],snout:.12,mouth:'tube',dorsal:'long',marks:'bars',traits:[]}],
+  lionfish:['yellow-perch',{body:[1.28,.60,.45],dorsal:'spiny',finSize:1.95,marks:'bars',traits:['cheek-frills','spines']}],
+  triggerfish:['black-pacu',{body:[1.36,.72,.24],dorsal:'double',mouth:'lips',traits:['head-plates'],marks:'scales'}],
+  moray:['american-eel',{head:1.25,mouth:'fang',traits:['fangs'],marks:'mottled'}],
+  barracuda:['northern-pike',{body:[2.25,.29,.26],snout:.14,dorsal:'double',marks:'bars',head:1.1}],
+  grouper:['largemouth-bass',{body:[1.6,.83,.64],head:1.35,tail:'round',marks:'mottled'}],
+  cobia:['striped-bass',{body:[2.0,.37,.33],head:1.15,marks:'lateral-band',dorsal:'long'}],
+  mackerel:['giant-trevally',{body:[1.8,.37,.32],head:.9,marks:'vermiculated',tail:'lunate'}],
+  herring:['silver-carp',{body:[1.62,.35,.22],head:.85,dorsal:'soft',traits:[],marks:'fine-scales'}],
+  snapper:['largemouth-bass',{body:[1.55,.58,.33],head:1.1,tail:'fork',traits:['teeth'],marks:'fine-scales'}],
+  trevally:['giant-trevally',{}],tuna:['giant-trevally',{body:[1.9,.61,.52],tail:'lunate',head:.92,traits:['keel','finlets'],marks:'horizontal'}],
+  mahi:['napoleon-wrasse',{body:[1.94,.64,.35],head:1.3,tail:'lunate',dorsal:'long',marks:'pale-spots',traits:['forehead']}],
+  sailfish:['blue-marlin',{dorsal:'sail',finSize:1.5}],thresher:['great-white',{tailSize:2.8,body:[2.0,.47,.4],head:.92}],
+  'flying-fish':['white-perch',{body:[1.7,.35,.27],finSize:2.4,tail:'heterocercal',marks:'none',traits:[]}],
+  'glass-catfish':['channel-catfish',{body:[1.7,.40,.18],dorsal:'none',traits:['barbels-long','ribs'],marks:'none'}],
+  piranha:['black-pacu',{body:[1.05,.75,.37],head:1.3,mouth:'large',traits:['teeth','adipose']}],
+  'ghost-leviathan':['elder-leviathan',{body:[2.5,.47,.44],traits:['lobed-fins','fin-streamers','photophores'],marks:'pale-spots'}],
+  armored:['sunken-god',{}],hydra:['world-serpent',{head:1.25,traits:['antlers','fangs','cheek-frills','spines']}],
+  sculpin:['brown-bullhead',{body:[1.4,.46,.53],head:1.5,dorsal:'double',traits:['head-plates'],marks:'mottled'}],
+  wolffish:['burbot',{head:1.3,mouth:'fang',dorsal:'long',traits:['teeth'],marks:'bars'}],
+  needle:['american-eel',{body:[2.5,.14,.12],dorsal:'long',head:.8,marks:'none'}],
+  lumpfish:['ocean-sunfish',{body:[1.1,.92,.60],tail:'round',dorsal:'double',traits:['armor'],marks:'mottled'}],
+  sixgill:['bull-shark',{gillCount:6,dorsal:'rear',head:1.2}],
+  lanternfish:['creek-chub',{head:1.1,eyeSize:1.6,traits:['adipose','photophores'],marks:'none'}],
+  hatchetfish:['black-pacu',{body:[.85,.92,.18],eyeSize:1.6,head:1.15,traits:['photophores'],marks:'none'}],
+  viperfish:['deep-choir',{body:[1.9,.27,.24],mouth:'fang',eyeSize:1.4,traits:['fangs','photophores','lure'],dorsal:'soft'}],
+  fangtooth:['void-angler',{body:[1.03,.65,.43],mouth:'cavern',traits:['fangs'],head:1.4,marks:'none'}],
+  barreleye:['creek-chub',{body:[1.25,.53,.42],eyeSize:2,head:1.55,traits:['head-plates'],marks:'none'}],
+  gulper:['american-eel',{body:[2.6,.35,.36],mouth:'cavern',head:2.1,traits:['fangs','photophores'],marks:'none'}],
+  'frilled-shark':['world-serpent',{body:[2.65,.28,.28],mouth:'fang',traits:['gill-slits','fangs'],gillCount:6,dorsal:'rear'}],
+  'goblin-shark':['bull-shark',{snout:.48,mouth:'large',head:1.15,traits:['gill-slits','shark-fins','teeth','extended-jaw']}],
+  goby:['brown-bullhead',{body:[1.45,.34,.33],head:1.22,traits:[],dorsal:'double',marks:'mottled'}],
+  chimaera:['bull-shark',{body:[1.8,.44,.42],tail:'ribbon',head:1.25,eyeSize:1.6,traits:['spines'],marks:'none'}],
+  'sperm-whale':['star-whale',{body:[2.7,.92,.86],head:1.65,dorsal:'hump',eye:[.41,-.05],marks:'scars',traits:['flippers','blowhole']}],
+  ray:['giant-stingray',{}],opah:['moonfish',{traits:['disc-body'],marks:'pale-spots'}],
+  flatfish:['ocean-sunfish',{family:'flatfish',body:[1.6,.18,1.02],traits:[],marks:'mottled'}],
+  shrimp:['creek-chub',{family:'shrimp',body:[1.4,.35,.4],traits:[],marks:'none'}],
+  isopod:['sunken-god',{family:'isopod',body:[1.6,.45,.9],traits:[],marks:'none'}],
+  'sea-spider':['river-kraken',{family:'sea-spider',body:[.85,.25,1.5],traits:[],marks:'none'}],
+  starfish:['pale-sun',{family:'starfish',body:[1.6,.18,1.6],traits:['photophores'],marks:'none'}],
+};
+for(const [key,[base,options]]of Object.entries(aliases))originals[key]={...originals[base],...options};
+const naturalColours={
+  'golden-bluegill':palettes.gold,'golden-shiner':palettes.gold,'golden-trout':palettes.gold,
+  'silver-pike':palettes.silver,'albino-catfish':[0xb5aca0,0xe8dfcb,0xfff3da,0xdccbb3,0xb2988e],
+  'clown-killifish':[0x393e3d,0xd9bd67,0xf4e7bc,0xc76d57,0x343d42],
+  guppy:[0x4d776d,0x95cbb7,0xe7e3c4,0xdc8159,0x4c739f],molly:palettes.gold,swordtail:palettes.bronze,
+  'neon-tetra':[0x3a6676,0x70b5ca,0xd9e5d4,0xc76869,0xe6888d],
+  discus:[0x4e665f,0xbfa577,0xe6cea6,0x9b7055,0x5c9bab],
+  'peacock-cichlid':[0x315f88,0x5f9fc0,0xd7d3a5,0xc29b58,0x21415f],
+  'blue-tang':[0x244679,0x528fc7,0xa2c1ca,0xe2c75d,0x1e345e],
+  'yellow-tang':[0xa69035,0xefd569,0xffecaa,0xdcc159,0xb39530],
+  butterflyfish:[0x626749,0xe6d785,0xf4eed1,0xd4b75b,0x354649],
+  'moorish-idol':[0x596568,0xe6e6c6,0xf6f1d7,0xe8ce67,0x26383b],
+  'royal-gramma':[0x5a3971,0xa279b4,0xddc18b,0xe1bb4e,0xe6ce68],
+  lionfish:[0x765044,0xc39b7b,0xe8d9bd,0xb67d65,0x68483f],
+  'red-snapper':[0x8a4c44,0xcb8775,0xefc6b0,0xb16a57,0x9e6155],
+  'mahi-mahi':[0x37686d,0x8fc07b,0xece095,0x429c9d,0x5d9fbc],
+  'glass-catfish':[0x7c9196,0xb5cccc,0xe1e3d5,0xa5bec1,0x647d87],
+  'red-bellied-piranha':[0x4b565a,0x83968e,0xdf8671,0xa76e58,0x374d4a],
+};
+const fantasyPalettes=[palettes.gold,palettes.root,palettes.moon,palettes.violet,palettes.deep,palettes.bone];
+const fictional=n=>n===20||n>=38&&n<=40||n>=57&&n<=60||n>=77&&n<=80||n>=99&&n<=100||n>=118&&n<=120||n===140||n>=158&&n<=160||n>=178&&n<=200||n>=216&&n<=220||n>=237&&n<=240||n>=258&&n<=260||n>=274&&n<=280||n>=282;
+const registry=Object.fromEntries(designs);
+for(const [id,design]of designs)registry['legacy-'+id]=design;
+for(const row of COLLECTION_ROSTER){
+  const base=originals[row.template];if(!base)throw new Error('Missing anatomy template: '+row.template);
+  const exact=originals[row.id],n=row.number;
+  const design={...base,...(exact||{}),body:[...(exact||base).body],traits:[...(exact||base).traits]};
+  if(!exact){
+    // Individually specified template + proportions/fin treatment. Preserve
+    // biological families, while avoiding a single recoloured trunk silhouette.
+    design.body=design.body.map((v,k)=>v*([.94+(n%11)*.012,.91+(n%7)*.027,.92+(n%9)*.018][k]));
+    design.head*=.94+(n%5)*.03;design.tailSize*=.94+(n%7)*.025;
+  }
+  if(naturalColours[row.id])design.tones=naturalColours[row.id];
+  else if(fictional(n)){
+    design.tones=row.island===9||row.island===14?[0x4b343d,0xa56b4d,0xd6b18a,0xc1784e,0xf5bc78]:fantasyPalettes[(row.island+n)%fantasyPalettes.length];
+    if(!['shrimp','isopod','sea-spider','starfish','flatfish'].includes(design.family)){
+      const accents=['fin-rim','photophores','fin-streamers','head-plates'];
+      design.traits=[...new Set([...design.traits,accents[n%4]])];
+    }
+  }
+  registry[row.id]=design;
+}
+export const FISH_APPEARANCE=freeze(registry);
 export const FISH_FAMILIES=Object.freeze(Object.keys(families));
 export function fishAppearance(species){
   const id=typeof species==='string'?species:species?.id;

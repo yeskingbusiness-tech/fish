@@ -78,16 +78,14 @@ test('last-value cache invalidates immediately on every changed UI dependency',(
   const bad=memoLast(()=>{throw new Error('failed calculation');});assert.throws(()=>bad(1));assert.throws(()=>bad(1));
 });
 
-test('cached label pools equal the real picker pools for all 144 island/bait combinations',()=>{
+test('cached label pools equal the real picker pools for all 800 island/bait combinations',()=>{
   let calls=0;const lookup=createBaitPoolLookup((zone,bait)=>{calls++;return eligibleSpecies(zone,bait);});
   const before=JSON.stringify({SPECIES,BAITS});
-  for(let pass=0;pass<5;pass++)for(let zone=0;zone<6;zone++)for(let bait=0;bait<24;bait++){
+  for(let pass=0;pass<5;pass++)for(let zone=0;zone<20;zone++)for(let bait=0;bait<40;bait++){
     const pool=lookup(zone,bait);assert.deepEqual(pool,eligibleSpecies(zone,bait));assert.equal(pool,lookup(zone,bait));
     assert.ok(Object.isFrozen(pool));assert.throws(()=>pool.pop(),TypeError);
   }
-  assert.equal(calls,144);assert.equal(lookup.size,144);
+  assert.equal(calls,800);assert.equal(lookup.size,800);
   assert.equal(JSON.stringify({SPECIES,BAITS}),before);
-  for(const [name,count,forty]of [['Salmon Egg',14,false],['Dough Ball',14,false],['Cheese Cube',15,true],['Powerbait',15,true],['Live Minnow',15,true]]){
-    const pool=lookup(1,BAITS.findIndex(b=>b.name===name));assert.equal(pool.length,count);assert.equal(pool.some(s=>s.number===40),forty);
-  }
+  for(const bait of [2,3]){const pool=lookup(1,bait);assert.equal(pool.length,20);assert.ok(pool.some(s=>s.number===40));}
 });

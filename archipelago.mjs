@@ -1,129 +1,45 @@
-import { SPECIES, RODS, LINES, BAITS, BOAT_COST, fishValue } from './game-data.mjs?v=40';
+import { SPECIES, RODS, LINES, BAITS, RARITY, RARITY_ORDER, ISLAND_RARITIES, fishValue } from './game-data.mjs?v=41';
+import { ISLANDS, MAX_LEVEL, GEAR_PER_ISLAND } from './island-data.mjs?v=41';
+export { ISLANDS, MAX_LEVEL, GEAR_PER_ISLAND };
+const ISLAND_SPECIES=ISLANDS.map(i=>SPECIES.filter(s=>s.island===i.id));
+export const ISLAND_COLLECTION_BONUS=5;
+export function islandCollectionProgress(discoveries={}){
+  return ISLAND_SPECIES.map((fish,island)=>{const found=fish.filter(sp=>Number(discoveries?.[sp.id]?.count)>=1).length;return {island,found,total:fish.length,complete:found===fish.length};});
+}
+export function completedCollections(discoveries={},earned=[]){
+  return [...new Set([...(Array.isArray(earned)?earned:[]).filter(n=>Number.isInteger(n)&&ISLANDS[n]),...islandCollectionProgress(discoveries).filter(p=>p.complete).map(p=>p.island)])].sort((a,b)=>a-b);
+}
+export function collectionCoinBonus(discoveries={},earned=[]){return completedCollections(discoveries,earned).length*ISLAND_COLLECTION_BONUS;}
+export function fishSaleValue(sp,weight,discoveries={},earned=[]){return Math.round(fishValue(sp,weight)*(100+collectionCoinBonus(discoveries,earned))/100);}
+export const gearIsland=tier=>Math.floor(tier/GEAR_PER_ISLAND);
+export function localGearPriceCeiling(island){return !Number.isInteger(island)||!ISLANDS[island]?0:Math.max(...[RODS,LINES,BAITS].flatMap(list=>list.filter(g=>g.island===island).map(g=>g.cost)));}
 
-// The archipelago is deliberately data-driven: six islands, twenty species and
-// four gear tiers per island. No distance roll can bypass an island's fish pool.
-// Wider license milestones: 9 / 15 / 20 / 20 / 25 levels between destinations.
-export const ISLANDS = [
-  { id:0, name:'Reedhaven', short:'Reedhaven', level:1, x:0, z:0, theme:'harbor', color:'#65b987', accent:0xf2bd62,
-    land:0x70b96b, sand:0xe8cf9b, rock:0x7c9288, water:0x36a4af, sky:0x9bd9ed,
-    tagline:'Every great voyage starts with a little bite.',
-    description:'A sunny fishing village with reed beds, a striped lighthouse and a very patient harbormaster.',
-    landmark:'The Old Lighthouse', stock:'Bamboo & twine', waters:'Panfish, bass & carp' },
-  { id:1, name:'Pinewater Isle', short:'Pinewater', level:10, x:-145, z:-155, theme:'forest', color:'#4b9779', accent:0xc6a974,
-    land:0x548f6b, sand:0xb7b194, rock:0x637f79, water:0x438b8f, sky:0xb1d9d5,
-    tagline:'Tall pines. Still water. Serious fish.',
-    description:'Mossy stone terraces, towering spruce trees and a timber waterwheel beside the cold-water docks.',
-    landmark:'The Timber Mill', stock:'Carbon & fluoro', waters:'Trout, salmon & catfish' },
-  { id:2, name:'Sunscar Atoll', short:'Sunscar', level:25, x:130, z:-280, theme:'tropical', color:'#dfaf68', accent:0xf69e70,
-    land:0x95bc70, sand:0xf0d49a, rock:0xbfa477, water:0x32b7b4, sky:0xb1e8ec,
-    tagline:'Golden sand. Ancient giants.',
-    description:'A palm-lined lagoon with coral gardens, a weathered sandstone arch and sun-bleached market awnings.',
-    landmark:'The Sun Gate', stock:'Tournament tackle', waters:'River monsters & golden legends' },
-  { id:3, name:'Frostfall Isle', short:'Frostfall', level:45, x:-120, z:-435, theme:'ice', color:'#89bdd6', accent:0xc3eaff,
-    land:0xe1eff0, sand:0xb3d9df, rock:0x7a9ea8, water:0x538fac, sky:0xc8deed,
-    tagline:'Where the water keeps its oldest secrets.',
-    description:'Snow-capped pines, stacked blue icebergs and a frozen watchtower overlooking the deep shelf.',
-    landmark:'The Icewatch', stock:'Titanium & moonsilver', waters:'Ocean giants & first mythics' },
-  { id:4, name:'Emberforge', short:'Emberforge', level:65, x:145, z:-590, theme:'volcanic', color:'#cb806c', accent:0xffad65,
-    land:0x645e66, sand:0x81736b, rock:0x454858, water:0x4a6f80, sky:0xd6c2bb,
-    tagline:'Forged in fire. Fished from the abyss.',
-    description:'Basalt columns, glowing lava seams and a smoking cube volcano. The tackle here is built for monsters.',
-    landmark:'The Cinder Peak', stock:'Abyssal & leviathan', waters:'Trench beasts & ancient leviathans' },
-  { id:5, name:'Moontide Sanctum', short:'Moontide', level:90, x:0, z:-800, theme:'lunar', color:'#a69bd3', accent:0xc3bbff,
-    land:0x817ca6, sand:0xaba5c4, rock:0x615e84, water:0x6e79a5, sky:0xada9d0,
-    tagline:'The last island. Not the last mystery.',
-    description:'A quiet sanctuary of amethyst cubes, luminous trees and an ancient moon gate above the farthest water.',
-    landmark:'The Moon Gate', stock:'Celestial & mythril', waters:'The final twenty legends' },
+// Optional vessels: no boat has a territory range or license requirement.
+// All eight can reach all twenty territories. Only speed and physical size vary.
+const boats=[
+  ['Harbor Skiff',0,14,.85,0xb78755,0xeee2b5],
+  ['Pinewood Dinghy',1000,18,1,0x527f6b,0xe9d4a1],
+  ['Sunrunner',18000,23,1.16,0xd69b52,0x68c3c5],
+  ['Frostbreaker',160000,28,1.32,0x7eb3c7,0xe7f3f3],
+  ['Cinderwake',1500000,34,1.5,0x59606b,0xf4a15e],
+  ['Astral Voyager',12000000,40,1.7,0x8a7fbc,0xd1e4ff],
+  ['Horizon Cruiser',80000000,47,1.9,0x627c98,0xe5ca90],
+  ['Origin Ark',420000000,55,2.15,0x7eaaa4,0xf5e8bc],
 ];
-
-// Lifetime discoveries already persist across sales, travel and reloads. Deriving
-// the reward from them makes it permanent without a repeatable award counter.
-// Existing saves with completed collections receive the same reward automatically.
-const ISLAND_SPECIES = ISLANDS.map(i => SPECIES.filter(sp => sp.island === i.id));
-export const ISLAND_COLLECTION_BONUS = 5;
-export function islandCollectionProgress(discoveries = {}){
-  return ISLAND_SPECIES.map((fish,island) => {
-    const found = fish.reduce((total,sp) => {
-      const count = Number(discoveries?.[sp.id]?.count);
-      return total + (Number.isFinite(count) && count >= 1 ? 1 : 0);
-    },0);
-    return { island, found, total:fish.length, complete:fish.length > 0 && found === fish.length };
-  });
+export const BOATS=Object.freeze(boats.map(([name,cost,speed,size,color,stripe],id)=>Object.freeze({id,name,cost,speed,size,color,stripe,description:id?'A larger hull and a faster cruise. No island-access advantage.':'Your free starter boat. Every unlocked territory is within reach.'})));
+export function xpForLevel(level){const n=Math.max(0,Math.min(MAX_LEVEL-1,Math.floor(Number(level)||1)-1));return 90*n+22*n*n;}
+export function levelForXp(xp){const n=Number.isFinite(xp)?Math.max(0,xp):0;return Math.min(MAX_LEVEL,Math.floor((-90+Math.sqrt(8100+88*n))/44)+1);}
+export function levelProgress(xp){const level=levelForXp(xp),start=xpForLevel(level),next=xpForLevel(level+1);return {level,current:Math.max(0,xp-start),needed:next-start,ratio:level===MAX_LEVEL?1:(xp-start)/(next-start)};}
+export const CATCH_XP_MULTIPLIER=.90;
+export const CATCH_XP_BY_RARITY=Object.freeze(Object.fromEntries(RARITY_ORDER.map((key,tier)=>[key,[20,30,45,68,103,155,233,350,525,788,1182,1773][tier]])));
+export const ISLAND_XP_MULTIPLIERS=Object.freeze(ISLANDS.map((i,n)=>n===0?1:Math.max(.1,(xpForLevel(ISLANDS[n+1]?.level||MAX_LEVEL)-xpForLevel(i.level)||900000)/(80*1.8*CATCH_XP_BY_RARITY[RARITY_ORDER[ISLAND_RARITIES[n][0]]]))));
+export function catchXP(sp,weight,isNew=false){
+  const ratio=Number(weight)/sp.maxW,size=Number.isFinite(ratio)?Math.max(0,Math.min(1,ratio)):0;
+  const base=CATCH_XP_BY_RARITY[sp.rarity]*ISLAND_XP_MULTIPLIERS[sp.island];
+  return Math.max(1,Math.round(base*(1+.4*size)*(isNew?1.5:1)*CATCH_XP_MULTIPLIER));
 }
-export function collectionCoinBonus(discoveries = {}){
-  return islandCollectionProgress(discoveries).filter(p => p.complete).length * ISLAND_COLLECTION_BONUS;
-}
-export function fishSaleValue(sp, weight, discoveries = {}){
-  // Round each fish once, so Sell All always equals selling the same fish singly.
-  // Calculate at sale time: already-bagged fish also benefit from newly earned boosts.
-  return Math.round(fishValue(sp,weight) * (100 + collectionCoinBonus(discoveries)) / 100);
-}
-
-export function localGearPriceCeiling(island){
-  if(!Number.isInteger(island) || !ISLANDS[island]) return 0;
-  const from = island * 4;
-  return Math.max(...[RODS, LINES, BAITS].flatMap(list => list.slice(from, from + 4).map(item => item.cost)));
-}
-// Prices come from the shared travel-order calculation in game-data.mjs:
-// each boat exceeds departure gear by at least 25%, and its destination's first
-// rod, line and bait each cost exactly 30% more than that boat. Boat licenses
-// share their destination's level; owned boats are never charged again.
-export const BOATS = [
-  { id:0, name:'Harbor Skiff', range:0, level:ISLANDS[0].level, cost:0, speed:30, color:0xb78755, stripe:0xeee2b5, description:'Your trusty starter. Built for the home harbor.' },
-  { id:1, name:'Pinewood Dinghy', range:1, level:ISLANDS[1].level, cost:BOAT_COST[1], speed:35, color:0x527f6b, stripe:0xe9d4a1, description:'A wooden runabout for your first crossing.' },
-  { id:2, name:'Sunrunner', range:2, level:ISLANDS[2].level, cost:BOAT_COST[2], speed:44, color:0xd69b52, stripe:0x68c3c5, description:'A shaded cabin and a hull made for warm seas.' },
-  { id:3, name:'Frostbreaker', range:3, level:ISLANDS[3].level, cost:BOAT_COST[3], speed:52, color:0x7eb3c7, stripe:0xe7f3f3, description:'Reinforced blue steel for the frozen shelf.' },
-  { id:4, name:'Cinderwake', range:4, level:ISLANDS[4].level, cost:BOAT_COST[4], speed:60, color:0x59606b, stripe:0xf4a15e, description:'An ironclad cruiser for rough volcanic waters.' },
-  { id:5, name:'Astral Voyager', range:5, level:ISLANDS[5].level, cost:BOAT_COST[5], speed:72, color:0x8a7fbc, stripe:0xd1e4ff, description:'A moonlit expedition vessel. No water is beyond you.' },
-];
-
-export const MAX_LEVEL = 99;
-export function xpForLevel(level){
-  const n = Math.max(0, Math.min(MAX_LEVEL - 1, Math.floor(level) - 1));
-  return 90 * n + 22 * n * n;
-}
-export function levelForXp(xp){
-  const safe = Number.isFinite(xp) ? Math.max(0, xp) : 0;
-  return Math.min(MAX_LEVEL, Math.floor((-90 + Math.sqrt(8100 + 88 * safe)) / 44) + 1);
-}
-export function levelProgress(xp){
-  const level = levelForXp(xp);
-  const start = xpForLevel(level), next = xpForLevel(level + 1);
-  return { level, current:xp - start, needed:next - start, ratio:level === MAX_LEVEL ? 1 : (xp - start) / (next - start) };
-}
-// Repeat-catch rewards must keep pace with the wider island level gaps, not
-// merely add a few XP per island. Rarity is worth a substantial step on its own.
-// Audited using actual local bait pools and weight rolls (npm run progression).
-export const CATCH_XP_BY_RARITY = Object.freeze({
-  common:20, uncommon:28, rare:42, epic:64, legendary:100, mythic:155,
-});
-export const ISLAND_XP_MULTIPLIERS = Object.freeze([1,4,5,6,7,9]);
-export function catchXP(sp, weight, isNew = false){
-  const ratio = Number(weight) / sp.maxW;
-  const size = Number.isFinite(ratio) ? Math.max(0,Math.min(1,ratio)) : 0;
-  const base = CATCH_XP_BY_RARITY[sp.rarity] * ISLAND_XP_MULTIPLIERS[sp.island];
-  // Bigger specimens earn more; the same +50% first-discovery reward still applies.
-  // Add the size XP before rounding, preserving starter-common rewards exactly.
-  return Math.round((base + base * 0.4 * size) * (isNew ? 1.5 : 1));
-}
-// Frozen pre-v33 reward model. Only legacy v6 save inference and balance reports
-// use this: increasing future catch rewards must not rewrite an old save's XP.
-export function legacyCatchXP(sp, weight, isNew = false){
-  const tiers = { common:0, uncommon:1, rare:2, epic:3, legendary:4, mythic:5 };
-  const base = 20 + sp.island * 22 + tiers[sp.rarity] * 6 + 8 * Math.min(1, weight / sp.maxW);
-  return Math.round(base * (isNew ? 1.5 : 1));
-}
-export const gearIsland = tier => Math.floor(tier / 4);
-// Saved licenses keep earned access when a later update raises the milestones.
-export function hasIslandLicense(target, xp, licenses=[]){
-  const island = ISLANDS[target];
-  return !!island && (levelForXp(xp) >= island.level || (Array.isArray(licenses) && licenses.includes(island.id)));
-}
-export function travelRequirement(target, xp, boat, licenses=[]){
-  const island = ISLANDS[target];
-  if(!island) return 'Unknown destination.';
-  if(!hasIslandLicense(target, xp, licenses)) return `Reach level ${island.level} to visit ${island.name}.`;
-  const vessel = BOATS[boat];
-  if(!vessel || vessel.range < target) return `Requires the ${BOATS[target].name} or better. Visit the boat shop.`;
-  return null;
-}
+// Frozen reward for v6 inference ONLY; caller supplies frozen legacy species.
+export function legacyCatchXP(sp,weight,isNew=false){return Math.round((20+sp.island*22+RARITY[sp.rarity].tier*6+8*Math.min(1,weight/sp.maxW))*(isNew?1.5:1));}
+export function hasIslandLicense(target,xp,licenses=[]){const island=ISLANDS[target];return !!island&&(levelForXp(xp)>=island.level||(Array.isArray(licenses)&&licenses.includes(island.id)));}
+// Kept as a pure access guard for chart + physics. Boat is intentionally ignored.
+export function travelRequirement(target,xp,_boat,licenses=[]){const i=ISLANDS[target];return !i?'Unknown destination.':!hasIslandLicense(target,xp,licenses)?`Reach level ${i.level} to enter ${i.name}.`:null;}

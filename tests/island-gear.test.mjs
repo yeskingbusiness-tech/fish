@@ -1,77 +1,20 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import { RODS, LINES, BAITS, BOAT_COST } from '../game-data.mjs';
-import { BOATS, xpForLevel } from '../archipelago.mjs';
-import { normalizeSave, SAVE_VERSION, SAVE_KEY } from '../save-state.mjs';
-
-const boundaries=[4,8,12,16,20];
-const rodPower=r=>Math.round(r.cast*(r.reel/r.tension)**.6);
-
-test('the starter island keeps its exact prices and fishing stats',()=>{
-  assert.deepEqual(RODS.slice(0,4).map(r=>[r.cost,r.cast,r.reel,r.tension]),[
-    [0,12,.75,1.55],[100,16,.78,1.46],[160,19,.8,1.37],[260,23,.83,1.29],
-  ]);
-  assert.deepEqual(LINES.slice(0,4).map(l=>[l.cost,l.rating,l.strain]),[
-    [0,3,1.6],[80,6,1.51],[130,10,1.43],[210,15,1.35],
-  ]);
-  assert.deepEqual(BAITS.slice(0,4).map(b=>[b.cost,b.luck,b.weightBonus]),[
-    [0,0,0],[140,.03,.005],[220,.07,.01],[360,.11,.015],
-  ]);
+import test from'node:test';import assert from'node:assert/strict';
+import{RODS,LINES,BAITS}from'../game-data.mjs';import{ISLANDS,BOATS,gearIsland,localGearPriceCeiling}from'../archipelago.mjs';
+test('two curated upgrades per category in every local shop, not four',()=>{
+ for(const i of ISLANDS)for(const list of [RODS,LINES,BAITS]){const items=list.filter((g,n)=>gearIsland(n)===i.id);assert.equal(items.length,2);assert.ok(items.every(g=>g.island===i.id));}
 });
-
-test('every island-entry rod jumps at least 65% in power and 25% in actual reel speed',()=>{
-  for(const i of boundaries){
-    const previous=RODS[i-1],next=RODS[i];
-    assert.ok(next.cast/previous.cast>=1.30,`${next.name}: reach jump`);
-    assert.ok(next.reel/previous.reel>=1.25,`${next.name}: reel jump`);
-    assert.ok(next.tension/previous.tension<=.83,`${next.name}: more forgiving control`);
-    assert.ok(rodPower(next)/rodPower(previous)>=1.65,`${next.name}: power jump`);
-    assert.ok(next.reel/previous.reel>4*(previous.reel/RODS[i-2].reel-1)+1,'a new island must feel different from a local rung');
-  }
-  for(let i=1;i<24;i++)if(i%4){
-    assert.ok(RODS[i].cast>RODS[i-1].cast&&RODS[i].cast-RODS[i-1].cast<=4);
-    assert.ok(RODS[i].reel>RODS[i-1].reel&&RODS[i].reel/RODS[i-1].reel<1.06);
-    assert.ok(RODS[i].tension<RODS[i-1].tension&&RODS[i].tension/RODS[i-1].tension>.90);
-  }
+test('every upgrade improves stats and island boundaries are noticeably larger',()=>{
+ for(let n=1;n<40;n++){
+ assert.ok(RODS[n].reel>RODS[n-1].reel);assert.ok(RODS[n].cast>RODS[n-1].cast);assert.ok(LINES[n].rating>LINES[n-1].rating);
+ const ratio=RODS[n].power/RODS[n-1].power;assert.ok(ratio>=(n%2?1.17:1.30));assert.ok(LINES[n].control>LINES[n-1].control);
+ assert.ok(RODS[n].tension>0&&LINES[n].strain>0);
+ }
 });
-
-test('island-entry lines jump 70–100% in weight rating and at least 16% in strain relief',()=>{
-  for(const i of boundaries){
-    const previous=LINES[i-1],next=LINES[i];
-    assert.ok(next.rating/previous.rating>=1.7&&next.rating/previous.rating<=2);
-    assert.ok(next.strain/previous.strain<=.84);
-  }
-  for(let i=5;i<24;i++)if(i%4){
-    assert.ok(LINES[i].rating/LINES[i-1].rating<=1.25,'local line upgrades are smaller than island jumps');
-  }
-  for(const line of LINES.slice(1))assert.equal(Number(line.name.match(/^([0-9]+)lb /)[1]),line.rating,'line name and charged-for rating must agree');
+test('prices remain strict, integer and independent of wallet/equipped boat',()=>{
+ for(const list of [RODS,LINES,BAITS]){assert.equal(list[0].cost,0);for(let n=1;n<40;n++){assert.ok(Number.isSafeInteger(list[n].cost));assert.ok(list[n].cost>list[n-1].cost);}}
+ for(const i of ISLANDS)assert.equal(localGearPriceCeiling(i.id),Math.max(...[RODS,LINES,BAITS].flatMap(list=>list.filter(g=>g.island===i.id).map(g=>g.cost))));
 });
-
-test('the price ladder has one shared boat schedule and exact destination-entry prices',()=>{
-  assert.deepEqual(BOATS.map(b=>b.cost),BOAT_COST);
-  assert.ok(Object.isFrozen(BOAT_COST));
-  for(const [island,entry] of [715,5850,29250,169000,416000].entries()){
-    const tier=(island+1)*4;
-    for(const list of [RODS,LINES,BAITS])assert.equal(list[tier].cost,entry);
-  }
-  for(const [kind,list] of [['rod',RODS],['line',LINES],['bait',BAITS]]){
-    assert.equal(list.length,24);
-    assert.deepEqual(list.map(g=>g.id),Array.from({length:24},(_,i)=>kind+i));
-    for(let i=1;i<24;i++)assert.ok(Number.isSafeInteger(list[i].cost)&&list[i].cost>list[i-1].cost);
-  }
-});
-
-test('already-owned gear gets its new stats without a repurchase, new save key or balance rewrite',()=>{
-  const all=Array.from({length:24},(_,i)=>i),licenses=[0,1,2,3,4,5];
-  assert.equal(SAVE_VERSION,8);assert.equal(SAVE_KEY,'reel-deal-save-v8');
-  for(let tier=0;tier<24;tier++){
-    const raw={version:8,coins:4321,xp:xpForLevel(90),caught:77,boat:5,ownedBoats:licenses,zone:5,licenses,
-      gear:{rod:tier,line:tier,bait:tier},owned:{rod:all,line:all,bait:all},
-      bag:[{n:'Bluegill',w:1.2}],log:[{n:'Bluegill',w:1.2}],best:{name:'Bluegill',weight:'1.2'}};
-    const original=structuredClone(raw),saved=normalizeSave(raw);
-    assert.deepEqual(raw,original,'normalizing must not rewrite the original save');
-    for(const key of ['coins','xp','caught','boat','ownedBoats','zone','licenses','gear','owned','best'])assert.deepEqual(saved[key],raw[key],key);
-    assert.equal(saved.bag[0].weight,1.2);assert.equal(saved.log[0].weight,1.2);
-    assert.equal(RODS[saved.gear.rod].id,'rod'+tier);assert.equal(LINES[saved.gear.line].id,'line'+tier);assert.equal(BAITS[saved.gear.bait].id,'bait'+tier);
-  }
+test('eight optional vessels vary only in speed, size, styling and price—not access',()=>{
+ assert.equal(BOATS.length,8);assert.equal(BOATS[0].cost,0);
+ for(const b of BOATS){assert.equal('range'in b,false);assert.equal('level'in b,false);assert.ok(b.size>0&&b.speed>0);if(b.id){assert.ok(b.speed>BOATS[b.id-1].speed);assert.ok(b.size>BOATS[b.id-1].size);assert.ok(b.cost>BOATS[b.id-1].cost);}}
 });

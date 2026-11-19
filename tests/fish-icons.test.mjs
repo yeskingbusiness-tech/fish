@@ -38,9 +38,9 @@ test('catch/reel images reuse one exact, unmodified vector source per species',a
     const first=h.icons.markup(sp,{eager:true});assert.match(first,/loading="eager" src="blob:/);
     assert.equal(h.icons.markup(sp,{eager:true}),first);
   }
-  assert.equal(h.builds,120);assert.equal(h.blobs.length,120);assert.equal(h.icons.stats.images,120);
-  for(let n=0;n<120;n++){assert.equal(h.blobs[n].type,'image/svg+xml');assert.equal(await h.blobs[n].text(),fishSVG(SPECIES[n]));}
-  h.icons.dispose();h.icons.dispose();assert.equal(h.revoked.length,120);assert.equal(new Set(h.revoked).size,120);
+  assert.equal(h.builds,SPECIES.length);assert.equal(h.blobs.length,SPECIES.length);assert.equal(h.icons.stats.images,SPECIES.length);
+  for(let n=0;n<SPECIES.length;n++){assert.equal(h.blobs[n].type,'image/svg+xml');assert.equal(await h.blobs[n].text(),fishSVG(SPECIES[n]));}
+  h.icons.dispose();h.icons.dispose();assert.equal(h.revoked.length,SPECIES.length);assert.equal(new Set(h.revoked).size,SPECIES.length);
   assert.equal(h.icons.stats.images,0);assert.throws(()=>h.icons.markup(SPECIES[0]),/Unknown fish/);
 });
 

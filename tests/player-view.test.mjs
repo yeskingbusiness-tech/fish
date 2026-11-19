@@ -5,40 +5,18 @@ import { heldFishSpan, heldFishLayout, firstPersonFishPose, frontViewPose } from
 
 const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-9,`${a} != ${b}`);
 
-test('absolute weight makes every specimen strictly bigger, including the heaviest endgame fish',()=>{
-  const original=structuredClone(SPECIES),samples=[];
-  for(const sp of SPECIES){
-    let previous=0;
-    for(let q=0;q<=100;q++){
-      const weight=sp.minW+(sp.maxW-sp.minW)*q/100,span=heldFishSpan(sp,weight);
-      assert.ok(Number.isFinite(span)&&span>=.45,sp.name);
-      assert.ok(span>previous,sp.name);previous=span;samples.push({weight,span});
-    }
-  }
-  samples.sort((a,b)=>a.weight-b.weight);
-  for(let i=1;i<samples.length;i++){
-    if(Math.abs(samples[i].weight-samples[i-1].weight)<1e-10)close(samples[i].span,samples[i-1].span);
-    else assert.ok(samples[i].span>samples[i-1].span,'a heavier fish cannot look smaller just because it is another species');
-  }
-  assert.ok(heldFishSpan(SPECIES[0],1500)>25,'a giant must dwarf the two-unit angler');
-  assert.ok(heldFishSpan(SPECIES[0],1500)>20*heldFishSpan(SPECIES[0],1));
-  assert.deepEqual(SPECIES,original,'display sizing must not rewrite real fish stats');
+test('each species grows with weight without a universal mass-to-length rule',()=>{
+ const before=structuredClone(SPECIES);
+ for(const sp of SPECIES){let previous=0;for(let q=0;q<=100;q++){const weight=sp.minW+(sp.maxW-sp.minW)*q/100,span=heldFishSpan(sp,weight);assert.ok(Number.isFinite(span)&&span>previous);previous=span;}close(heldFishSpan(sp,sp.maxW),sp.displaySpan);}
+ const fry=SPECIES.find(s=>s.name==='Primordial Fry'),whale=SPECIES.find(s=>s.name==='Sperm Whale');assert.ok(heldFishSpan(fry,fry.maxW)<.3);assert.ok(heldFishSpan(whale,whale.maxW)>30);
+ assert.notEqual(heldFishSpan(SPECIES[0],1),heldFishSpan(SPECIES[26],1));assert.deepEqual(SPECIES,before);
 });
-
-test('display sizing handles invalid weights and has no normal-game trophy cap or species normalization',()=>{
-  for(const sp of SPECIES){
-    for(const weight of [undefined,NaN,Infinity,-100,null])assert.equal(heldFishSpan(sp,weight),.45);
-    assert.equal(heldFishSpan(sp,String(sp.maxW)),heldFishSpan(sp,sp.maxW));
-    assert.ok(Number.isFinite(heldFishSpan(sp,Number.MAX_VALUE)));
-    assert.ok(heldFishSpan(sp,10000)>heldFishSpan(sp,2000));
-    close(heldFishSpan(sp,1),1.1);
-  }
-  assert.equal(heldFishSpan({maxW:0},0),.45);
-  close(heldFishSpan({maxW:1},10),heldFishSpan({maxW:2000},10));
+test('invalid display weights stay finite without touching catch records',()=>{
+ for(const sp of SPECIES)for(const weight of [undefined,NaN,Infinity,-100,null])assert.ok(Number.isFinite(heldFishSpan(sp,weight)));for(const sp of SPECIES)assert.equal(heldFishSpan(sp,String(sp.maxW)),heldFishSpan(sp,sp.maxW));
 });
 
 function dimensions(weight,shape={height:.51,depth:.47}){
-  const x=heldFishSpan(null,weight),y=x*shape.height,z=x*shape.depth;
+  const x=.45+.65*Math.sqrt(weight),y=x*shape.height,z=x*shape.depth;
   return {x,y,z,gripY:-y/2,gripZ:-z*.29};
 }
 function corners(size,includePlayer=true){

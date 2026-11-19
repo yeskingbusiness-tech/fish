@@ -1,5 +1,7 @@
 import * as THREE from 'three';
-import { ISLANDS, BOATS } from './archipelago.mjs?v=40';
+import { exposedCuboidFaces } from './voxel-geometry.mjs?v=41';
+import { ISLANDS, BOATS } from './archipelago.mjs?v=41';
+import { dockLocation, SEA_BOUNDS } from './navigation.mjs?v=41';
 
 const UNIT = new THREE.BoxGeometry(1, 1, 1);
 const scratch = new THREE.Object3D();
@@ -10,7 +12,7 @@ const STALL_LAYOUT = [
   { kind:'line', name:'Line & Spool', x:0, z:42, color:0xba9bd2, banner:'LINE & SPOOL' },
   { kind:'bait', name:'Bait Shack', x:17, z:29, color:0xe4a568, banner:'BAIT SHACK' },
   { kind:'market', name:'Fish Market', x:-8.5, z:18, color:0x77b88b, banner:'FISH MARKET' },
-  { kind:'port', name:'Boat Shop & Dock', x:9, z:16, color:0x6ea3b5, banner:'BOATS & VOYAGES' },
+  { kind:'port', name:'Boatyard & Dock', x:9, z:16, color:0x6ea3b5, banner:'BOATYARD & DOCK' },
 ];
 
 // One vertex-coloured draw call for hundreds of cuboids; no imported models.
@@ -18,7 +20,14 @@ function mergeBoxes(specs,unlit=false){
   const pos=[], normals=[], colors=[], indices=[];
   const matrix = new THREE.Matrix4(), q = new THREE.Quaternion();
   let offset=0;
-  for(const s of specs){
+  const rotated=specs.filter(s=>s.rx||s.ry||s.rz);
+  const tones=new Map();
+  for(const face of exposedCuboidFaces(specs.filter(s=>!s.rx&&!s.ry&&!s.rz))){
+    if(!tones.has(face.color))tones.set(face.color,new THREE.Color(face.color));const c=tones.get(face.color);
+    for(const p of face.points){pos.push(...p);normals.push(...face.normal);colors.push(c.r,c.g,c.b);}
+    indices.push(offset,offset+1,offset+2,offset,offset+2,offset+3);offset+=4;
+  }
+  for(const s of rotated){
     const g = new THREE.BoxGeometry(s.w,s.h,s.d);
     q.setFromEuler(new THREE.Euler(s.rx||0,s.ry||0,s.rz||0));
     matrix.compose(new THREE.Vector3(s.x,s.y,s.z),q,new THREE.Vector3(1,1,1));
@@ -41,7 +50,10 @@ function cube(w,h,d,color,x=0,y=0,z=0){
   const m=new THREE.Mesh(UNIT,new THREE.MeshLambertMaterial({color}));
   m.scale.set(w,h,d); m.position.set(x,y,z); return m;
 }
+const signMaterials=new Map();
 function label(text, x,y,z,w=4.4,h=.65, color='#f4e5c5'){
+  let front=signMaterials.get(text);
+  if(!front){
   const canvas=document.createElement('canvas'); canvas.width=768; canvas.height=128;
   const c=canvas.getContext('2d');
   c.fillStyle='#193d45'; c.fillRect(0,0,768,128);
@@ -50,7 +62,8 @@ function label(text, x,y,z,w=4.4,h=.65, color='#f4e5c5'){
   c.fillText(text,384,67,720);
   const texture=new THREE.CanvasTexture(canvas);
   texture.colorSpace=THREE.SRGBColorSpace; texture.magFilter=THREE.NearestFilter;
-  const front=new THREE.MeshBasicMaterial({map:texture});
+  front=new THREE.MeshBasicMaterial({map:texture});signMaterials.set(text,front);
+  }
   // One material keeps a sign to one draw call (six material groups cost six).
   const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,.12),front);
   m.position.set(x,y,z); return m;
@@ -81,7 +94,7 @@ function boatMesh(id){
   }
   if(id>=4){ add(.35,1,.35,-.7,3.1,1.45,0x535a6d); add(.8,.18,.65,0,2.9,-.6,b.color); }
   if(id===5){ for(const x of [-1.48,1.48]) add(.16,.17,4.6,x,.65,.25,0xc6e8ff); add(.3,.9,.3,0,3.2,-.5,0xd0c3ff); }
-  const g=new THREE.Group(); g.add(mergeBoxes(S)); return g;
+  const g=new THREE.Group();g.name='player-boat';g.add(mergeBoxes(S));g.scale.setScalar(b.size);return g;
 }
 
 export function createWorld(scene){
@@ -103,14 +116,14 @@ export function createWorld(scene){
       c+=glint*.19*(1.-smoothstep(35.,110.,vDepth));
       c=mix(c,uFog,smoothstep(65.,350.,vDepth)); gl_FragColor=vec4(c,.97); }`
   });
-  const water=new THREE.Mesh(new THREE.BoxGeometry(1900,.10,2100,64,1,64),waterMat);
-  water.position.set(0,-.04,-400); root.add(water);
-  root.add(cube(1900,1,2100,0x376f71,0,-4,-400));
+  const water=new THREE.Mesh(new THREE.BoxGeometry(2300,.10,2600,64,1,64),waterMat);
+  water.position.set(0,-.08,-500); root.add(water);
+  root.add(cube(2300,1,2600,0x376f71,0,-4,-500));
 
   const sky=new THREE.Mesh(new THREE.BoxGeometry(2200,2200,2200),new THREE.ShaderMaterial({
     side:THREE.BackSide,depthWrite:false,fog:false,
     uniforms:{uTop:{value:new THREE.Color(0x559cbd)},uBottom:{value:new THREE.Color(0xd9edf0)}},
-    vertexShader:'varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    vertexShader:'varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);gl_Position.z=gl_Position.w*.9999;}',
     fragmentShader:'uniform vec3 uTop;uniform vec3 uBottom;varying vec3 vP;void main(){float h=clamp(vP.y/800.,0.,1.);h=floor(h*8.)/8.;gl_FragColor=vec4(mix(uBottom,uTop,h),1.);}'
   }));
   sky.frustumCulled=false; scene.add(sky);
@@ -126,6 +139,11 @@ export function createWorld(scene){
     add(60,3.2,48,0,-1.2,34,zone.rock);
     add(60,.5,48,0,.25,34,zone.sand);
     add(54,.45,43,0,.725,34.5,zone.land);
+    for(const f of zone.landforms){
+      add(f.w,f.h,f.d,f.x,f.h/2-.8,f.z,zone.rock);
+      add(f.w*.84,.4,f.d*.84,f.x,f.h-.59,f.z,zone.land);
+      if(f.h>6)add(f.w*.5,f.h*.34,f.d*.52,f.x,f.h*1.16-.8,f.z,zone.theme==='fjord'||zone.theme==='ice'?0xdcebf0:zone.rock);
+    }
     // A connected peninsula carries each island's signature landmark.
     add(12,2.9,20,-22,-1.05,8,zone.rock);
     add(12,.5,20,-22,.25,8,zone.sand);
@@ -145,24 +163,28 @@ export function createWorld(scene){
       if(Math.abs(x)<3||Math.abs(x-9)<2) continue;
       add(3.5,.12,1.2,x,.12,9.4,0xd5eeea);
     }
-    // Main paths and a little plaza, inlaid with square stepping stones.
-    add(9,.06,10,0,1,24,zone.sand);
-    for(const st of STALL_LAYOUT){
-      const count=14;
-      for(let n=0;n<count;n++){
-        const t=n/(count-1);
-        add(1.8,.07,1.8,mix(0,st.x,t),1,mix(13,st.z-3.4,t),n%3?zone.sand:0xc3b799);
-      }
+    // One paving stone per grid cell. Paths meet at shared EDGES, not
+    // coplanar overlapping blocks (the old radial paths flickered at the plaza).
+    const paving=new Map();
+    for(const st of STALL_LAYOUT)for(let n=0;n<28;n++){
+      const t=n/27,x=Math.round(mix(0,st.x,t)/1.8),z=Math.round(mix(13,st.z-3.4,t)/1.8);
+      paving.set(x+','+z,[x*1.8,z*1.8]);
     }
+    for(const [x,z]of paving.values())add(1.72,.08,1.72,x,1.005,z,zone.sand);
     // Signature plants, using only cuboids. Keep the central village clear.
     function tree(x,z,s=1){
       add(.55*s,3.7*s,.55*s,x,.95+1.85*s,z,0x715a43);
-      if(zone.theme==='tropical'){
+      if(['tropical','jungle','coral'].includes(zone.theme)){
         for(const dir of [-1,1]){
           add(5*s,.55*s,1.3*s,x+dir*1.2*s,4.7*s,z,0x68a56b);
           add(1.3*s,.55*s,4.6*s,x,4.55*s,z+dir*1.2*s,0x7eb96e);
         }
         add(.6*s,.6*s,.6*s,x+.6*s,4.25*s,z,0x96724c);
+      }else if(zone.theme==='swamp'){
+        for(const side of [-1,1]){add(.35,2,.35,x+side*.65*s,1.9,z,0x5a6346,{rz:side*.3});add(3.8*s,.8*s,3.2*s,x,4.8*s,z,0x667d50);add(.17,1.5*s,.17,x+side*1.5*s,3.7*s,z,0x9aab77);}
+      }else if(['canyon','wreck','vents','void','time','origin','celestial','fjord','coast','storm'].includes(zone.theme)){
+        // Stone/crystal/ice pillars, not the same forest with a new tint.
+        add(1.6*s,4*s,1.3*s,x,2.7*s,z,zone.rock);add(.9*s,2.4*s,.8*s,x+.4*s,5*s,z,zone.accent);
       }else{
         const leaf=zone.theme==='ice'?0xa5c5c2:zone.theme==='lunar'?0xb3a3d4:zone.theme==='volcanic'?0x846b70:zone.theme==='forest'?0x337969:0x529865;
         for(let j=0;j<4;j++){
@@ -229,6 +251,60 @@ export function createWorld(scene){
       }
       glow(2.2,.3,2.2,-22,11.6,6,0xffbd72);
       for(let k=0;k<4;k++)add(1.4+k*.5,.9,1.3+k*.4,-22+k*.3,13+k*1.6,6,0x9b949a);
+    }else if(zone.theme==='river'){
+      block(-22,6,4,14);
+      for(let k=0;k<4;k++){add(10-k*1.8,3,9-k,-22,1.8+k*2.5,6,zone.rock);}
+      // Waterfall sheets separated from the rock face by a visible gap.
+      for(let k=0;k<3;k++){glow(1.2,7-k, .24,-24+k*2,6-k,1.05,0x84cdda);add(2.4,.18,1.2,-24+k*2,1.1,0,0xc2e4e4);}
+      for(const z of [3,9]){add(1.4,12,1.4,-17,6.5,z,0x8b9183);block(-17,z,1,13);}
+      add(1.8,1.4,9,-17,12.8,6,0xb9bda4);
+    }else if(zone.theme==='swamp'){
+      for(let k=0;k<6;k++){const a=k*Math.PI/3,x=-22+Math.cos(a)*3,z=6+Math.sin(a)*3;add(1,8+(k%2)*2,1,x,5,z,0x626447,{rz:Math.cos(a)*.16});block(x,z,.8,11);add(2.8,1,2.6,x,9.7,z,0x738356);}
+      for(let k=0;k<8;k++){add(.18,2.4,.18,-25+k*.9,7.5,3,0xadb98a);add(1.5,.16,1,-23+k%3*3,.12,-4-Math.floor(k/3)*2,0x7e9c63);}
+      add(8,1.6,5,-22,10.8,6,0x526a48);
+    }else if(zone.theme==='coral'){
+      for(let k=0;k<7;k++){const x=-26+k*1.4,h=4+(k%3)*2;add(.9,h,1,x,1+h/2,6,0xd89caa);add(2.4,.6,1.3,x+.3,h,6,0xf0b6b0);add(.6,2, .8,x+1,h+1,6,0xe3b98f);block(x,6,.7,h+2);}
+      for(let k=0;k<16;k++)add(1,.8+k%4*.6,1,-20+k*2,.2,-8-k%3*2,[0xde969e,0x89c7ba,0xe9c695][k%3]);
+    }else if(zone.theme==='coast'){
+      for(const z of [2,10]){add(4,10,3,-22,5.8,z,0x697786);add(3,3,2.5,-22,12,z,0x82929b);block(-22,z,2.4,14);}
+      add(4.2,2.8,12,-22,14,6,0x7a8692);add(2,5,3,-14,1,-16,0x647787);add(3,7,4,-30,2,-14,0x74838b);
+    }else if(zone.theme==='storm'){
+      block(-22,6,3,19);for(let k=0;k<4;k++)add(6-k,2,6-k,-22,1.8+k*1.5,6,zone.rock);
+      add(.7,11,.7,-22,12,6,0x9a785b);for(const y of [10,14,18]){add(5,.4,.5,-22,y,6,0xb89b6d);glow(.5,.6,.5,-19.5,y,6,0xcce9ef);}
+      add(2.6,.35,2.6,-22,17,6,0x6d8798);
+    }else if(zone.theme==='jungle'){
+      block(-22,6,4.7,15);for(let k=0;k<5;k++)add(10-k*1.6,2,9-k*1.4,-22,1.8+k*1.8,6,k%2?0x78956b:0x697c5b);
+      add(2.5,3,3,-22,11.3,6,0x405f48);for(const x of [-25,-19])add(.25,7,.25,x,7,1.8,0x3d784c);
+      add(12,.8,3,-22,15,6,0x327c50);add(3,.8,10,-22,14.3,6,0x4d9356);
+    }else if(zone.theme==='fjord'){
+      for(const z of [1,11]){for(let k=0;k<4;k++)add(9-k*1.7,4,3.5,-22,2.4+k*3.4,z,k%2?0xaddbe5:0x87bdcf);block(-22,z,4.8,16);}
+      for(let k=0;k<7;k++)add(3,2+k%3,3,-48+k*7,-.5,-15-k%2*5,0xb7dfea);
+    }else if(zone.theme==='canyon'){
+      for(let k=0;k<6;k++){const z=k<3?2:11,h=7+(k%3)*4;add(2.3,h,2.8,-26+k%3*3.5,h/2+1,z,zone.rock);add(1.5,2,2,-26+k%3*3.5,h+2,z,0x7e96a4);block(-26+k%3*3.5,z,1.6,h+3);}
+      add(1.2,.3,12,-22,1,6,0x253a4b);
+    }else if(zone.theme==='wreck'){
+      block(-22,6,4.6,12);add(5,2,13,-22,2,6,0x756454);add(3,1,10,-22,3.4,6,0x9c8664);
+      add(.5,10,.5,-22,8,7,0x635f56,{rz:.15});add(.2,5,4,-21,8,7,0xb5afa0);
+      for(let k=0;k<5;k++)for(const side of [-1,1]){add(.6,5,.7,-22+side*3,4,1+k*2.3,0xd4ccb0,{rz:side*.2});add(1.8,.65,.7,-22+side*2.5,6.7,1+k*2.3,0xe1dac1);}
+      add(1.2,1.2,2,-22,3.4,-1,0xd6cdb6);
+    }else if(zone.theme==='vents'){
+      for(let k=0;k<5;k++){const x=-26+k*2,h=5+k%3*3;add(1.8,h,2,x,1+h/2,5+k%2*3,zone.rock);add(2.2,.4,2.4,x,h+1,5+k%2*3,0xb79a63);glow(.7,.2,.8,x,h+1.3,5+k%2*3,0xe7ad6e);block(x,5+k%2*3,1.3,h+2);for(let j=0;j<3;j++)add(1+j*.5,.6,1+j*.4,x,h+3+j*1.5,5+k%2*3,0x7e7986);}
+    }else if(zone.theme==='celestial'){
+      block(-22,6,4,18);add(7,2,7,-22,2,6,0x7b88b2);add(2,9,2,-22,7,6,0xa3afd0);
+      for(let k=0;k<8;k++){const a=k*Math.PI/4;add(1.1,2,1.2,-22+Math.cos(a)*5,11+Math.sin(a)*5,6,0x9eb8d5,{rz:a});}
+      for(let k=0;k<5;k++)glow(.8,.8,.8,-26+k*2,14+(k%3)*2,4,0xe5f1ee);
+    }else if(zone.theme==='void'){
+      for(const z of [2,10]){add(4,7,3,-22,4.5,z,0x303648);add(3.4,6,2.5,-22.5,13,z,0x44475e,{rz:.12});glow(.15,.5,3.1,-20,8.8,z,0xafa5e0);block(-22,z,3,17);}
+      glow(.18,4,1,-22,8,6,0x777caf);
+    }else if(zone.theme==='time'){
+      block(-22,6,4.5,17);for(const y of [1.6,15])add(8,1.2,7,-22,y,6,0xb8ad89);
+      for(const x of [-25.5,-18.5])for(const z of [3,9])add(.6,13,.6,x,8,z,0x817862);
+      for(let k=0;k<4;k++){add(6-k*1.4,1.4,5-k*1.1,-22,13-k*1.5,6,0xc3c7bd);add(1.8+k*1.2,1.3,1.4+k,-22,6-k*1.2,6,0xd5c79b);}
+      glow(.18,4,.18,-22,7.5,6,0xf1dd9e);
+    }else if(zone.theme==='origin'){
+      block(-22,6,4.6,12);for(let k=0;k<5;k++)add(10-k*1.7,1.6,10-k*1.7,-22,1.8+k*1.3,6,0xd6ded0);
+      glow(2,3.5,2,-22,9,6,0xe6f2e5);add(4,.5,4,-22,7.2,6,0x7fc5b9);
+      for(const side of [-1,1]){add(.55,6,.55,-22+side*5,4.1,6,0xd7ddc7);add(3.5,.7,2,-22+side*5,7,6,0x8db4a0);}
     }else{
       for(const x of [-25,-18]){add(2,8.5,2.4,x,5,6,0x6b678f);add(2.5,.4,2.8,x,8.7,6,0xc9c0e7);block(x,6,1.5,11.5);}
       add(9.4,1.6,2.4,-21.5,10,6,0xa59dcd);add(7.4,.5,2.7,-21.5,11.1,6,0xd5cbed);
@@ -263,6 +339,34 @@ export function createWorld(scene){
       for(const dx of [-2,2]) for(const dz of [-.65,.65]) add(.18,3.3,.18,x+dx,base+1.65,z+dz,0x655a46);
       for(let i=0;i<7;i++) add(.8,.22,3.6,x-2.4+i*.8,base+3.3,z,i%2?0xf1e2c3:color);
       add(4.4,2.5,.15,x,base+1.3,z+1.25,0x9a7c56);
+      // Separate cladding faces and raised trim: none share a coplanar
+      // surface with the wall. 20 villages still use one main geometry each.
+      for(let j=0;j<5;j++)add(4.4,.09,.12,x,base+.25+j*.38,z+1.39,0xb39b77);
+      add(5.8,.18,4.1,x,base+3.55,z,zone.rock);add(5.25,.35,3.6,x,base+3.82,z,zone.accent);
+      for(const dx of [-2.5,2.5]){add(.35,.4,.35,x+dx,base+2.7,z-1.2,0x465d60);glow(.2,.25,.2,x+dx,base+2.75,z-1.25,0xf2d5a3);}
+      add(1,.65,.9,x-3,base+.325,z+.4,0xa48661);add(1.08,.1,.98,x-3,base+.7,z+.4,0xc8a97d);
+      add(1.6,.13,.4,x-1,base+2.05,z+1.02,0xd7bd92);
+      // Local building craft changes with the environment, while all of it
+      // remains vertex-coloured cuboids in the island's existing batch.
+      if(['forest','river','jungle','swamp'].includes(zone.theme)){
+        for(let k=0;k<3;k++)add(5.5-k*.9,.24,3.8-k*.6,x,base+4.08+k*.24,z,zone.theme==='swamp'?0x9c9b67:0x716c51);
+        if(zone.theme==='jungle'||zone.theme==='swamp')for(const dx of [-2.3,2.3])add(.12,1.5,.12,x+dx,base+2.6,z-1.9,0x729662);
+        if(zone.theme==='river')for(const dx of [-2.5,2.5])add(.55,1.1,.55,x+dx,base+.55,z+.7,0x7c8f87);
+      }else if(['ice','fjord'].includes(zone.theme)){
+        add(5.6,.23,3.9,x,base+4.13,z,0xe8f2ed);
+        for(let k=0;k<5;k++)add(.13,.36+k%2*.25,.16,x-2+k,base+3.83,z-1.98,0xa5dbe5);
+      }else if(zone.theme==='coral'){
+        for(const dx of [-2.7,2.7]){add(.25,1.2,.28,x+dx,base+.6,z,0xd79aa7);add(.9,.2,.3,x+dx,base+1.05,z,0xf0b7ae);add(.2,.65,.25,x+dx+.3,base+1.35,z,0xe6c18d);}
+      }else if(['volcanic','vents'].includes(zone.theme)){
+        add(.7,1.5,.8,x+1.8,base+4.25,z+.7,0x494f5b);add(.9,.2,1,x+1.8,base+5.1,z+.7,0x887464);
+        glow(3,.08,.05,x,base+.8,z-.83,0xf5b678);
+      }else if(['lunar','celestial','void','time','origin','canyon','wreck'].includes(zone.theme)){
+        for(const dx of [-2.45,2.45]){add(.42,2.6,.42,x+dx,base+1.3,z-.9,zone.rock);add(.7,.2,.7,x+dx,base+2.65,z-.9,zone.accent);}
+        add(2.7,.5,2,x,base+4.24,z,zone.rock);glow(.45,.65,.45,x,base+4.7,z,zone.accent);
+        if(zone.theme==='wreck')for(const dx of [-1.5,1.5])add(.22,1.4,.22,x+dx,base+4.4,z,0xdcd2b6,{rz:dx*.16});
+      }else if(zone.theme==='storm'||zone.theme==='coast'){
+        add(6.3,.16,4.3,x,base+4.08,z,0x738489);add(.15,1.4,.15,x+2,base+4.7,z+.5,0xc7b995);
+      }
       // vendor: torso, arms, head, hair and square eyes
       add(.75,1,.5,x+.8,base+1.45,z+.6,color);add(.61,.61,.58,x+.8,base+2.2,z+.6,0xe5ba91);
       add(.7,.22,.65,x+.8,base+2.55,z+.6,0x5b665f);add(.9,.13,.8,x+.8,base+2.43,z+.55,0x5b665f);
@@ -309,11 +413,12 @@ export function createWorld(scene){
     boat.traverse(o=>{if(o.isMesh){o.geometry.dispose();o.material.dispose();}});
     boat=boatMesh(id);boatId=id;root.add(boat);
   }
-  function dockPoint(zone){const i=ISLANDS[zone];return new THREE.Vector3(i.x+13.5,.1,i.z+4);}
+  function dockPoint(zone){const p=dockLocation(zone,BOATS[boatId].size);return new THREE.Vector3(p.x,.1,p.z);}
   function surfaceAt(x,z,onlyZone=null){
     for(const i of ISLANDS){
       if(onlyZone!==null&&onlyZone!==i.id)continue;
       const lx=x-i.x,lz=z-i.z;
+      for(const f of [...i.landforms,...i.waterObstacles])if(Math.abs(lx-f.x)<=f.w/2&&Math.abs(lz-f.z)<=f.d/2)return f.h-.8;
       if((Math.abs(lx)<=2.45&&lz>=-2.5&&lz<=13.6)||(Math.abs(lx-9)<=1.7&&lz>=.5&&lz<=13.6)||(lx>=-1.5&&lx<=10.5&&lz>=10.3&&lz<=12.9)) return 1.15;
       if(lx>=-27&&lx<=-17&&lz>=1&&lz<=17)return .95;
       if(lx>=-28&&lx<=-16&&lz>=-2&&lz<=18)return .5;
@@ -324,89 +429,43 @@ export function createWorld(scene){
   }
   function groundAt(x,z,zone){
     const y=surfaceAt(x,z,zone);
-    if(y===null)return null;
+    if(y===null||y>1.2)return null;
     for(const b of colliders)if(b.zone===zone&&Math.hypot(x-b.x,z-b.z)<b.r)return null;
     return y;
   }
-  function inWater(p){ return Math.abs(p.x)<800&&p.z>-1400&&p.z<350&&surfaceAt(p.x,p.z)===null; }
-  // A visibility graph around expanded island bounds keeps crossings out of
-  // terrain, even on long return voyages. A straight/Catmull shortcut can cut
-  // right through an intervening island, so routes are actually navigated.
-  function route(fromZone,toZone){
-    const from=dockPoint(fromZone),to=dockPoint(toZone);
-    const start=from.clone().add(new THREE.Vector3(0,0,-32));
-    const end=to.clone().add(new THREE.Vector3(0,0,-32));
-    const obstacles=ISLANDS.map(i=>({minX:i.x-36,maxX:i.x+36,minZ:i.z-9,maxZ:i.z+65}));
-    const nodes=[start,end];
-    for(const r of obstacles)for(const [x,z] of [[r.minX-8,r.minZ-8],[r.maxX+8,r.minZ-8],[r.maxX+8,r.maxZ+8],[r.minX-8,r.maxZ+8]])nodes.push(new THREE.Vector3(x,.1,z));
-    function intersects(a,b,r){
-      let lo=0,hi=1;
-      for(const [axis,min,max] of [['x',r.minX,r.maxX],['z',r.minZ,r.maxZ]]){
-        const d=b[axis]-a[axis];
-        if(Math.abs(d)<1e-8){if(a[axis]<min||a[axis]>max)return false;continue;}
-        const t1=(min-a[axis])/d,t2=(max-a[axis])/d;
-        lo=Math.max(lo,Math.min(t1,t2));hi=Math.min(hi,Math.max(t1,t2));
-        if(lo>hi)return false;
-      }
-      return true;
-    }
-    const distance=nodes.map(()=>Infinity),previous=nodes.map(()=>-1),done=new Set();distance[0]=0;
-    for(let count=0;count<nodes.length;count++){
-      let u=-1;
-      for(let n=0;n<nodes.length;n++)if(!done.has(n)&&(u<0||distance[n]<distance[u]))u=n;
-      if(u<0||!Number.isFinite(distance[u]))break;
-      if(u===1)break;done.add(u);
-      for(let v=0;v<nodes.length;v++){
-        if(v===u||done.has(v)||obstacles.some(r=>intersects(nodes[u],nodes[v],r)))continue;
-        const d=distance[u]+nodes[u].distanceTo(nodes[v]);
-        if(d<distance[v]){distance[v]=d;previous[v]=u;}
-      }
-    }
-    if(!Number.isFinite(distance[1]))return null;
-    const middle=[];for(let n=1;n>=0;n=previous[n]){middle.unshift(nodes[n]);if(n===0)break;}
-    const points=[from,...middle,to],curve=new THREE.CurvePath();let cursor=from;
-    for(let n=1;n<points.length-1;n++){
-      const p=points[n],before=points[n-1],after=points[n+1];
-      const radius=Math.min(6,p.distanceTo(before)*.25,p.distanceTo(after)*.25);
-      const a=p.clone().addScaledVector(before.clone().sub(p).normalize(),radius);
-      const b=p.clone().addScaledVector(after.clone().sub(p).normalize(),radius);
-      curve.add(new THREE.LineCurve3(cursor,a));curve.add(new THREE.QuadraticBezierCurve3(a,p,b));cursor=b;
-    }
-    curve.add(new THREE.LineCurve3(cursor,to));
-    return curve;
-  }
+  function inWater(p){ return p.x>SEA_BOUNDS.minX&&p.x<SEA_BOUNDS.maxX&&p.z>SEA_BOUNDS.minZ&&p.z<SEA_BOUNDS.maxZ&&surfaceAt(p.x,p.z)===null; }
   const tempColor=new THREE.Color();
-  function update(time,dt,zone,camera,voyage){
+  function update(time,dt,zone,camera,aboard){
     const i=ISLANDS[zone];
     waterUniforms.uTime.value=time;
     sky.position.copy(camera.position);
     sun.position.set(camera.position.x+120,120,camera.position.z-250);
-    tempColor.setHex(i.water);waterUniforms.uLight.value.lerp(tempColor,dt*1.2);
-    tempColor.multiplyScalar(.65);waterUniforms.uDeep.value.lerp(tempColor,dt*1.2);
-    tempColor.setHex(i.sky);waterUniforms.uFog.value.lerp(tempColor,dt*1.2);
-    scene.fog.color.lerp(tempColor,dt*1.2);scene.background.copy(scene.fog.color);
-    sky.material.uniforms.uBottom.value.lerp(tempColor,dt*1.2);
-    tempColor.multiplyScalar(.73);sky.material.uniforms.uTop.value.lerp(tempColor,dt*1.2);
+    tempColor.setHex(i.water);waterUniforms.uLight.value.lerp(tempColor,Math.min(1,dt*1.2));
+    tempColor.multiplyScalar(.65);waterUniforms.uDeep.value.lerp(tempColor,Math.min(1,dt*1.2));
+    tempColor.setHex(i.sky);waterUniforms.uFog.value.lerp(tempColor,Math.min(1,dt*1.2));
+    scene.fog.color.lerp(tempColor,Math.min(1,dt*1.2));scene.background.copy(scene.fog.color);
+    sky.material.uniforms.uBottom.value.lerp(tempColor,Math.min(1,dt*1.2));
+    tempColor.multiplyScalar(.73);sky.material.uniforms.uTop.value.lerp(tempColor,Math.min(1,dt*1.2));
     islands.forEach((g,n)=>{
       const distance=Math.hypot(camera.position.x-g.position.x,camera.position.z-g.position.z-20);
       g.visible=distance<145;distantIslands[n].visible=!g.visible&&distance<450;
       if(g.visible&&g.userData.wheel)g.userData.wheel.rotation.z=time*.22;
     });
     birds.forEach((b,n)=>{const a=time*.12+n*1.5;b.g.position.set(i.x+Math.cos(a)*25,13+n*2+Math.sin(time+n)*.5,i.z+Math.sin(a)*26);b.g.rotation.y=-a;b.left.rotation.z=Math.sin(time*6+n)*.35;b.right.rotation.z=-b.left.rotation.z;});
-    if(!voyage){boat.position.copy(dockPoint(zone));boat.position.y+=Math.sin(time*1.6)*.05;boat.rotation.set(0,0,Math.sin(time)*.015);}
-    motes.visible=zone>=3;
+    if(!aboard){boat.position.copy(dockPoint(zone));boat.position.y+=Math.sin(time*1.6)*.05;boat.rotation.set(0,0,Math.sin(time)*.015);}
+    motes.visible=['storm','ice','fjord','volcanic','vents','celestial','void','lunar','time','origin'].includes(i.theme);
     if(motes.visible){
-      motes.material.color.setHex(zone===3?0xe9f7ff:zone===4?0xffbb7a:0xc9d8ff);
+      motes.material.color.setHex(['ice','fjord','storm'].includes(i.theme)?0xe9f7ff:['volcanic','vents'].includes(i.theme)?0xffbb7a:0xc9d8ff);
       for(let n=0;n<44;n++){
-        const size=zone===3?.065:.045;
-        const h=zone===3?13-((time*.65+n*.71)%13):1+(time*.35+n*.73)%10;
+        const size=['ice','fjord','storm'].includes(i.theme)?.065:.045;
+        const h=['ice','fjord','storm'].includes(i.theme)?13-((time*(i.theme==='storm'?5:.65)+n*.71)%13):1+(time*.35+n*.73)%10;
         scratch.position.set(i.x-28+(n*17%56)+Math.sin(time*.2+n)*.7,h,i.z-16+(n*19%58));
-        scratch.scale.set(size,size,size);scratch.rotation.set(0,0,0);scratch.updateMatrix();motes.setMatrixAt(n,scratch.matrix);
+        scratch.scale.set(size,i.theme==='storm'?.7:size,size);scratch.rotation.set(0,0,i.theme==='storm'?.18:0);scratch.updateMatrix();motes.setMatrixAt(n,scratch.matrix);
       }
       motes.instanceMatrix.needsUpdate=true;
     }
-    tempColor.setHex(zone===5?0xe6deff:0xffefd0);sun.material.color.lerp(tempColor,dt*1.2);
+    tempColor.setHex(i.theme==='lunar'?0xe6deff:0xffefd0);sun.material.color.lerp(tempColor,Math.min(1,dt*1.2));
   }
-  return { root,water,waterUniforms,stalls,islands,groundAt,surfaceAt,inWater,dockPoint,route,update,setBoat,
+  return { root,water,waterUniforms,stalls,islands,groundAt,surfaceAt,inWater,dockPoint,update,setBoat,
     cameraBlockers:ISLANDS.map(i=>colliders.filter(b=>b.zone===i.id)),get boat(){return boat;} };
 }

@@ -15,7 +15,7 @@ module.exports=async function testUI(browser,url,shots){
   async function seed(page){
     await page.evaluate(()=>{
       const a=__reelDeal,bag=[{n:'Bluegill',w:'1.2'},{n:'Rainbow Trout',w:'3.6'}];
-      localStorage.setItem('reel-deal-save-v8',JSON.stringify({version:8,coins:1234,xp:a.xpForLevel(90),caught:1234,
+      localStorage.setItem('reel-deal-save-v9',JSON.stringify({version:9,coins:1234,xp:a.xpForLevel(90),caught:1234,
         best:{name:'Rainbow Trout',weight:'3.6'},bag,log:bag,zone:0,boat:5,ownedBoats:[0,5],licenses:[0,1,2,3,4,5],
         owned:{rod:[0,3,7],line:[0,3,7],bait:[0,3,7]},gear:{rod:3,line:3,bait:3}}));
     });
@@ -120,7 +120,7 @@ module.exports=async function testUI(browser,url,shots){
     await page.mouse.click(3,3);assert.equal(await page.locator('#helpOverlay').isVisible(),false);
     await page.keyboard.press('?');await page.keyboard.press('Escape');
 
-    const saved=await page.evaluate(()=>{__reelDeal.saveGame();return localStorage.getItem('reel-deal-save-v8');});
+    const saved=await page.evaluate(()=>{__reelDeal.saveGame();return localStorage.getItem('reel-deal-save-v9');});
     const cosmetic=await page.evaluate(()=>[__reelDeal.G.thirdPerson,__reelDeal.heldCatch.sp.name,__reelDeal.carriedModel.uuid,__reelDeal.G.px,__reelDeal.G.pz,__reelDeal.G.yaw]);
     await page.keyboard.press('h');
     assert.equal(await page.locator('#hud').isVisible(),false);assert.equal(await page.locator('#hudRestoreHint').isVisible(),true);
@@ -138,7 +138,7 @@ module.exports=async function testUI(browser,url,shots){
       await page.click('#hideHudBtn');await page.keyboard.press(restore);
       assert.deepEqual(await page.evaluate(()=>[__reelDeal.hudHidden,__reelDeal.G.state]),[false,'aim']);
     }
-    assert.equal(await page.evaluate(()=>{__reelDeal.saveGame();return localStorage.getItem('reel-deal-save-v8');}),saved);
+    assert.equal(await page.evaluate(()=>{__reelDeal.saveGame();return localStorage.getItem('reel-deal-save-v9');}),saved);
     console.log('PASS: accessible Help, native keyboard activation, focus trap, no modal input leakage; completely hidden HUD, repeat guards and safe keyboard/click restoration without save changes');
 
     await page.keyboard.press('x');await page.keyboard.press('v');await pier(page);
@@ -181,15 +181,16 @@ module.exports=async function testUI(browser,url,shots){
     await vendor(page,'market');await page.keyboard.press('e');await page.click('#sellAll');await page.click('#marketClose');
     await page.click('#logBtn');assert.equal(await page.locator('#caughtCount').textContent(),'1,235');
     assert.equal(await page.locator('#bestFishName').textContent(),'Rainbow Trout');await page.click('#closeLog');
-    await vendor(page,'port');await page.keyboard.press('e');await page.locator('[data-destination="1"]').click();await page.click('#sailBtn');
-    assert.deepEqual(await page.evaluate(()=>[__reelDeal.G.state,__reelDeal.openBag(),__reelDeal.openHelp(),__reelDeal.setHudHidden(true)]),['voyage',false,false,false]);
-    await page.click('#skipVoyage');await page.click('#hideHudBtn');
+    await vendor(page,'port');await page.keyboard.press('e');await page.locator('[data-destination="1"]').click();await page.click('#waypointBtn');await page.click('#boardFromChart');
+    assert.deepEqual(await page.evaluate(()=>[__reelDeal.G.state,__reelDeal.G.onBoat,__reelDeal.G.boatMode]),['aim',true,'drive']);
+    await page.click('#helpBtn');assert.equal(await page.locator('#helpOverlay').isVisible(),true);await page.click('#helpClose');
+    await page.click('#hideHudBtn');
     await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>!!window.__reelDeal);await page.click('#startBtn');
     assert.deepEqual(await page.evaluate(()=>[__reelDeal.hudHidden,__reelDeal.helpOpen,__reelDeal.bagOpen,__reelDeal.G.thirdPerson,__reelDeal.heldCatch]),[false,false,false,false,null]);
     await page.click('#logBtn');page.once('dialog',d=>d.accept());await page.click('#resetBtn');await page.click('#logBtn');
     assert.equal(await page.locator('#caughtCount').textContent(),'0');assert.equal(await page.locator('#bestNum').textContent(),'—');
     assert.equal(await page.locator('#bestFishName').textContent(),'No catches yet');
-    console.log('PASS: nearby-stall/holding/water/bait/charge/bite/reel contextual hints, fishing and voyage guards, lifetime records surviving sales, reset and transient UI state on reload');
+    console.log('PASS: nearby-stall/holding/water/bait/charge/bite/reel contextual hints, fishing guards and manual-boat panel pauses, lifetime records surviving sales, reset and transient UI state on reload');
   }catch(error){
     console.error('UI failure state:',await page.evaluate(()=>({state:__reelDeal.G.state,bag:__reelDeal.bagOpen,help:__reelDeal.helpOpen,hidden:__reelDeal.hudHidden,gear:__reelDeal.G.gear,pos:[__reelDeal.G.px,__reelDeal.G.pz],prompt:document.getElementById('prompt').outerHTML,active:document.activeElement.id})));
     await page.screenshot({path:`${shots}/ui-failure.png`});throw error;
@@ -199,12 +200,12 @@ module.exports=async function testUI(browser,url,shots){
   const mp=await mobile.newPage();watch(mp);
   try{
     await boot(mp);await seed(mp);
-    await mp.evaluate(()=>{const a=__reelDeal;for(const kind of ['rod','line','bait'])a.G.owned[kind]=Array.from({length:24},(_,i)=>i);});
+    await mp.evaluate(()=>{const a=__reelDeal;for(const kind of ['rod','line','bait'])a.G.owned[kind]=Array.from({length:40},(_,i)=>i);});
     for(const viewport of [{width:390,height:844},{width:360,height:740},{width:844,height:390}]){
       await mp.setViewportSize(viewport);await mp.tap('#bagBtn');
       assert.equal(await mp.locator('.bag-card').evaluate(fits),true);assert.equal(await mp.locator('#bagTabs').evaluate(fits),true);
       await mp.tap('#bagTab-bait');
-      assert.equal(await mp.locator('#bagBody [data-tier]').count(),24);
+      assert.equal(await mp.locator('#bagBody [data-tier]').count(),40);
       assert.equal(await mp.locator('#bagBody').evaluate(e=>e.scrollHeight>e.clientHeight&&e.scrollWidth<=e.clientWidth),true);
       await mp.locator('#bagBody [data-buy="23"]').tap();assert.equal(await mp.evaluate(()=>__reelDeal.G.gear.bait),23);
       await mp.locator('#bagBody [data-buy="0"]').tap();assert.equal(await mp.evaluate(()=>__reelDeal.G.gear.bait),0);
@@ -241,6 +242,6 @@ module.exports=async function testUI(browser,url,shots){
     assert.deepEqual(await mp.evaluate(()=>[__reelDeal.G.px,__reelDeal.G.pz]),stopped);
     assert.equal(await mp.evaluate(()=>__reelDeal.G.state),'aim');
     assert.deepEqual(errors,[],'UI flow must not raise browser errors');
-    console.log('PASS: phone and short-landscape Bag/Help scrolling, all 24 owned tiers, touch re-equips, compact non-overlapping strip, clean screenshots, tap-only restoration and joystick/input isolation');
+    console.log('PASS: phone and short-landscape Bag/Help scrolling, all 40 owned tiers, touch re-equips, compact non-overlapping strip, clean screenshots, tap-only restoration and joystick/input isolation');
   }finally{await mobile.close();}
 };

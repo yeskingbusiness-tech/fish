@@ -1,356 +1,85 @@
-// Pure game data: also used by the progression regression tests.
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-function lighten(hex, t){
-  const m = v => Math.round(v + (255 - v) * t);
-  return (m((hex >> 16) & 255) << 16) | (m((hex >> 8) & 255) << 8) | m(hex & 255);
-}
-
-// ---------- Species ----------
-// Compact table, one row per fish:
-//   [name, colour, rarity, depth, sizeFactor, pattern, blurb]
-// depth     = legacy size band. Every pair of bands now lives on one island.
-//             Island + bait decide the pool; cast distance never selects a fish.
-// sizeFactor= how big this fish runs for its depth band (0.6 = runt, 6 = leviathan)
-// pattern   = 0 none, 1 stripes, 2 spots, 3 rainbow, 4 patches, 5 scales, 6 whiskers
-// Weight, points, strength and body size are derived in buildSpecies().
-const FISH_TABLE = [
-  /* ---- 0m · right off the dock ---- */
-  ['Bluegill', 0x4a90d9, 'common', 0, 0.85, 1, 'A scrappy little panfish. Every angler starts here.'],
-  ['Pumpkinseed', 0xe08a3c, 'common', 0, 0.70, 2, 'Sunset orange with a cheeky bite.'],
-  ['Rock Bass', 0x7a6a52, 'common', 0, 0.95, 2, 'Grumpy, stubby and always hungry.'],
-  ['Yellow Perch', 0xf6c945, 'common', 0, 1.05, 1, 'Golden stripes and a feisty scrap on light tackle.'],
-  ['Black Crappie', 0x4c5a6b, 'common', 0, 1.15, 2, 'Paper-mouthed. Easy to lose at the net.'],
-  ['Green Sunfish', 0x4f9a5a, 'common', 0, 0.80, 0, 'Big mouth, bigger attitude, tiny body.'],
-  ['Warmouth', 0x8a6a3a, 'common', 0, 0.75, 2, 'Sits in the weeds and sulks.'],
-  ['White Perch', 0xd8dde3, 'common', 0, 0.90, 5, 'Silver, plentiful, never says no.'],
-  ['Redear Sunfish', 0xd0743f, 'common', 0, 0.95, 2, 'A shell-cracker with a red ear flap.'],
-  ['Brown Bullhead', 0x54503f, 'uncommon', 0, 1.35, 6, 'Whiskered, stubborn, unbothered by daylight.'],
-  /* ---- 8m · just past the pilings ---- */
-  ['Largemouth Bass', 0x3d9970, 'uncommon', 8, 1.50, 2, 'King of the shallows. Hits hard, jumps harder.'],
-  ['Smallmouth Bass', 0x8a6a3a, 'uncommon', 8, 1.30, 1, 'Bronze muscle from the rocky bottom.'],
-  ['Spotted Bass', 0x6b7a4a, 'uncommon', 8, 1.15, 2, 'Small, mean and covered in spots.'],
-  ['Yellow Bass', 0xd8c25a, 'common', 8, 0.85, 1, 'A gold-barred scrapper that runs in schools.'],
-  ['White Bass', 0xc9d3dc, 'uncommon', 8, 1.10, 0, 'Slashes at anything shiny.'],
-  ['River Carp', 0xc2a15a, 'common', 8, 1.75, 5, 'A mud-grubbing, broad-shouldered lump.'],
-  ['Grass Carp', 0x8f9b6a, 'common', 8, 2.05, 5, 'A vegetarian torpedo with no sense of humour.'],
-  ['Longear Sunfish', 0xd88a3c, 'common', 8, 0.65, 3, 'Flashy fins, tiny frame.'],
-  ['Saugeye', 0xb9c47a, 'rare', 8, 1.20, 5, 'A walleye hybrid with a bad temper.'],
-  ['Creek Chub', 0x9a8a6a, 'common', 8, 0.60, 0, 'Bold, greedy, and always first to the bait.'],
-  /* ---- 16m · the drop-off ---- */
-  ['Rainbow Trout', 0xe86a92, 'uncommon', 16, 1.20, 3, 'A rainbow flash beneath the surface.'],
-  ['Brown Trout', 0xa07a44, 'rare', 16, 1.40, 2, 'Buttery gold with red spots. Wary of everything.'],
-  ['Brook Trout', 0x6f8f5a, 'uncommon', 16, 1.00, 3, 'Speckled and cold-water fussy.'],
-  ['Walleye', 0xb9c47a, 'rare', 16, 1.35, 5, 'A glass-eyed night feeder.'],
-  ['Sauger', 0x9aa06a, 'uncommon', 16, 1.05, 5, 'The smaller, sandier cousin of the walleye.'],
-  ['Channel Catfish', 0x5d6d7e, 'rare', 16, 1.85, 6, 'A whiskered heavyweight that pulls like a truck.'],
-  ['Tiger Muskie', 0x7f8f4a, 'rare', 16, 1.90, 1, 'All the teeth, none of the patience.'],
-  ['Northern Pike', 0x6f8f4a, 'rare', 16, 2.10, 2, 'All teeth and attitude. Bring line, not luck.'],
-  ['Burbot', 0x6b5f45, 'uncommon', 16, 1.15, 6, 'A freshwater cod that sulks in the dark.'],
-  ['Blue Catfish', 0x4a6a8a, 'epic', 16, 2.20, 6, 'Blue-grey and built like a submarine.'],
-  /* ---- 24m · deep water ---- */
-  ['Muskellunge', 0x7d8a5a, 'rare', 24, 2.20, 1, 'The fish of ten thousand casts.'],
-  ['Striped Bass', 0x9aa7b5, 'epic', 24, 2.30, 1, 'Silver that shoulders upstream like a train.'],
-  ['Lake Trout', 0x6a7f7a, 'rare', 24, 1.90, 2, 'Cold, deep and slow to give up.'],
-  ['Chinook Salmon', 0x8a9099, 'epic', 24, 2.40, 2, 'A chrome slab with a one-track mind.'],
-  ['Coho Salmon', 0xb05a4a, 'rare', 24, 1.70, 3, 'Silver and red, and all fight.'],
-  ['Steelhead', 0xc8ccd4, 'epic', 24, 2.00, 3, 'A trout that went to sea and came back angry.'],
-  ['Flathead Catfish', 0x6b5b3e, 'epic', 24, 2.50, 6, 'A wide flat head that owns the bottom of the hole.'],
-  ['Bighead Carp', 0xa8a89a, 'rare', 24, 2.60, 5, 'A wall of a fish with a tiny face.'],
-  ['Silver Carp', 0xc9cfd4, 'uncommon', 24, 2.20, 0, 'Jumps at loud noises. Terrifying.'],
-  ['Golden Koi', 0xffb703, 'legendary', 24, 1.50, 4, 'Shimmering gold. A true prize catch.'],
-  /* ---- 32m · the old channel ---- */
-  ['Mirror Carp', 0xd9d2c0, 'legendary', 32, 2.60, 5, 'Scattered mirror scales and the temper of a bull.'],
-  ['Leather Carp', 0xb8ae98, 'epic', 32, 2.80, 0, 'Smooth-skinned and impossible to net.'],
-  ['Atlantic Salmon', 0xb8c0c9, 'epic', 32, 2.10, 2, 'A leaper with a grudge.'],
-  ['Alligator Gar', 0x6b7a4a, 'epic', 32, 3.00, 5, 'Armoured scales and rows of needle teeth.'],
-  ['Paddlefish', 0x5a6a72, 'legendary', 32, 2.90, 0, 'A living fossil with a paddle for a nose.'],
-  ['Bowfin', 0x6a6a48, 'rare', 32, 1.90, 2, 'Prehistoric, ugly, and never quits.'],
-  ['American Eel', 0x4a5a4a, 'uncommon', 32, 1.30, 0, 'A rope of muscle that ties itself in knots.'],
-  ['Lake Sturgeon', 0x8e9b8a, 'epic', 32, 3.10, 5, 'Armoured living fossil. Older than the dock.'],
-  ['Giant Snakehead', 0x5a4a3a, 'epic', 32, 2.40, 2, 'Breathes air and hunts the shallows.'],
-  ['Golden Dorado', 0xe0a020, 'legendary', 32, 1.80, 4, 'A gold torpedo that eats anything.'],
-  /* ---- 40m · the drowned river ---- */
-  ['Wels Catfish', 0x4a4a52, 'legendary', 40, 3.20, 6, 'A river monster that eats things larger than you.'],
-  ['Goonch', 0x6a5a52, 'epic', 40, 3.00, 6, 'A devil cat with a taste for flesh.'],
-  ['Arapaima', 0x7a5a5a, 'legendary', 40, 3.40, 4, 'Air-breathing giant with armour-plate scales.'],
-  ['Giant Gourami', 0x9a8a7a, 'rare', 40, 2.20, 0, 'A lump of a fish with a huge appetite.'],
-  ['Mekong Giant Catfish', 0x6f7a82, 'legendary', 40, 3.60, 6, 'Pale, whiskered and enormous.'],
-  ['Giant Stingray', 0x5a5a4a, 'epic', 40, 3.30, 2, 'A wing of muscle that drags along the sand.'],
-  ['Black Pacu', 0x3a3a3a, 'rare', 40, 2.00, 0, 'A river fish with a human-looking smile.'],
-  ['Tambaqui', 0x4a4a3a, 'rare', 40, 2.30, 5, 'Armoured and seed-crunching.'],
-  ['Bull Shark', 0x8a929a, 'legendary', 40, 3.50, 0, 'It should not be in a lake. It is.'],
-  ['Golden Mahseer', 0xd8a850, 'epic', 40, 2.40, 4, 'A golden river tank with a black mood.'],
-  /* ---- 48m · past the shelf ---- */
-  ['Goliath Tigerfish', 0x9a9a8a, 'legendary', 48, 2.60, 5, 'Teeth like a saw and a straight-line temper.'],
-  ['Giant Trevally', 0x8a9aa8, 'legendary', 48, 2.70, 0, 'A silver fist that hunts in packs.'],
-  ['Napoleon Wrasse', 0x5a8a9a, 'epic', 48, 3.00, 4, 'Huge, proud and slow to spook.'],
-  ['Ocean Sunfish', 0xa8a8a0, 'legendary', 48, 3.60, 0, 'A floating boulder with fins.'],
-  ['Coelacanth', 0x4a5a7a, 'legendary', 48, 2.80, 5, 'It has been doing this for four hundred million years.'],
-  ['Giant Oarfish', 0xc0c8d0, 'legendary', 48, 3.40, 1, 'A silver ribbon with a red mane.'],
-  ['Giant Manta', 0x4a4a5a, 'legendary', 48, 3.80, 0, 'A flying carpet of muscle.'],
-  ['Whale Shark', 0x5a6a82, 'mythic', 48, 4.40, 2, 'Spotted, gentle and staggeringly heavy.'],
-  ['Blue Marlin', 0x2a4a8a, 'legendary', 48, 3.20, 1, 'A spear that runs hot.'],
-  ['Great White', 0x8a9298, 'mythic', 48, 3.70, 0, 'The lake does not deserve this.'],
-  /* ---- 56m · the black water ---- */
-  ['Leviathan Sturgeon', 0x6a7a6a, 'legendary', 56, 3.40, 5, 'Old as the lake and twice as heavy.'],
-  ['Moonfish', 0x9fd8ff, 'mythic', 56, 2.20, 3, 'Bites only under a coin-white moon.'],
-  ['Ancient Carp', 0x9b5de5, 'mythic', 56, 2.40, 5, 'The old giant. It has outsmarted a hundred anglers.'],
-  ['Abyssal Wyrm', 0x2a3a5a, 'mythic', 56, 3.00, 1, 'Something long. Something patient.'],
-  ['Star-Eater', 0x3a2a5a, 'mythic', 56, 2.80, 4, 'It swallows the light and comes back for the hook.'],
-  ['Lunar Coelacanth', 0x7a8ac0, 'legendary', 56, 2.60, 5, 'Pale as bone and twice as stubborn.'],
-  ['Deep One', 0x3a4a4a, 'mythic', 56, 3.20, 0, 'It was here before the shore was.'],
-  ['Trench Serpent', 0x2a2a4a, 'mythic', 56, 3.60, 1, 'Coils that could wrap the whole pier.'],
-  ['Hollow Gar', 0x5a6a5a, 'legendary', 56, 2.90, 5, 'Hollow-boned, hollow-eyed, all teeth.'],
-  ['Pale Leviathan', 0xa8b0b8, 'legendary', 56, 3.80, 0, 'Whiter than the foam and far less friendly.'],
-  /* ---- 64m · the trench lip ---- */
-  ['Titan Sturgeon', 0x7a8a7a, 'mythic', 64, 3.50, 5, 'A barge with fins. Older than the hills.'],
-  ['Void Angler', 0x1a1a2a, 'mythic', 64, 2.40, 6, 'A lure on its own head, and worse teeth than yours.'],
-  ['Elder Leviathan', 0x4a5a6a, 'mythic', 64, 4.00, 0, 'It remembers the lake as a puddle.'],
-  ['Sunken God', 0x6a5a3a, 'mythic', 64, 4.20, 4, 'They sank it here on purpose.'],
-  ['Marrow Eel', 0x8a8a7a, 'legendary', 64, 2.60, 1, 'Long, pale and entirely without mercy.'],
-  ['Ghost Sturgeon', 0xb8c4c8, 'legendary', 64, 3.20, 5, 'You will see it twice: once on the line, once in dreams.'],
-  ['Colossal Squid', 0x7a3a4a, 'mythic', 64, 3.00, 0, 'Not a fish. Nobody told it.'],
-  ['Megamouth', 0x3a3a4a, 'legendary', 64, 3.80, 6, 'A mouth the size of a rowboat.'],
-  ['River Kraken', 0x2a3a4a, 'mythic', 64, 3.40, 2, 'Eight reasons to bring a bigger line.'],
-  ['Golden Leviathan', 0xd8b040, 'mythic', 64, 3.60, 4, 'Gilded, ancient and very tired of hooks.'],
-  /* ---- 72m · the drop ---- */
-  ['World-Eater', 0x2a1a3a, 'mythic', 72, 4.40, 0, 'Its mouth is a cave, and the cave is open.'],
-  ['Timefish', 0x5a7a8a, 'mythic', 72, 2.80, 3, 'It bites before you cast.'],
-  ['Bone Sail', 0xc8c0a8, 'mythic', 72, 3.60, 1, 'A sail of bone and a hull of muscle.'],
-  ['Deep Choir', 0x3a2a5a, 'mythic', 72, 3.20, 5, 'It sings at a frequency that unhooks men.'],
-  ['The Warden', 0x4a4a3a, 'mythic', 72, 4.00, 2, 'It guards the last sandbar. It is not friendly.'],
-  ['Salt Ghost', 0x9aa8b0, 'legendary', 72, 3.00, 0, 'Silver, silent, and always already behind you.'],
-  ['Hollow King', 0x6a5a6a, 'mythic', 72, 3.80, 4, 'Crowned in barnacles. Utterly empty.'],
-  ['Trench Widow', 0x2a2a3a, 'mythic', 72, 3.40, 1, 'It has eaten three of your rods.'],
-  ['Old Growth', 0x4a6a3a, 'legendary', 72, 3.60, 5, 'Bark-scaled and rooted to the trench floor.'],
-  ['Pale Crown', 0xd0d8e0, 'mythic', 72, 3.90, 3, 'A bone-white arc under the last of the light.'],
-  /* ---- 80m · the deep ---- */
-  ['The Drowned', 0x3a4a5a, 'mythic', 80, 3.60, 0, 'Waiting at the end of the line all along.'],
-  ['Star Whale', 0x2a3a6a, 'mythic', 80, 5.00, 3, 'Constellations move under its skin.'],
-  ['Ironjaw', 0x5a5a5a, 'mythic', 80, 4.20, 6, 'Scarred by every hook ever made.'],
-  ['Sunken Spire', 0x4a6a7a, 'mythic', 80, 4.60, 1, 'A tower with fins, and it is coming up.'],
-  ['Lunar Leviathan', 0xb8c8e0, 'mythic', 80, 4.00, 2, 'It rises only when the moon is full and low.'],
-  ['Hollow Moon', 0xd8d8e8, 'mythic', 80, 3.80, 4, 'A circle of pale scale, spinning slowly.'],
-  ['Deep Root', 0x3a5a3a, 'legendary', 80, 4.40, 5, 'It grew here before the water came.'],
-  ['The Listener', 0x4a3a5a, 'mythic', 80, 3.90, 0, 'Every cast. It heard every one.'],
-  ['Bone Tide', 0xc0b8a0, 'mythic', 80, 4.30, 1, 'The whole trench moves when it does.'],
-  ['Crown of Salt', 0xa8b8c0, 'mythic', 80, 4.10, 2, 'Wear it and the lake bows.'],
-  /* ---- 88m · the far edge ---- */
-  ['The Hollow God', 0x2a2a3a, 'mythic', 88, 5.20, 4, 'Nothing this big should take a hook.'],
-  ['World Serpent', 0x3a5a4a, 'mythic', 88, 5.40, 1, 'It circles the lake. The lake is its bed.'],
-  ['Moon-Eater', 0xbfd8ff, 'mythic', 88, 4.80, 3, 'It took a bite out of the sky and came back for more.'],
-  ['The First Fish', 0x6a7a9a, 'mythic', 88, 5.00, 5, 'Every scale on your line came from this.'],
-  ['Leviathan Prime', 0x3a4a6a, 'mythic', 88, 5.60, 2, 'The one the rest of them answer to.'],
-  ['Sunken Crown', 0xd8c070, 'mythic', 88, 4.90, 4, 'Gold under the silt. It was left there for a reason.'],
-  ['The Deep Itself', 0x1a2a3a, 'mythic', 88, 6.00, 0, 'You are not reeling a fish. You are reeling the lake.'],
-  ['Pale Sun', 0xf0f0e0, 'mythic', 88, 5.00, 3, 'Light from somewhere that has no right to light.'],
-  ['Elder Tide', 0x4a6a8a, 'mythic', 88, 5.30, 1, 'Older than water. Angrier than water.'],
-  ['Reel Life', 0xd8d0c0, 'mythic', 88, 5.50, 5, 'The one at the end of the line.'],
-];
-
-// value = what a fish of this rarity sells for, before size is factored in
-const RARITY = {
-  common:    { tier:0, label:'COMMON',    value:24,    spawn:26 },
-  uncommon:  { tier:1, label:'UNCOMMON',  value:65,    spawn:15 },
-  rare:      { tier:2, label:'RARE',      value:180,   spawn:7.5 },
-  epic:      { tier:3, label:'EPIC',      value:520,   spawn:3.6 },
-  legendary: { tier:4, label:'LEGENDARY', value:1500,  spawn:1.5 },
-  mythic:    { tier:5, label:'MYTHIC',    value:4600,  spawn:0.55 },
-};
-const RARITY_ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
-
-// derive the numbers: deeper water and bigger specimens are worth more and fight harder
-const BAND_PTS = b => 20 * Math.pow(1.45, b);
-const BAND_W   = b => 2.2 * Math.pow(1.55, b);
-const SPECIES = FISH_TABLE.map(([name, color, rarity, dist, sf, pattern, desc], index) => {
-  const b = clamp(Math.round(dist / 8), 0, 11);
-  const rar = RARITY[rarity];
-  const maxW = +(BAND_W(b) * sf).toFixed(1);
-  const minW = Math.max(0.2, +(maxW * 0.16).toFixed(1));
-  return {
-    id: name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-    island: Math.floor(index / 20),
-    name, color, rarity, dist, pattern: ["none", "stripes", "spots", "rainbow", "patches", "scales", "whiskers"][pattern], desc,
-    belly: lighten(color, 0.66),
-    minW, maxW,
-    pts: Math.round(BAND_PTS(b) * (0.8 + rar.tier * 0.12) * (0.7 + sf * 0.28)),
-    strength: +Math.min(2.4, 0.12 + b * 0.135 + sf * 0.06 + rar.tier * 0.03).toFixed(2),
-    size: +Math.min(1.9, 0.45 + Math.cbrt(maxW) * 0.28).toFixed(2),
-    weight: rar.spawn,
-  };
-});
-// Discard the old numbering scheme entirely. Stable species IDs break rarity
-// ties by authored roster position; no previous index label participates in sorting.
-const speciesRosterOrder = new Map(SPECIES.map((sp,index) => [sp.id,index]));
-// The ONLY source of index numbers: assign fresh 001–120 labels after sorting.
-sortFishIndex().forEach((sp, index) => { sp.number = index + 1; });
-
-// ---------- Gear ----------
-// Three ladders of 24 tiers each: smaller local improvements and a distinct
-// power jump at every island boundary. Stable IDs preserve owned equipment.
-const ROD_NAMES = [
-  ['Bamboo Pole', 0xc98a4b], ['Willow Rod', 0xb99a5a], ['Fiberglass Rod', 0x69c8db],
-  ['Graphite Rod', 0x6a6a72], ['Carbon Rod', 0x3a424e], ['Carbon Pro', 0x2f3640],
-  ['Toray Carbon', 0x2a3038], ['Tournament Rod', 0x1f6f8b], ['Tour Pro', 0x2f7fbf],
-  ['Signature Rod', 0xc0392b], ['Champion Rod', 0xe0a020], ['Masterwork Rod', 0x8e44ad],
-  ['Titanium Rod', 0x95a5a6], ['Quicksilver Rod', 0xbdc3c7], ['Moonsilver Rod', 0xc8d6e5],
-  ['Starmetal Rod', 0x5b6ee1], ['Runewood Rod', 0x6b4a29], ['Deepwater Rod', 0x1f4e79],
-  ['Abyssal Rod', 0x1b2a3a], ['Leviathan Rod', 0x2c3e50], ['Ancient Rod', 0xb8860b],
-  ['Celestial Rod', 0x7ec8e3], ['Elderwood Rod', 0x3f6b3f], ['Mythril Rod', 0x9b5de5],
-];
-const LINE_NAMES = [
-  ['Cotton Twine', 0xe8dcc0, 3], ['6lb Mono', 0xdfe9f0, 6], ['10lb Mono', 0xd8f0ff, 10],
-  ['15lb Mono', 0xcfe6f5, 15], ['30lb Mono', 0xbfe0f2, 30], ['36lb Mono', 0x9fe3d8, 36],
-  ['44lb Fluoro', 0x8fd6cf, 44], ['55lb Fluoro', 0x7fc9c6, 55], ['100lb Fluoro', 0xa9e5d0, 100],
-  ['115lb Braid', 0xd8f0a0, 115], ['135lb Braid', 0xc8e88a, 135], ['165lb Braid', 0xffd166, 165],
-  ['300lb Braid', 0xf6c445, 300], ['350lb Braid', 0xe8b03a, 350], ['420lb Braid', 0xd99b2b, 420],
-  ['500lb Braid', 0xe07a4a, 500], ['850lb Spectra', 0xd06a3a, 850], ['960lb Spectra', 0xc25a2a, 960],
-  ['1100lb Spectra', 0xb84a20, 1100], ['1250lb Kevlar', 0xc0392b, 1250], ['2200lb Kevlar', 0xd0402f, 2200],
-  ['2500lb Aramid', 0xe0503f, 2500], ['2900lb Dragonline', 0x9ef7c8, 2900], ['3400lb Mythril', 0xe0d0ff, 3400],
-];
-const BAIT_NAMES = [
-  ['Garden Worm', 0xd98b7a], ['Bread Ball', 0xe8d9b0], ['Sweet Corn', 0xffd94a],
-  ['Red Wiggler', 0xc0503a], ['Mealworm', 0xd8b070], ['Maggot', 0xeee6c8],
-  ['Sweet Pea', 0x8fd05a], ['Salmon Egg', 0xff7f50], ['Dough Ball', 0xf0dfa8],
-  ['Cheese Cube', 0xffd166], ['Powerbait', 0xff9a3c], ['Live Minnow', 0xa9d6e8],
-  ['Nightcrawler', 0xb07a6a], ['Cricket', 0x6a8a3a], ['River Shrimp', 0xff9a76],
-  ['Bloodworm', 0xb02030], ['Cut Bait', 0xc98080], ['Glow Grub', 0x9ef7c8],
-  ['Scent Bomb', 0xd07ae0], ['Chum Cloud', 0xb090c0], ['Firefly Sac', 0xe8f07a],
-  ['Silver Minnow', 0xd8e8f0], ['Dragonfly Nymph', 0x6fd0b0], ['Moonbait', 0xc0d8ff],
-];
-// Price each island in travel order, avoiding a boat/gear circular dependency:
-// departure stock -> required boat -> destination entry gear. The first rod,
-// line AND bait are exactly 130% of that island's minimum required boat price,
-// irrespective of the player's equipped boat, ownership, wallet or travel route.
-const BOAT_SAVING_GOALS = [0,550,4500,22500,130000,320000];
-const LOCAL_GEAR_TOPS = [
-  // rod, line, bait. The starter island keeps its accessible existing prices.
-  [260,210,360], [1800,1450,2500], [12000,9600,17000],
-  [50000,40000,70000], [240000,225000,255000], [720000,600000,900000],
-];
-function roundShopPrice(value){
-  const step = value < 1000 ? 5 : value < 10000 ? 50 : value < 100000 ? 250 : 1000;
-  return Math.round(value / step) * step;
-}
-function roundBoatPrice(value){
-  const step = value < 1000 ? 50 : value < 10000 ? 250 : value < 100000 ? 500 : 5000;
-  return Math.ceil(value / step) * step;
-}
-const ROD_COST = [0,100,160,260], LINE_COST = [0,80,130,210], BAIT_COST = [0,140,220,360];
-const BOAT_COST = [0];
-for(let island=1;island<6;island++){
-  const ladders=[ROD_COST,LINE_COST,BAIT_COST];
-  const departureCeiling=Math.max(...ladders.map(list=>list.at(-1)));
-  BOAT_COST.push(roundBoatPrice(Math.max(BOAT_SAVING_GOALS[island],departureCeiling*1.25)));
-  const entry=BOAT_COST[island]*13/10; // Exact integer coins, including Pinewater's 715c.
-  ladders.forEach((list,kind)=>{
-    // Local prices rise geometrically. Even if a future boat/gear rebalance
-    // raises the entry price, all three subsequent upgrades still cost more.
-    const top=Math.max(LOCAL_GEAR_TOPS[island][kind],roundShopPrice(entry*1.1**3));
-    list.push(entry);
-    for(let rung=1;rung<4;rung++)list.push(roundShopPrice(entry*(top/entry)**(rung/3)));
-  });
-}
-Object.freeze(BOAT_COST);
-
-const ROD_REACH_BASE = [12,34,60,94,138,194];
-const RODS = ROD_NAMES.map(([name, color], i) => {
-  const island=Math.floor(i/4),rung=i%4;
-  return {
-    id:'rod' + i, name, color, cost: ROD_COST[i],
-    cast: Math.round(ROD_REACH_BASE[island] + 3.6*rung),
-    // Crossing an island adds ~26% reel speed and ~19% less tension, versus
-    // ~3.5% and ~6% within one island. Starter stats remain unchanged.
-    tension: +(1.55 * Math.pow(0.94, i) * Math.pow(0.86, island)).toFixed(2),
-    reel: +(0.75 * Math.pow(1.035, i) * Math.pow(1.22, island)).toFixed(2),
-  };
-});
-const LINES = LINE_NAMES.map(([name, color, rating], i) => ({
-  id:'line' + i, name, color, rating, cost: LINE_COST[i],
-  // Island entry ratings jump 70–100%; strain drops ~17% instead of ~5.5%.
-  strain: +(1.60 * Math.pow(0.945, i) * Math.pow(0.88, Math.floor(i/4))).toFixed(2),
+// Pure collection, equipment and fishing rules. No size is derived from rarity.
+import { COLLECTION_ROSTER } from './collection-roster.mjs?v=41';
+import { ISLANDS, GEAR_PER_ISLAND } from './island-data.mjs?v=41';
+import { fishAppearance } from './fish-appearance.mjs?v=41';
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+export const SALE_MULTIPLIER=.85;
+export const RARITY_ORDER=Object.freeze(['common','uncommon','rare','epic','legendary','mythic','exotic','divine','ancient','celestial','transcendent','unfathomable']);
+const colours=['#858b91','#32905e','#347fd0','#8854bc','#db802b','#c83f49','#d855a2','#b68a10','#876047','#75c9ed','rainbow','#13151b'];
+export const RARITY=Object.freeze(Object.fromEntries(RARITY_ORDER.map((key,tier)=>[key,Object.freeze({tier,label:key.toUpperCase(),color:colours[tier],value:[24,65,180,520,1500,4600,12000,32000,85000,220000,580000,1500000][tier],spawn:26*.55**tier})])));
+export const ISLAND_RARITIES=Object.freeze(ISLANDS.map(i=>{
+  const tiers=COLLECTION_ROSTER.filter(s=>s.island===i.id).map(s=>RARITY[s.rarity].tier);
+  return Object.freeze([Math.min(...tiers),Math.max(...tiers)]);
 }));
-// each bait can only ever hook fish inside its rarity window
-const BAIT_WINDOW = [
-  [0,1],[0,1],[0,2],[1,2],[1,2],[1,3],[1,3],[2,3],[2,3],[2,4],[2,4],[2,4],
-  [3,4],[3,4],[3,5],[3,5],[3,5],[4,5],[4,5],[4,5],[4,5],[4,5],[4,5],[4,5],
-];
-const BAITS = BAIT_NAMES.map(([name, color], i) => {
-  const [lo, hi] = BAIT_WINDOW[i];
-  // Preserve the 3–6 point local steps, plus eight extra points on arrival at
-  // a new island: boundary steps are 12–13 points. Even 153% is not a guarantee.
-  const luckPercent = Math.round(90 * Math.pow(i / (BAIT_NAMES.length - 1), 1.2)) + i + 8*Math.floor(i/4);
-  return {
-    id:'bait' + i, name, color, cost: BAIT_COST[i], lo, hi,
-    luck: luckPercent / 100,
-    // A separate, gentle weight bonus: +0.5 percentage points per upgrade.
-    // This is the upper bound on the rolled-weight boost, not a higher maxW.
-    weightBonus: +(i * 0.005).toFixed(3),
-  };
-});
+export const SPECIES=Object.freeze(COLLECTION_ROSTER.map(row=>{
+  const a=fishAppearance(row),relative=RARITY[row.rarity].tier-ISLAND_RARITIES[row.island][0];
+  return Object.freeze({...row,color:a.tones[1],belly:a.tones[2],pattern:a.marks,
+    desc:`${row.name} · ${ISLANDS[row.island].environment}. ${['A familiar inhabitant of these waters.','A distinctive catch from this territory.','A prized entry in the local field guide.'][Math.min(2,relative)]}`,
+    strength:.24+row.island*.05+relative*.11,difficulty:(.7+relative*.17)*1.55**row.island,
+    size:row.displaySpan,pts:Math.round(20*(1+row.island)*1.4**relative),weight:RARITY[row.rarity].spawn});
+}));
+const order=new Map(SPECIES.map((sp,i)=>[sp.id,i]));
+export function sortFishIndex(items=SPECIES){return [...items].sort((a,b)=>a.island-b.island||RARITY[a.rarity].tier-RARITY[b.rarity].tier||order.get(a.id)-order.get(b.id));}
 
-// ---------- Progression ----------
-// Islands are level-gated. Local vendors sell four tiers of each gear ladder.
-// Price and bait windows remain strict; owned gear is re-equippable anywhere.
-function fishValue(sp, weight){
-  // rarity sets the base, the specimen size multiplies it — a fat fish of a
-  // rare species is where the money is
-  const rel = clamp((weight - sp.minW) / Math.max(0.1, sp.maxW - sp.minW), 0, 1);
-  const bulk = 0.6 + 0.4 * Math.pow(Math.max(0.5, weight) / 50, 0.35);
-  return Math.max(6, Math.round(RARITY[sp.rarity].value * (0.5 + 0.5 * rel) * bulk * (1 + sp.island * 0.15)));
-}
+// Two meaningful tiers per island. Local upgrades are 18% stronger; crossing
+// to the next kit is another 31%, instead of dozens of near-identical items.
+const entry=[0,500,1300,3200,7500,17000,38000,83000,180000,390000,830000,1750000,3650000,7600000,15800000,32800000,68000000,141000000,292000000,605000000];
+export const GEAR_ENTRY_PRICES=Object.freeze(entry);
+const round=n=>Math.round(n/10)*10;
+const price=(island,rung,kind)=>island===0?(rung?[100,80,140][kind]:0):rung?round(entry[island]*[1.6,1.45,1.8][kind]):entry[island];
+export const RODS=Object.freeze(ISLANDS.flatMap(i=>[0,1].map(r=>Object.freeze({id:'rod'+(i.id*2+r),island:i.id,
+  name:i.id===0?['Bamboo Pole','Willow Rod'][r]:`${i.stock} ${r?'Master Rod':'Rod'}`,color:i.accent,cost:price(i.id,r,0),
+  cast:12+i.id*5+r*2,power:1.55**i.id*1.18**r,tension:1.55/Math.sqrt(1.55**i.id*1.18**r),reel:+(.75+i.id*.09+r*.035).toFixed(3)}))));
+export const LINES=Object.freeze(ISLANDS.flatMap(i=>[0,1].map(r=>Object.freeze({id:'line'+(i.id*2+r),island:i.id,
+  name:i.id===0?['Cotton Twine','Reinforced Mono'][r]:`${i.stock} ${r?'Braided':'Woven'} Line`,color:i.accent,cost:price(i.id,r,1),
+  rating:Math.round(3*2.18**i.id*1.8**r),control:1.55**i.id*1.18**r,strain:1.6/Math.sqrt(1.55**i.id*1.18**r)}))));
+export const BAITS=Object.freeze(ISLANDS.flatMap(i=>[0,1].map(r=>{
+  const [lo,hi]=ISLAND_RARITIES[i.id];
+  // Both local baits cover every local rarity; premium bait improves luck
+  // and weight without losing any eligible small species.
+  return Object.freeze({id:'bait'+(i.id*2+r),island:i.id,name:i.id===0?['Garden Worm','Golden Corn'][r]:`${i.stock} ${r?'Lure':'Bait'}`,
+    color:i.accent,cost:price(i.id,r,2),lo,hi,luck:+(i.id*.22+r*.08).toFixed(2),weightBonus:+((i.id*2+r)*.005).toFixed(3)});
+})));
 
-// Bait/island gates define eligibility; cast luck only reweights that same pool.
-// No luck value can hook a fish outside the bait's strict rarity window.
-// Species size is NOT an eligibility gate: upgrading to a wider rarity range
-// must not silently discard smaller fish (including Pinewater's #040). Better
-// bait still biases specimen weight through rollWeight, within natural limits.
-function baitWindow(i){
-  const b = BAITS[i] || BAITS[0];
-  return [b.lo, b.hi];
+// Rare tiny animals are still valuable. This is an economy scale, not a mass
+// scale. The explicit 15% reduction applies once before collection rewards.
+const saleScales=ISLANDS.map(i=>i.id===0?.52:(entry[i.id]/(i.id===19?32:22+i.id*1.4))/RARITY[RARITY_ORDER[ISLAND_RARITIES[i.id][0]]].value);
+export function fishBaseValue(sp,weight){
+  const rel=clamp((Number(weight)-sp.minW)/Math.max(.000001,sp.maxW-sp.minW),0,1);
+  if(sp.legacy){
+    const bulk=.6+.4*Math.pow(Math.max(.5,Number(weight))/50,.35);
+    return Math.max(6,Math.round(RARITY[sp.rarity].value*(.5+.5*rel)*bulk*(1+sp.legacyIsland*.15)));
+  }
+  return Math.max(6,Math.round(RARITY[sp.rarity].value*saleScales[sp.island]*(.5+.5*rel)));
 }
-function eligibleSpecies(island, baitIndex){
-  const bait = BAITS[baitIndex];
-  if(!bait || !Number.isInteger(island) || island < 0 || island > 5) return [];
-  return SPECIES.filter(s => s.island === island &&
-    RARITY[s.rarity].tier >= bait.lo && RARITY[s.rarity].tier <= bait.hi);
+export function fishValue(sp,weight){return Math.max(1,Math.round(fishBaseValue(sp,weight)*SALE_MULTIPLIER));}
+export function baitWindow(index){const b=BAITS[index]||BAITS[0];return [b.lo,b.hi];}
+export function eligibleSpecies(island,index){
+  const b=BAITS[index];if(!b||!Number.isInteger(island)||!ISLANDS[island])return [];
+  return SPECIES.filter(s=>s.island===island&&RARITY[s.rarity].tier>=b.lo&&RARITY[s.rarity].tier<=b.hi);
 }
-// Sort a copy without reading index numbers. Spawn order and save IDs never change.
-function sortFishIndex(items = SPECIES){
-  return [...items].sort((a,b) => a.island - b.island ||
-    RARITY[a.rarity].tier - RARITY[b.rarity].tier || speciesRosterOrder.get(a.id) - speciesRosterOrder.get(b.id));
+export function castLuckModifier(power=.5){return ((Number.isFinite(power)?clamp(power,0,1):.5)*2-1)*.1;}
+// Shore suppresses the whole luck multiplier, not an unsafe negative spawn
+// weight. -95% cannot be cancelled by buying endgame bait and standing on a dock.
+export function effectiveLuck(index=0,power=.5,shorePenalty=0){
+  return Math.max(-.98,(1+(BAITS[index]||BAITS[0]).luck+castLuckModifier(power))*(1+clamp(shorePenalty,-.95,0))-1);
 }
-// Charge adds percentage points to bait luck: -10 at minimum, 0 at halfway, +10 at full.
-// A neutral default preserves callers that are not resolving a player's cast.
-function castLuckModifier(power = 0.5){
-  const charge = Number.isFinite(power) ? clamp(power, 0, 1) : 0.5;
-  return (charge * 2 - 1) * 0.1;
+export function speciesChance(sp,index=0,power=.5,shorePenalty=0){
+  const b=BAITS[index]||BAITS[0],luck=effectiveLuck(index,power,shorePenalty);
+  return sp.weight*Math.pow(Math.max(.02,1+luck*2),RARITY[sp.rarity].tier-b.lo);
 }
-function effectiveLuck(baitIndex = 0, castPower = 0.5){
-  return (BAITS[baitIndex] || BAITS[0]).luck + castLuckModifier(castPower);
+export function pickSpecies(island,index,random=Math.random,power=.5,shorePenalty=0){
+  const list=eligibleSpecies(island,index);if(!list.length)return null;
+  const weights=list.map(sp=>speciesChance(sp,index,power,shorePenalty));let r=clamp(random(),0,1)*weights.reduce((a,b)=>a+b,0);
+  for(let i=0;i<list.length;i++){r-=weights[i];if(r<=0)return list[i];}return list.at(-1);
 }
-function pickSpecies(island, baitIndex, random = Math.random, castPower = 0.5){
-  const bait = BAITS[baitIndex];
-  const list = eligibleSpecies(island, baitIndex);
-  if(!list.length) return null; // never silently give a fish outside the island/bait window
-  const luck = effectiveLuck(baitIndex, castPower);
-  const weights = list.map(s => s.weight * Math.pow(1 + luck * 2, RARITY[s.rarity].tier - bait.lo));
-  let r = random() * weights.reduce((a, b) => a + b, 0);
-  for(let i = 0; i < list.length; i++) { r -= weights[i]; if(r <= 0) return list[i]; }
-  return list[list.length - 1];
+export function rollWeight(sp,index=0,random=Math.random,power=.5,shorePenalty=0){
+  const bait=BAITS[index]||BAITS[0],luck=effectiveLuck(index,power,shorePenalty);
+  const t=Math.pow(clamp(random(),0,1),1/Math.max(.16,1+luck*1.8));
+  const weight=clamp(sp.minW+(sp.maxW-sp.minW)*t,sp.minW,sp.maxW),bonus=weight*bait.weightBonus,room=sp.maxW-weight;
+  return !bonus||!room?weight:Math.min(sp.maxW,weight+bonus*room/(bonus+room));
 }
-function rollWeight(sp, baitIndex = 0, random = Math.random, castPower = 0.5){
-  const bait = BAITS[baitIndex] || BAITS[0];
-  const luck = effectiveLuck(baitIndex, castPower);
-  const t = Math.pow(random(), 1 / (1 + luck * 1.8));
-  const weight = clamp(sp.minW + (sp.maxW - sp.minW) * t, sp.minW, sp.maxW);
-  if(!bait.weightBonus || weight === sp.maxW) return weight;
-  const bonus = weight * bait.weightBonus, room = sp.maxW - weight;
-  // Soft-cap the extra weight to the remaining headroom. Small fish get nearly
-  // the advertised bonus; trophies get less. Unlike a hard multiplier + clamp,
-  // this doesn't turn a whole band of lucky rolls into identical max-size fish.
-  return Math.min(sp.maxW, weight + bonus * room / (bonus + room));
-}
-
-
-export { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, BOAT_COST, fishValue, baitWindow, eligibleSpecies, sortFishIndex, castLuckModifier, effectiveLuck, pickSpecies, rollWeight };
+// Six decimal places retain millipound species and their specimen differences.
+export const roundWeight=weight=>Math.round(Number(weight)*1e6)/1e6;
+export function formatWeight(weight){const w=Number(weight);return Number.isFinite(w)?w.toLocaleString('en-US',{minimumFractionDigits:w>=1?1:0,maximumFractionDigits:w>=1?2:w>=.1?3:6}):'—';}
+export { GEAR_PER_ISLAND };

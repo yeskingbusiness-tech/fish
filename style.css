@@ -436,3 +436,48 @@ button:disabled{cursor:not-allowed}.primary-btn:disabled{background:#c8d1ca;colo
 /* Same vector fish art, one reusable image instead of hundreds of DOM paths. */
 .fish-thumbnail{object-fit:contain;image-rendering:auto}
 .fish-thumbnail:not([src]){opacity:0}
+
+/* Open-water expansion: compact live map, explicit helm/fishing controls. */
+.minimap-button{position:absolute;left:22px;bottom:58px;width:154px;padding:5px;background:#1c3b48;border:2px solid #e0cfaa;color:#f7ebce;box-shadow:4px 4px #102c3d55;pointer-events:auto;cursor:pointer;text-align:left}
+.minimap-button canvas{display:block;width:140px;height:140px;image-rendering:pixelated}
+.minimap-button span{display:block;font:10px 'Courier New',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:6px 2px}
+.minimap-button small{font:8px 'Courier New',monospace;letter-spacing:1px;display:block;margin:3px 2px;color:#c4d8d6}
+.shore-luck{position:absolute;bottom:58px;left:50%;transform:translateX(-50%);font:700 9px 'Courier New',monospace;letter-spacing:.5px;padding:7px 10px;background:#fff1d9e8;border:1px solid #c09b74;color:#815344;white-space:nowrap;pointer-events:none}
+.shore-luck.offshore{color:#2a6d5e;border-color:#6d9e89;background:#e8f1dce8}
+.board-boat{position:absolute;bottom:166px;left:50%;transform:translateX(-50%);background:#234d53;color:#f7e9cb;border:2px solid #e7cea2;padding:12px 20px;font:bold 13px 'Courier New',monospace;pointer-events:auto;cursor:pointer}
+.boat-controls{position:absolute;bottom:94px;left:50%;transform:translateX(-50%);display:flex;gap:8px;pointer-events:auto}
+.boat-controls button{border:2px solid #23434c;background:#eddfc0;color:#23434c;padding:11px 15px;font:bold 11px 'Courier New',monospace;cursor:pointer;white-space:nowrap}
+.boat-controls button:disabled{opacity:.7;cursor:default}
+.boat-readout{position:absolute;right:22px;bottom:72px;display:grid;gap:5px;text-align:right;color:#f8efda;background:#193d45df;padding:10px 12px;border:1px solid #b0c6bc;font:10px 'Courier New',monospace}
+.boat-readout b{font-size:17px}
+.arrival-banner{top:18%;left:50%;pointer-events:none;max-width:90vw;min-width:270px;background:#152e3edb;color:#faf0cf;border:1px solid #e5d9b2}
+.arrival-banner p,.arrival-banner .eyebrow{color:#c8d7cf}
+.chart-layout{grid-template-columns:minmax(0,1.7fr) minmax(240px,1fr)}
+.sea-chart{min-height:680px;aspect-ratio:1180/1440}
+.map-island{width:23%;min-height:78px;gap:0}
+.map-island svg{width:58px;height:45px}
+.map-island b{font-size:9px;white-space:normal;max-width:100%;text-align:center;line-height:1.15}
+.map-island span{font-size:6px;letter-spacing:0}
+.chart-caption{left:12px;top:12px}.chart-caption b{font-size:10px;letter-spacing:1px}.chart-caption span{font-size:6px}
+.chart-ocean{display:none}
+.index-islands{flex-wrap:nowrap;overflow-x:auto;flex-shrink:0;scrollbar-width:thin;padding-bottom:12px;max-width:100%}
+.island-filter{flex-shrink:0}
+/* Rarity hue is shared by labels, catch cards and field-guide trims. */
+.common{--rarity:#858b91}.uncommon{--rarity:#32905e}.rare{--rarity:#347fd0}.epic{--rarity:#8854bc}.legendary{--rarity:#db802b}.mythic{--rarity:#c83f49}.exotic{--rarity:#d855a2}.divine{--rarity:#b68a10}.ancient{--rarity:#876047}.celestial{--rarity:#75c9ed}.transcendent{--rarity:#927bbd}.unfathomable{--rarity:#13151b}
+.rarity-label,.carry-rarity,.modal-eyebrow{color:var(--rarity,#63746e)!important}
+.fish-entry.discovered{border-top-color:var(--rarity)}
+.modal-card:is(.mythic,.exotic,.divine,.ancient,.celestial,.transcendent,.unfathomable){border-color:var(--rarity);box-shadow:8px 8px 0 var(--rarity);background:#faf4e7}
+:is(.rarity-label,.carry-rarity,.modal-eyebrow).transcendent{background:linear-gradient(90deg,#cb4350,#bb8109,#318a64,#267ac6,#9457aa);background-clip:text;-webkit-background-clip:text;color:transparent!important}
+.fish-entry.transcendent{border-top:3px solid transparent;border-image:linear-gradient(90deg,#d6656b,#dfbe57,#79b386,#69b7d6,#a58ace) 1}
+.fish-entry.unfathomable{border-top:3px solid #13151b}
+@media(max-width:760px){
+ .minimap-button{width:118px;left:12px;bottom:48px;padding:4px}.minimap-button canvas{width:106px;height:106px}.minimap-button span{font-size:8px}.minimap-button small{font-size:6px}
+ .boat-readout{right:12px;bottom:86px;font-size:8px;padding:7px}.boat-readout b{font-size:13px}.boat-readout span{display:none}
+ .shore-luck{bottom:48px;left:auto;right:12px;transform:none;font-size:7px;max-width:60vw;white-space:normal;text-align:right}
+ .boat-controls{bottom:130px;left:auto;right:12px;transform:none;display:grid;gap:5px}.boat-controls button{font-size:9px;padding:10px}.board-boat{bottom:172px;font-size:11px}
+ .stick{bottom:222px}.sea-chart{min-height:600px}.map-island{min-height:70px}.map-island svg{width:49px;height:38px}.map-island b{font-size:8px}.map-island span{font-size:5px}
+ .chart-layout{display:block}.destination-copy{padding:14px}.arrival-banner{top:32%;min-width:240px}.arrival-banner h2{font-size:22px}
+}
+@media(max-height:590px){.minimap-button{bottom:43px;width:98px}.minimap-button canvas{width:86px;height:86px}.minimap-button span{font-size:7px}.minimap-button small{display:none}.boat-controls{bottom:96px}.boat-readout{bottom:60px}.shore-luck{bottom:42px}.stick{bottom:102px}.sea-chart{min-height:600px}.arrival-banner{top:32%}}
+@media(min-width:761px){.sea-chart{aspect-ratio:auto;height:100%;min-height:540px}.chart-layout{min-height:540px}.destination-art{height:110px;flex-shrink:0}.destination-copy{padding:16px}.destination-copy dl{gap:7px;margin:12px 0}.destination-copy .destination-requirement{margin-top:12px}.map-island svg{width:47px;height:36px}.map-island{min-height:68px}.chart-north{font-size:12px}}
+.chart-you{position:absolute;transform:translate(-50%,-50%);color:#fff3bb;background:#28535c;border:1px solid #e0cc8e;border-radius:50%;font-size:12px;line-height:18px;width:18px;height:18px;text-align:center;pointer-events:none;box-shadow:0 0 0 3px #f4df8c44}

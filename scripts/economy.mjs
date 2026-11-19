@@ -1,88 +1,30 @@
-// Deterministic balance audit, not a runtime/player-specific price adjustment.
-// Integrate each eligible species' weight distribution at fixed quantiles, then
-// apply its actual bait-weighted spawn chance. Catch weights are rounded to one
-// decimal just as they are in hookFish(); market values include that rounding.
+// Deterministic real-pool audit, including six-decimal catch precision.
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
-import { RODS, LINES, BAITS, RARITY, eligibleSpecies, effectiveLuck, fishValue, rollWeight } from '../game-data.mjs';
-import { ISLANDS, BOATS, gearIsland, localGearPriceCeiling } from '../archipelago.mjs';
-
-const cache = new Map();
-export function expectedCatchIncome(island, baitIndex, samples = 1024, castPower = 0.5){
-  const key = `${island}:${baitIndex}:${samples}:${castPower}`;
-  if(cache.has(key)) return cache.get(key);
-  const bait = BAITS[baitIndex], pool = eligibleSpecies(island, baitIndex);
-  if(!bait || !pool.length) return 0;
-  const luck = effectiveLuck(baitIndex, castPower);
-  let chanceTotal = 0, saleTotal = 0;
-  for(const sp of pool){
-    const chance = sp.weight * Math.pow(1 + luck * 2, RARITY[sp.rarity].tier - bait.lo);
-    let sales = 0;
-    for(let q = 0; q < samples; q++){
-      const weight = +rollWeight(sp, baitIndex, () => (q + 0.5) / samples, castPower).toFixed(1);
-      sales += fishValue(sp, weight);
-    }
-    chanceTotal += chance;
-    saleTotal += chance * sales / samples;
+import { RODS,LINES,BAITS,eligibleSpecies,speciesChance,fishValue,rollWeight,roundWeight } from '../game-data.mjs';
+import { ISLANDS,BOATS,gearIsland } from '../archipelago.mjs';
+const cache=new Map();
+export function expectedCatchIncome(island,baitIndex,samples=256,castPower=.5,shorePenalty=0){
+  if(!Number.isInteger(samples)||samples<1)throw new RangeError('Use at least one quantile');
+  const key=[island,baitIndex,samples,castPower,shorePenalty].join(':');if(cache.has(key))return cache.get(key);
+  let chances=0,total=0;
+  for(const sp of eligibleSpecies(island,baitIndex)){
+    const chance=speciesChance(sp,baitIndex,castPower,shorePenalty);let sales=0;
+    for(let n=0;n<samples;n++)sales+=fishValue(sp,roundWeight(rollWeight(sp,baitIndex,()=>(n+.5)/samples,castPower,shorePenalty)));
+    chances+=chance;total+=chance*sales/samples;
   }
-  const result = saleTotal / chanceTotal;
-  cache.set(key, result);
-  return result;
+  const result=chances?total/chances:0;cache.set(key,result);return result;
 }
-
-export function gearEconomyRows(){
-  return RODS.slice(1).map((rod, offset) => {
-    const index = offset + 1, island = gearIsland(index);
-    const income = expectedCatchIncome(island, index - 1);
-    return {
-      tier:index + 1, island:ISLANDS[island].short, income,
-      rod:rod.cost, line:LINES[index].cost, bait:BAITS[index].cost,
-      rodCatches:rod.cost / income, lineCatches:LINES[index].cost / income,
-      baitCatches:BAITS[index].cost / income,
-    };
-  });
+export function gearEconomyRows(){return RODS.slice(1).map((rod,n)=>{
+  const tier=n+1,island=gearIsland(tier),previous=Math.max(0,tier-1);
+  // Final island's new rarity needs its entry bait. Save for it before departure.
+  const income=expectedCatchIncome(island,previous)||expectedCatchIncome(Math.max(0,island-1),previous);
+  return {tier:tier+1,island:ISLANDS[island].short,income,rod:rod.cost,line:LINES[tier].cost,bait:BAITS[tier].cost,rodCatches:rod.cost/income,lineCatches:LINES[tier].cost/income,baitCatches:BAITS[tier].cost/income};
+});}
+export function islandEntryRows(){return ISLANDS.slice(1).map(i=>({island:i.short,rod:RODS[i.id*2].cost,line:LINES[i.id*2].cost,bait:BAITS[i.id*2].cost}));}
+export function boatEconomyRows(){return BOATS.map(b=>({boat:b.name,cost:b.cost,speed:b.speed,size:b.size,access:'ALL level-unlocked territories'}));}
+if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
+  console.log('Offshore, neutral charge, no collection bonuses. Default sale reduction ×0.85 is included.');
+  console.table(gearEconomyRows().map(r=>({...r,income:+r.income.toFixed(1),rodCatches:+r.rodCatches.toFixed(1),lineCatches:+r.lineCatches.toFixed(1),baitCatches:+r.baitCatches.toFixed(1)})));
+  console.table(boatEconomyRows());console.log('Optional boats have no access premium. Shore penalty and return trips add effort; rewards are paid on land at a market.');
 }
-export function islandEntryRows(){
-  return ISLANDS.slice(1).map(island=>{
-    const tier=island.id*4,boat=BOATS[island.id],rod=RODS[tier],line=LINES[tier],bait=BAITS[tier];
-    return {
-      island:island.short,boat:boat.name,boatCost:boat.cost,
-      rod:rod.cost,line:line.cost,bait:bait.cost,
-      reelGain:(rod.reel/RODS[tier-1].reel-1)*100,
-      lineRatingGain:(line.rating/LINES[tier-1].rating-1)*100,
-      luckGain:Math.round((bait.luck-BAITS[tier-1].luck)*100),
-    };
-  });
-}
-export function boatEconomyRows(){
-  return BOATS.slice(1).map(boat => {
-    const departure = boat.range - 1;
-    const income = expectedCatchIncome(departure, departure * 4 + 3);
-    const gearCeiling = localGearPriceCeiling(departure);
-    return { boat:boat.name, departure:ISLANDS[departure].short, gearCeiling, premium:boat.cost / gearCeiling - 1, cost:boat.cost, income, catches:boat.cost / income };
-  });
-}
-function report(){
-  console.log('Saving goals assume a neutral 50% cast. Low/full charge applies -10/+10 luck points.');
-  console.log('Base saving goals exclude collection rewards: each completed island adds +5% sale coins, up to +30%.');
-  console.log('New-island entry gear: each category costs exactly 130% of the minimum required boat.');
-  console.table(islandEntryRows().map(r=>({
-    island:r.island,boat:r.boat,'boat price':r.boatCost,'first rod':r.rod,'first line':r.line,'first bait':r.bait,
-    'reel speed jump':r.reelGain.toFixed(1)+'%','line rating jump':r.lineRatingGain.toFixed(1)+'%','luck jump':r.luckGain+' points',
-  })));
-  console.log('Gear: income from the previous bait in the shop\'s own island.');
-  console.table(gearEconomyRows().map(r => ({
-    tier:r.tier, island:r.island, 'coins/catch':r.income.toFixed(1),
-    rod:r.rod, line:r.line, bait:r.bait,
-    'rod catches':r.rodCatches.toFixed(1), 'line catches':r.lineCatches.toFixed(1), 'bait catches':r.baitCatches.toFixed(1),
-  })));
-  console.log('Boats: income from the departure island\'s best local bait, never destination fish.');
-  console.table(boatEconomyRows().map(r => ({
-    boat:r.boat, leaving:r.departure, 'local gear max':r.gearCeiling, cost:r.cost,
-    'above local gear':(r.premium * 100).toFixed(1) + '%',
-    'coins/catch':r.income.toFixed(1), 'landed catches':r.catches.toFixed(1),
-  })));
-  console.log('These are expected landed-and-sold catches, not guarantees or catch attempts.');
-  console.log('Boat prices must exceed local gear by at least 25%; current bait luck and weight bonuses are included.');
-}
-if(process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) report();

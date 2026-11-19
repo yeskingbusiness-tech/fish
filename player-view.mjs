@@ -2,12 +2,14 @@
 // data. THREE is passed in so the camera/size helpers can be tested without WebGL.
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
-export function heldFishSpan(_sp, weight){
-  const w = Number.isFinite(Number(weight)) ? Math.max(0, Number(weight)) : 0;
-  // Absolute pounds, not a percentage of a species' maximum. No trophy-size cap:
-  // a 1,500 lb catch is ~25.6 world units long beside a ~2-unit angler.
-  // Saved fish are already validated by the save codec; never edit their weight.
-  return 0.45 + 0.65 * Math.sqrt(w);
+export function heldFishSpan(sp,weight){
+  const w=Number.isFinite(Number(weight))?Math.max(0,Number(weight)):0;
+  const template=sp.template||sp.id||'';
+  const exponent=/eel|serpent|oarfish|needle|gar/.test(template)?.42:/whale|grouper|sunfish|pacu|discus/.test(template)?.28:.34;
+  const span=Number.isFinite(sp.displaySpan)?sp.displaySpan:1;
+  // Each species owns its maximum length. A tiny cosmic fry is still tiny;
+  // a thirty-unit whale remains huge. Heavier specimens of either grow.
+  return span*Math.pow(Math.max(.015,w/Math.max(.000001,sp.maxW)),exponent);
 }
 
 const dimension = n => Number.isFinite(n) ? Math.max(0, n) : 0;
