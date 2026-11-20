@@ -18,5 +18,5 @@ test('picker draws only eligible fish for every valid combination, including tin
 });
 test('invalid territories and tackle return an empty pool, never a fallback catch',()=>{
  for(const i of [-1,20,NaN,'0',null])assert.deepEqual(eligibleSpecies(i,0),[]);
- for(const b of [-1,40,NaN])assert.equal(pickSpecies(0,b),null);
+ for(const b of [-1,41,NaN])assert.equal(pickSpecies(0,b),null);
 });

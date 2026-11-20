@@ -1,5 +1,6 @@
 import test from'node:test';import assert from'node:assert/strict';import{readFileSync}from'node:fs';
-import{SPECIES,RARITY,formatWeight,sortFishIndex,castLuckModifier,pickSpecies,eligibleSpecies}from'../game-data.mjs';
+import{SPECIES,RARITY,formatWeight,formatCatchMass,sortFishIndex,castLuckModifier,pickSpecies,eligibleSpecies}from'../game-data.mjs';
+test('catch mass uses ounces for tiny fish, pounds for normal fish and tons for whales',()=>{assert.equal(formatCatchMass(.03),'0.48 oz');assert.equal(formatCatchMass(2.4),'2.4 lb');assert.equal(formatCatchMass(100000),'50 tons');});
 test('index is exactly 001–400 island first/commonest first without modifying authored identities',()=>{
  const copy=JSON.stringify(SPECIES),sorted=sortFishIndex();assert.notEqual(sorted,SPECIES);assert.deepEqual(sorted.map(s=>s.number),Array.from({length:400},(_,i)=>i+1));
  for(let n=1;n<400;n++)assert.ok(sorted[n].island>sorted[n-1].island||RARITY[sorted[n].rarity].tier>=RARITY[sorted[n-1].rarity].tier);assert.equal(JSON.stringify(SPECIES),copy);

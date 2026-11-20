@@ -15,7 +15,7 @@ export function expectedCatchIncome(island,baitIndex,samples=256,castPower=.5,sh
   }
   const result=chances?total/chances:0;cache.set(key,result);return result;
 }
-export function gearEconomyRows(){return RODS.slice(1).map((rod,n)=>{
+export function gearEconomyRows(){return RODS.slice(1,40).map((rod,n)=>{
   const tier=n+1,island=gearIsland(tier),previous=Math.max(0,tier-1);
   // Final island's new rarity needs its entry bait. Save for it before departure.
   const income=expectedCatchIncome(island,previous)||expectedCatchIncome(Math.max(0,island-1),previous);

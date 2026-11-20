@@ -26,20 +26,20 @@ export function sortFishIndex(items=SPECIES){return [...items].sort((a,b)=>a.isl
 const entry=[0,500,1300,3200,7500,17000,38000,83000,180000,390000,830000,1750000,3650000,7600000,15800000,32800000,68000000,141000000,292000000,605000000];
 export const GEAR_ENTRY_PRICES=Object.freeze(entry);
 const round=n=>Math.round(n/10)*10;
-const price=(island,rung,kind)=>island===0?(rung?[100,80,140][kind]:0):rung?round(entry[island]*[1.6,1.45,1.8][kind]):entry[island];
-export const RODS=Object.freeze(ISLANDS.flatMap(i=>[0,1].map(r=>Object.freeze({id:'rod'+(i.id*2+r),island:i.id,
+const price=(island,rung,kind)=>island===0?(rung?round([100,80,140][kind]*1.45):0):round((rung?entry[island]*[1.6,1.45,1.8][kind]:entry[island])*1.28);
+export const RODS=Object.freeze([...ISLANDS.flatMap(i=>[0,1].map(r=>Object.freeze({id:'rod'+(i.id*2+r),island:i.id,
   name:i.id===0?['Bamboo Pole','Willow Rod'][r]:`${i.stock} ${r?'Master Rod':'Rod'}`,color:i.accent,cost:price(i.id,r,0),
-  cast:12+i.id*5+r*2,power:1.55**i.id*1.18**r,tension:1.55/Math.sqrt(1.55**i.id*1.18**r),reel:+(.75+i.id*.09+r*.035).toFixed(3)}))));
-export const LINES=Object.freeze(ISLANDS.flatMap(i=>[0,1].map(r=>Object.freeze({id:'line'+(i.id*2+r),island:i.id,
+  cast:12+i.id*5+r*2,power:1.55**i.id*1.18**r,tension:1.55/Math.sqrt(1.55**i.id*1.18**r),reel:+(.75+i.id*.09+r*.035).toFixed(3)}))),Object.freeze({id:'rod-reedhaven-elite',island:0,name:'Reedhaven River Rod',color:ISLANDS[0].accent,cost:320,cast:19,power:1.55**.0*1.18**2.2,tension:1.55/Math.sqrt(1.18**2.2),reel:.87})]);
+export const LINES=Object.freeze([...ISLANDS.flatMap(i=>[0,1].map(r=>Object.freeze({id:'line'+(i.id*2+r),island:i.id,
   name:i.id===0?['Cotton Twine','Reinforced Mono'][r]:`${i.stock} ${r?'Braided':'Woven'} Line`,color:i.accent,cost:price(i.id,r,1),
-  rating:Math.round(3*2.18**i.id*1.8**r),control:1.55**i.id*1.18**r,strain:1.6/Math.sqrt(1.55**i.id*1.18**r)}))));
-export const BAITS=Object.freeze(ISLANDS.flatMap(i=>[0,1].map(r=>{
+  rating:Math.round(3*2.18**i.id*1.8**r),control:1.55**i.id*1.18**r,strain:1.6/Math.sqrt(1.55**i.id*1.18**r)}))),Object.freeze({id:'line-reedhaven-elite',island:0,name:'Reedhaven Braided Line',color:ISLANDS[0].accent,cost:290,rating:18,control:1.55**2.2,strain:1.6/Math.sqrt(1.55**2.2)})]);
+export const BAITS=Object.freeze([...ISLANDS.flatMap(i=>[0,1].map(r=>{
   const [lo,hi]=ISLAND_RARITIES[i.id];
   // Both local baits cover every local rarity; premium bait improves luck
   // and weight without losing any eligible small species.
   return Object.freeze({id:'bait'+(i.id*2+r),island:i.id,name:i.id===0?['Garden Worm','Golden Corn'][r]:`${i.stock} ${r?'Lure':'Bait'}`,
     color:i.accent,cost:price(i.id,r,2),lo,hi,luck:+(i.id*.22+r*.08).toFixed(2),weightBonus:+((i.id*2+r)*.005).toFixed(3)});
-})));
+})),Object.freeze({id:'bait-reedhaven-elite',island:0,name:'Reedhaven Minnow Lure',color:ISLANDS[0].accent,cost:380,lo:ISLAND_RARITIES[0][0],hi:ISLAND_RARITIES[0][1],luck:.16,weightBonus:.2})]);
 
 // Rare tiny animals are still valuable. This is an economy scale, not a mass
 // scale. The explicit 15% reduction applies once before collection rewards.
@@ -82,4 +82,5 @@ export function rollWeight(sp,index=0,random=Math.random,power=.5,shorePenalty=0
 // Six decimal places retain millipound species and their specimen differences.
 export const roundWeight=weight=>Math.round(Number(weight)*1e6)/1e6;
 export function formatWeight(weight){const w=Number(weight);return Number.isFinite(w)?w.toLocaleString('en-US',{minimumFractionDigits:w>=1?1:0,maximumFractionDigits:w>=1?2:w>=.1?3:6}):'—';}
+export function formatCatchMass(weight){const w=Number(weight);if(!Number.isFinite(w)||w<0)return '—';if(w<1)return `${(w*16).toLocaleString('en-US',{maximumFractionDigits:2})} oz`;if(w>=2000)return `${(w/2000).toLocaleString('en-US',{maximumFractionDigits:1})} tons`;return `${w.toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:2})} lb`;}
 export { GEAR_PER_ISLAND };

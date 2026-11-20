@@ -21,8 +21,8 @@ test('all twelve rarity colors and strict first/last-island availability match t
  for(const key of RARITY_ORDER){const islands=SPECIES.filter(s=>s.rarity===key).map(s=>s.island+1);assert.deepEqual([Math.min(...islands),Math.max(...islands)],RARITY_AVAILABILITY[key]);}
  assert.ok(SPECIES.slice(380).every(s=>s.rarity==='unfathomable'));
 });
-test('exactly two of each equipment per island, all entries reachable without future bait',()=>{
- for(const list of [RODS,LINES,BAITS]){assert.equal(list.length,40);for(const i of ISLANDS)assert.equal(list.filter(g=>g.island===i.id).length,2);}
+test('two equipment tiers per island plus an extra starter tier, all fish reachable',()=>{
+ for(const list of [RODS,LINES,BAITS]){assert.equal(list.length,41);for(const i of ISLANDS)assert.equal(list.filter(g=>g.island===i.id).length,i.id===0?3:2);}
  for(const s of SPECIES)for(const b of [s.island*2,s.island*2+1])assert.ok(eligibleSpecies(s.island,b).includes(s));
  assert.equal(BOATS.length,8);
 });

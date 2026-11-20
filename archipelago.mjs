@@ -11,25 +11,26 @@ export function completedCollections(discoveries={},earned=[]){
 }
 export function collectionCoinBonus(discoveries={},earned=[]){return completedCollections(discoveries,earned).length*ISLAND_COLLECTION_BONUS;}
 export function fishSaleValue(sp,weight,discoveries={},earned=[]){return Math.round(fishValue(sp,weight)*(100+collectionCoinBonus(discoveries,earned))/100);}
-export const gearIsland=tier=>Math.floor(tier/GEAR_PER_ISLAND);
+export const gearIsland=tier=>tier===40?0:Math.floor(tier/GEAR_PER_ISLAND);
 export function localGearPriceCeiling(island){return !Number.isInteger(island)||!ISLANDS[island]?0:Math.max(...[RODS,LINES,BAITS].flatMap(list=>list.filter(g=>g.island===island).map(g=>g.cost)));}
 
 // Optional vessels: no boat has a territory range or license requirement.
 // All eight can reach all twenty territories. Only speed and physical size vary.
 const boats=[
   ['Harbor Skiff',0,14,.85,0xb78755,0xeee2b5],
-  ['Pinewood Dinghy',1000,18,1,0x527f6b,0xe9d4a1],
-  ['Sunrunner',18000,23,1.16,0xd69b52,0x68c3c5],
-  ['Frostbreaker',160000,28,1.32,0x7eb3c7,0xe7f3f3],
-  ['Cinderwake',1500000,34,1.5,0x59606b,0xf4a15e],
-  ['Astral Voyager',12000000,40,1.7,0x8a7fbc,0xd1e4ff],
-  ['Horizon Cruiser',80000000,47,1.9,0x627c98,0xe5ca90],
-  ['Origin Ark',420000000,55,2.15,0x7eaaa4,0xf5e8bc],
+  ['Pinewood Dinghy',1800,18,1,0x527f6b,0xe9d4a1],
+  ['Sunrunner',32000,23,1.16,0xd69b52,0x68c3c5],
+  ['Frostbreaker',280000,28,1.32,0x7eb3c7,0xe7f3f3],
+  ['Cinderwake',2600000,34,1.5,0x59606b,0xf4a15e],
+  ['Astral Voyager',21000000,40,1.7,0x8a7fbc,0xd1e4ff],
+  ['Horizon Cruiser',140000000,47,1.9,0x627c98,0xe5ca90],
+  ['Origin Ark',735000000,55,2.15,0x7eaaa4,0xf5e8bc],
 ];
 export const BOATS=Object.freeze(boats.map(([name,cost,speed,size,color,stripe],id)=>Object.freeze({id,name,cost,speed,size,color,stripe,description:id?'A larger hull and a faster cruise. No island-access advantage.':'Your free starter boat. Every unlocked territory is within reach.'})));
 export function xpForLevel(level){const n=Math.max(0,Math.min(MAX_LEVEL-1,Math.floor(Number(level)||1)-1));return 90*n+22*n*n;}
 export function levelForXp(xp){const n=Number.isFinite(xp)?Math.max(0,xp):0;return Math.min(MAX_LEVEL,Math.floor((-90+Math.sqrt(8100+88*n))/44)+1);}
 export function levelProgress(xp){const level=levelForXp(xp),start=xpForLevel(level),next=xpForLevel(level+1);return {level,current:Math.max(0,xp-start),needed:next-start,ratio:level===MAX_LEVEL?1:(xp-start)/(next-start)};}
+export function capCatchXP(xp,award){const earned=Math.max(0,Number(award)||0),level=levelForXp(xp);return level>=MAX_LEVEL?earned:Math.min(earned,Math.max(0,xpForLevel(level+1)-Math.max(0,Number(xp)||0)));}
 export const CATCH_XP_MULTIPLIER=.90;
 export const LEVELING_SPEED_MULTIPLIER=1.20;
 export const CATCH_XP_BY_RARITY=Object.freeze(Object.fromEntries(RARITY_ORDER.map((key,tier)=>[key,[20,30,45,68,103,155,233,350,525,788,1182,1773][tier]])));

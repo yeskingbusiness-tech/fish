@@ -14,8 +14,8 @@ const fmt   = n => n.toLocaleString('en-US');
 
 import { advanceReelPhase, REEL_PHASES, phasePull, fishTugImpulse, alternateTugDirection } from './reel-phases.mjs?v=44';
 import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow, sortFishIndex, castLuckModifier, effectiveLuck,
-  eligibleSpecies, roundWeight, formatWeight, GEAR_PER_ISLAND, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=44';
-import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, hasIslandLicense, travelRequirement,
+  eligibleSpecies, roundWeight, formatWeight, formatCatchMass, GEAR_PER_ISLAND, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=44';
+import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, capCatchXP, gearIsland, hasIslandLicense, travelRequirement,
   MAX_LEVEL, ISLAND_COLLECTION_BONUS, islandCollectionProgress, completedCollections, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=44';
 import { createWorld } from './world.mjs?v=44';
 import { fishSVG, fishGeometryCacheStats } from './fish-geometry.mjs?v=44';
@@ -381,7 +381,7 @@ function updateStats(){
   const bonus = coinBonus();
   $('coinBonus').textContent = `+${bonus}% SALES`;
   $('coinBonus').classList.toggle('hidden',bonus===0);
-  $('bestNum').textContent = G.best ? formatWeight(G.best.weight) + ' lb' : '—';
+  $('bestNum').textContent = G.best ? formatCatchMass(G.best.weight) : '—';
   $('bestFishName').textContent = G.best ? G.best.name : 'No catches yet';
   $('shopCoins').textContent = fmt(G.coins);
   $('marketCoins').textContent = fmt(G.coins);
@@ -410,7 +410,7 @@ function renderLog(){
     fishIcons.disconnect(logList);
     logSummary.textContent=`${fmt(log.length)} recent catches · ${discoveredCount()}/${SPECIES.length} discovered`;
     logList.innerHTML=log.length?log.map(e =>
-      `<div class="log-item"><span class="e">${fishIcons.markup(e.sp)}</span><div><b>${e.sp.name}</b><small>${formatWeight(e.weight)} lb • ${fishPlace(e.sp)}</small></div><span class="pts">${fmt(saleValue(e.sp,e.weight))}c</span></div>`
+      `<div class="log-item"><span class="e">${fishIcons.markup(e.sp)}</span><div><b>${e.sp.name}</b><small>${formatCatchMass(e.weight)} • ${fishPlace(e.sp)}</small></div><span class="pts">${fmt(saleValue(e.sp,e.weight))}c</span></div>`
     ).join(''):'<p class="empty">No recent catches. Cast your line!</p>';
     logDirty=false;
   }
@@ -572,7 +572,7 @@ function updateCarryUI(){
   $('bagFishCount').textContent=`${fmt(bag.length)} fish`;
   $('heldFishBar').classList.toggle('hidden',!heldCatch||G.state==='menu');
   $('heldFishName').textContent=heldCatch?heldCatch.sp.name:'';
-  $('heldFishWeight').textContent=heldCatch?`${formatWeight(heldCatch.weight)} lb`:'';
+  $('heldFishWeight').textContent=heldCatch?formatCatchMass(heldCatch.weight):'';
   $('viewLabel').textContent=G.thirdPerson?'First person':'Front view';
   $('viewBtn').setAttribute('aria-pressed',String(G.thirdPerson));
   $('viewBtn').setAttribute('aria-label',G.thirdPerson?'Switch to first-person view (V)':'Switch to front-facing third-person view (V)');
@@ -672,8 +672,8 @@ function renderFishBag(){
     const held=e===heldCatch;
     return `<article class="carry-row ${held?'selected':''}">
       <div class="carry-icon">${fishIcons.markup(e.sp)}</div>
-      <div class="carry-copy"><span class="carry-rarity ${e.sp.rarity}">${RARITY[e.sp.rarity].label}</span><b>${e.sp.name}</b><small>${formatWeight(e.weight)} lb · ${fishPlace(e.sp)}</small></div>
-      <button class="buy-btn" data-hold-fish="${i}" aria-pressed="${held}" aria-label="${held?'Put away':'Hold'} ${e.sp.name}, ${formatWeight(e.weight)} pounds">${held?'Put away':'Hold'}</button>
+      <div class="carry-copy"><span class="carry-rarity ${e.sp.rarity}">${RARITY[e.sp.rarity].label}</span><b>${e.sp.name}</b><small>${formatCatchMass(e.weight)} · ${fishPlace(e.sp)}</small></div>
+      <button class="buy-btn" data-hold-fish="${i}" aria-pressed="${held}" aria-label="${held?'Put away':'Hold'} ${e.sp.name}, ${formatCatchMass(e.weight)}">${held?'Put away':'Hold'}</button>
     </article>`;
   }).join(''):'<div class="fish-bag-empty"><span aria-hidden="true">▥</span><h3>No fish in your bag yet.</h3><p>Land a catch, then come back to hold it up.<br>Sold fish stay in your index, not in your bag.</p></div>';
   fishIcons.observe(bagBody);
@@ -771,7 +771,8 @@ function catchFish(){
   const bonusBefore = coinBonus();
   const oldLevel=level(), lockedBefore=ISLANDS.filter(i=>!hasLicense(i.id)), isNew=!G.discoveries[sp.id];
   const earnedXP=catchXP(sp,Number(weight),isNew);
-  G.xp+=earnedXP;
+  const awardedXP=capCatchXP(G.xp,earnedXP);
+  G.xp+=awardedXP; // one catch can never skip multiple levels
   const record=G.discoveries[sp.id]||(G.discoveries[sp.id]={count:0,best:0,first:new Date().toISOString().slice(0,10)});
   record.count++; record.best=Math.max(record.best,Number(weight));
   G.completedIslands=completedCollections(G.discoveries,G.completedIslands);
@@ -796,8 +797,8 @@ function catchFish(){
   $('catchRarity').className = 'modal-eyebrow' + (sp.rarity !== 'common' ? ' ' + sp.rarity : '');
   $('catchIcon').innerHTML = fishIcons.markup(sp,{eager:true});
   $('catchName').textContent = sp.name;
-  $('catchWeight').textContent = formatWeight(weight) + ' lb';
-  $('catchPoints').innerHTML = '+' + fmt(earnedXP) + ' XP' + (isNew?' · 50% discovery bonus':'') + '<span class="catch-value">WORTH ' + fmt(value) + 'c AT THE MARKET</span>';
+  $('catchWeight').textContent = formatCatchMass(weight);
+  $('catchPoints').innerHTML = '+' + fmt(awardedXP) + ' XP' + (isNew?' · 50% discovery bonus':'') + '<span class="catch-value">WORTH ' + fmt(value) + 'c AT THE MARKET</span>';
   $('catchDesc').textContent = sp.desc;
   catchModal.querySelector('.modal-card').className = 'modal-card ' + sp.rarity;
   catchModal.classList.remove('hidden');
@@ -807,7 +808,7 @@ function catchFish(){
   $('continueBtn').focus({preventScroll:true});
   if(RARITY[sp.rarity].tier >= 4) sfx.legendary(); else sfx.caught();
   spawnSplash(bobberPos, 18, 1.1);
-  if(isBest && G.caught > 1) showToast('New best — ' + formatWeight(weight) + ' lb ' + sp.name + '!');
+  if(isBest && G.caught > 1) showToast('New best — ' + formatCatchMass(weight) + ' ' + sp.name + '!');
 }
 function escapeFish(reason){
   disposeHookedFish();
@@ -1001,7 +1002,7 @@ function renderShop(){
   const kind=shopKind,i=ISLANDS[G.zone];
   $('shopTitle').textContent={rod:'Rod Works',line:'Line & Spool',bait:'Bait Shack'}[kind];
   $('shopEyebrow').textContent=i.name.toUpperCase()+' · LOCAL OUTFITTER';
-  $('shopNote').textContent=`Two local tiers: ${i.id*2+1}–${i.id*2+2}. Bigger upgrades, less clutter. Prices below are the exact coins charged.`;
+  $('shopNote').textContent=i.id===0?`Three Reedhaven tiers: keep the free starter, then buy two upgrades. Prices below are exact.`:`Two local tiers: ${i.id*2+1}–${i.id*2+2}. Prices below are the exact coins charged.`;
   if(kind==='bait')$('shopNote').textContent+=' All local fish in the shown rarity range are eligible, regardless of size. Luck favors rarer eligible fish; it is not a catch percentage. The small weight boost tapers near each species’ maximum.';
   shopBody.innerHTML=gearRows(kind,GEAR[kind].list.map((g,index)=>index).filter(index=>gearIsland(index)===G.zone));
   if(G.zone<ISLANDS.length-1)shopBody.innerHTML+=`<div class="next-stock">Next shipment: tiers ${i.id*2+3}–${i.id*2+4} at <b>${ISLANDS[i.id+1].name}</b> · Level ${ISLANDS[i.id+1].level}</div>`;
@@ -1071,7 +1072,7 @@ function renderMarket(){
     `<div class="bag-total"><span>${bag.length} fish in the bag</span><span>${fmt(bagTotal())}c</span></div>` +
     bag.map((e, i) => `<div class="sell-row">
       <div class="e">${fishIcons.markup(e.sp)}</div>
-      <div><b>${e.sp.name}</b><small>${formatWeight(e.weight)} lb · ${RARITY[e.sp.rarity].label}</small></div>
+      <div><b>${e.sp.name}</b><small>${formatCatchMass(e.weight)} · ${RARITY[e.sp.rarity].label}</small></div>
       <div class="val">${fmt(saleValue(e.sp,e.weight))}c</div>
       <button class="buy-btn" data-sell="${i}">Sell</button>
     </div>`).join('') +
@@ -1246,7 +1247,7 @@ function renderIndex(){
     // Unknown entries contain no species name, color, rarity, description,
     // title or accessible label. There is nothing for CSS/hover to reveal.
     if(!r)return `<article class="fish-entry undiscovered"><div class="entry-top"><span>#${sp.legacy?'LEGACY':String(sp.number).padStart(3,'0')}</span><span>UNDISCOVERED</span></div><div class="entry-fish">${unknownFishSVG()}</div><h3>???</h3><p>${ISLANDS[sp.island].short}</p><div class="entry-record">NOT YET CAUGHT</div></article>`;
-    return `<details class="fish-entry discovered ${sp.rarity}"><summary><div class="entry-top"><span>#${sp.legacy?'LEGACY':String(sp.number).padStart(3,'0')}</span><span class="rarity-label ${sp.rarity}">${RARITY[sp.rarity].label}</span></div><div class="entry-fish">${fishIcons.markup(sp)}</div><h3>${sp.name}</h3><p>${ISLANDS[sp.island].short}</p><div class="entry-record">BEST ${formatWeight(r.best)} LB <span>×${fmt(r.count)}</span></div></summary><p class="entry-lore">${sp.desc}<br><b>${sp.minW}–${sp.maxW} lb</b> · ${r.first?'First caught '+r.first:'From your earlier adventures'}</p></details>`;
+    return `<details class="fish-entry discovered ${sp.rarity}"><summary><div class="entry-top"><span>#${sp.legacy?'LEGACY':String(sp.number).padStart(3,'0')}</span><span class="rarity-label ${sp.rarity}">${RARITY[sp.rarity].label}</span></div><div class="entry-fish">${fishIcons.markup(sp)}</div><h3>${sp.name}</h3><p>${ISLANDS[sp.island].short}</p><div class="entry-record">BEST ${formatCatchMass(r.best)} <span>×${fmt(r.count)}</span></div></summary><p class="entry-lore">${sp.desc}<br><b>${formatCatchMass(sp.minW)}–${formatCatchMass(sp.maxW)}</b> · ${r.first?'First caught '+r.first:'From your earlier adventures'}</p></details>`;
   }).join(''):'<p class="empty">No entries in this filter yet. There is a whole sea to explore.</p>';
   fishIcons.observe($('fishGrid'));
 }
@@ -1289,7 +1290,7 @@ function renderChart(){
   const i=ISLANDS[selectedIsland],requirement=travelRequirement(i.id,G.xp,G.boat,G.licenses),here=i.id===fishingTerritory();
   const reason=requirement||'Any boat can enter. Follow your waypoint and steer there yourself.';
   const discovered=SPECIES.filter(s=>s.island===i.id&&G.discoveries[s.id]).length;
-  $('destinationDetail').innerHTML=`<div class="destination-art" style="--island-color:${i.color}">${islandGlyph(i)}<span>ISLAND ${String(i.id+1).padStart(2,'0')}</span></div><div class="destination-copy"><span class="eyebrow">LEVEL ${i.level} LICENSE${hasLicense(i.id)&&level()<i.level?' · RETAINED':''}</span><h3>${i.name}</h3><p>${i.description}</p><dl><div><dt>LOCAL GEAR</dt><dd>Tiers ${i.id*2+1}–${i.id*2+2}</dd></div><div><dt>FIELD GUIDE</dt><dd>${discovered} / 20 discovered</dd></div><div><dt>LANDMARK</dt><dd>${i.landmark}</dd></div></dl><p class="destination-requirement ${requirement?'blocked':''}">${reason||'License ready. Boat ready. Let’s cast off.'}</p><button id="waypointBtn" class="primary-btn">${G.waypoint===i.id?'Waypoint selected ✓':'Mark on minimap →'}</button></div>`;
+  $('destinationDetail').innerHTML=`<div class="destination-art" style="--island-color:${i.color}">${islandGlyph(i)}<span>ISLAND ${String(i.id+1).padStart(2,'0')}</span></div><div class="destination-copy"><span class="eyebrow">LEVEL ${i.level} LICENSE${hasLicense(i.id)&&level()<i.level?' · RETAINED':''}</span><h3>${i.name}</h3><p>${i.description}</p><dl><div><dt>LOCAL GEAR</dt><dd>${i.id===0?'Tiers 1–3':'Tiers '+(i.id*2+1)+'–'+(i.id*2+2)}</dd></div><div><dt>FIELD GUIDE</dt><dd>${discovered} / 20 discovered</dd></div><div><dt>LANDMARK</dt><dd>${i.landmark}</dd></div></dl><p class="destination-requirement ${requirement?'blocked':''}">${reason||'License ready. Boat ready. Let’s cast off.'}</p><button id="waypointBtn" class="primary-btn">${G.waypoint===i.id?'Waypoint selected ✓':'Mark on minimap →'}</button></div>`;
   renderFleet();
 }
 function boatSVG(b){
@@ -2012,7 +2013,7 @@ animate();
 
 // Compatibility handle plus a name that matches the current title.
 window.__reelDeal = window.__reelLife = {
-  G, SPECIES, RODS, LINES, BAITS, ISLANDS, BOATS, RARITY, RARITY_ORDER, ALL_CATCH_SPECIES, LEGACY_SPECIES, formatWeight,roundWeight,shoreLuckPenalty,territoryAt,territoryCenter,TERRITORY_RADIUS,stepBoat,nearbyDock,drawMinimap,islandToWorld,islandSpawn,dockPose,returnBoatPose,
+  G, SPECIES, RODS, LINES, BAITS, ISLANDS, BOATS, RARITY, RARITY_ORDER, ALL_CATCH_SPECIES, LEGACY_SPECIES, formatWeight, formatCatchMass,roundWeight,shoreLuckPenalty,territoryAt,territoryCenter,TERRITORY_RADIUS,stepBoat,nearbyDock,drawMinimap,islandToWorld,islandSpawn,dockPose,returnBoatPose,
   renderer, scene, camera, world, bobber, bobberPos, water, rodRig, aimMarker, bag,
   get shopOpen(){return shopOpen;},get chartOpen(){return chartOpen;},get indexOpen(){return indexOpen;},
   get bagOpen(){return bagOpen;},get bagTab(){return bagTab;},get helpOpen(){return helpOpen;},get tutorialOpen(){return tutorialOpen;},get hudHidden(){return hudHidden;},get tutorialIndex(){return tutorialIndex;},

@@ -37,8 +37,8 @@ module.exports=async function testModels(browser,url,shots){
     await page.evaluate(()=>__reelDeal.toggleView());await frame();
     const fits=await page.evaluate(async()=>{const a=__reelDeal,T=await import('three');a.scene.updateMatrixWorld(true);a.frontCamera.updateMatrixWorld(true);const points=[];
      for(const root of [a.carriedModel,a.playerModel.root])root.traverse(o=>{if(o.isMesh&&o.visible&&!o.name.includes('rod'))for(let n=0;n<o.geometry.attributes.position.count;n++){points.push(new T.Vector3().fromBufferAttribute(o.geometry.attributes.position,n).applyMatrix4(o.matrixWorld).project(a.frontCamera));}});
-     return points.every(v=>Number.isFinite(v.x+v.y+v.z)&&Math.abs(v.x)<1.01&&Math.abs(v.y)<1.01&&v.z>-1&&v.z<1);
-    });assert.equal(fits,true,`${id} front ${viewport.width}`);
+     return {ok:points.every(v=>Number.isFinite(v.x+v.y+v.z)&&Math.abs(v.x)<1.01&&Math.abs(v.y)<1.01&&v.z>-1&&v.z<1),bounds:points.reduce((b,v)=>({x0:Math.min(b.x0,v.x),x1:Math.max(b.x1,v.x),y0:Math.min(b.y0,v.y),y1:Math.max(b.y1,v.y),z0:Math.min(b.z0,v.z),z1:Math.max(b.z1,v.z)}),{x0:Infinity,x1:-Infinity,y0:Infinity,y1:-Infinity,z0:Infinity,z1:-Infinity})};
+    });assert.equal(fits.ok,true,`${id} front ${viewport.width} ${JSON.stringify(fits.bounds)}`);
     if(viewport.width===390&&['giant-squid','sperm-whale','clown-killifish'].includes(id)){await page.evaluate(()=>{__reelDeal.setHudHidden(true);document.getElementById('hudRestoreHint').classList.add('hidden');});await frame();await page.screenshot({path:`${shots}/held-${id}-mobile.png`});await page.evaluate(()=>__reelDeal.setHudHidden(false));}
     await page.evaluate(()=>__reelDeal.stowFish());
    }

@@ -1,11 +1,15 @@
 import test from'node:test';import assert from'node:assert/strict';
 import{SPECIES,RARITY_ORDER,RARITY}from'../game-data.mjs';
-import{ISLANDS,CATCH_XP_BY_RARITY,ISLAND_XP_MULTIPLIERS,CATCH_XP_MULTIPLIER,LEVELING_SPEED_MULTIPLIER,catchXP,legacyCatchXP,xpForLevel}from'../archipelago.mjs';
+import{ISLANDS,CATCH_XP_BY_RARITY,ISLAND_XP_MULTIPLIERS,CATCH_XP_MULTIPLIER,LEVELING_SPEED_MULTIPLIER,catchXP,capCatchXP,legacyCatchXP,xpForLevel}from'../archipelago.mjs';
 import{expectedCatchXP,islandProgressionRows}from'../scripts/progression.mjs';import{normalizeSave}from'../save-state.mjs';import{LEGACY_V8_SPECIES}from'../legacy-v8-data.mjs';
 test('future catch XP applies the requested 20% level-speed boost on top of the existing 10% reduction',()=>{
  assert.equal(CATCH_XP_MULTIPLIER,.9);
  assert.equal(LEVELING_SPEED_MULTIPLIER,1.2);
  for(const s of SPECIES)for(const q of [0,.1,.5,1]){const weight=s.maxW*q,base=CATCH_XP_BY_RARITY[s.rarity]*ISLAND_XP_MULTIPLIERS[s.island]*(1+.4*q);assert.equal(catchXP(s,weight),Math.round(base*.9*1.2));assert.equal(catchXP(s,weight,true),Math.round(base*1.5*.9*1.2));}
+});
+test('one catch cannot skip a level, while the full XP award carries forward after level 400',()=>{
+ for(const level of [1,10,100,399]){const start=xpForLevel(level),cap=xpForLevel(level+1)-start;assert.equal(capCatchXP(start,cap*20),cap);assert.equal(capCatchXP(start+cap-3,50),3);}
+ assert.equal(capCatchXP(xpForLevel(400),12345),12345);
 });
 test('better rarity gives better XP even when its animal is physically tiny',()=>{
  for(const i of ISLANDS){const groups=RARITY_ORDER.map(r=>SPECIES.filter(s=>s.island===i.id&&s.rarity===r)).filter(g=>g.length);

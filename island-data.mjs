@@ -63,7 +63,12 @@ export const ISLANDS=Object.freeze(rows.map((r,id)=>{
   const x=cx-[0,25,0,-25][layout.quarter],z=cz-[25,0,-25,0][layout.quarter];
   return Object.freeze({id,key:name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/-$/,''),name,short,level,environment,theme,landmark,stock,boatName,
     x,z,layout,land,sand,rock,water,sky,accent,color:'#'+land.toString(16).padStart(6,'0'),
-    waterObstacles:waterObstacles(theme).map(f=>Object.freeze({...f,x:f.x*layout.landmarkMirror})),landforms:landforms[id].map(([x,z,w,d,h])=>Object.freeze({x,z,w,d,h})),description,tagline:environment+' · '+landmark,waters:environment});
+    waterObstacles:waterObstacles(theme).map(f=>Object.freeze({...f,x:f.x*layout.landmarkMirror})),landforms:landforms[id].map(([x,z,w,d,h])=>{
+      // Keep highland strata behind the village instead of letting cliffs
+      // surface through shop floors and counter approaches.
+      const overlapsVillage=layout.stalls.some(st=>Math.abs(x-st.x)<(w+6)/2&&Math.abs(z-st.z)<(d+5)/2);
+      return Object.freeze({x,z:overlapsVillage?Math.max(z,56+d/2):z,w,d,h});
+    }),description,tagline:environment+' · '+landmark,waters:environment});
 }));
 export const ISLAND_COUNT=ISLANDS.length;
 export const GEAR_PER_ISLAND=2;

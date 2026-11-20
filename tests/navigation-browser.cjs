@@ -16,7 +16,7 @@ module.exports=async function testNavigation(browser,url,shots){
   const walked=await page.evaluate(()=>__reelDeal.G.walked);await page.keyboard.down('w');await page.waitForTimeout(750);await page.keyboard.up('w');await page.keyboard.press('q');
   assert.equal(await page.evaluate(()=>__reelDeal.G.walked),walked,'helm input cannot also cause footsteps/walk bob');
   const deckStart=await page.evaluate(()=>({x:__reelDeal.G.px,z:__reelDeal.G.pz,boat:{...__reelDeal.G.sailing}}));
-  await page.keyboard.down('w');await page.waitForTimeout(700);await page.keyboard.up('w');
+  await page.keyboard.down('w');await page.waitForFunction(({x,z})=>Math.hypot(__reelDeal.G.px-x,__reelDeal.G.pz-z)>.2,{x:deckStart.x,z:deckStart.z},{timeout:5000});await page.keyboard.up('w');
   const deckWalk=await page.evaluate(()=>({x:__reelDeal.G.px,z:__reelDeal.G.pz,boat:{...__reelDeal.G.sailing}}));
   assert.ok(Math.hypot(deckWalk.x-deckStart.x,deckWalk.z-deckStart.z)>.2,'stopped player can walk on deck');
   assert.deepEqual(deckWalk.boat,deckStart.boat,'walking does not move the parked hull');
@@ -49,13 +49,13 @@ module.exports=async function testNavigation(browser,url,shots){
    for(const i of a.ISLANDS){
     a.spawnAtIsland(i.id);const spawn=a.islandSpawn(i);if(a.world.groundAt(spawn.x,spawn.z,i.id)===null)failures.push('spawn '+i.name);
     const vendors=a.world.stalls.filter(s=>s.zone===i.id);
-    for(const s of vendors){a.G.px=s.approach.x;a.G.pz=s.approach.z;if(a.world.groundAt(a.G.px,a.G.pz,i.id)===null)failures.push('blocked counter '+i.name+'/'+s.kind);if(a.nearestVendor()?.kind!==s.kind)failures.push('wrong vendor '+i.name+'/'+s.kind);}
+    for(const s of vendors){if(a.world.groundAt(s.x,s.z,i.id)!==null)failures.push('missing wall hitbox '+i.name+'/'+s.kind);a.G.px=s.approach.x;a.G.pz=s.approach.z;if(a.world.groundAt(a.G.px,a.G.pz,i.id)===null)failures.push('blocked counter '+i.name+'/'+s.kind);if(a.nearestVendor()?.kind!==s.kind)failures.push('wrong vendor '+i.name+'/'+s.kind);}
     const step=.8,key=(x,z)=>x+','+z,q=[[Math.round(i.layout.dockX/step),5]],seen=new Set([key(...q[0])]);
     for(let n=0;n<q.length;n++){const[x,z]=q[n];for(const[dx,dz]of[[1,0],[-1,0],[0,1],[0,-1]]){const xx=x+dx,zz=z+dz,k=key(xx,zz);if(xx<-40||xx>40||zz<-3||zz>70||seen.has(k))continue;const p=a.islandToWorld(i,xx*step,zz*step);if(a.world.groundAt(p.x,p.z,i.id)!==null){seen.add(k);q.push([xx,zz]);}}}
     for(const s of i.layout.stalls)if(!q.some(([x,z])=>Math.hypot(x*step-s.x,z*step-(s.z-3.8))<1))failures.push('unreachable '+i.name+'/'+s.kind);
     for(const b of a.BOATS){const p=a.dockPose(i.id,b.size);if(!a.world.inWater(p)||a.nearbyDock(p.x,p.z)!==i.id)failures.push('berth '+i.name+'/'+b.name);}
     const group=a.world.islands[i.id];if(group.rotation.y!==i.layout.yaw)failures.push('render heading '+i.name);
-    for(const c of a.world.cameraBlockers[i.id])if(!Number.isFinite(c.x+c.z+c.r+c.top))failures.push('camera collider '+i.name);
+    for(const c of a.world.cameraBlockers[i.id])if(!Number.isFinite(c.x+c.z+c.top+(c.rect?c.rect.minX+c.rect.maxX+c.rect.minZ+c.rect.maxZ:c.r)))failures.push('camera collider '+i.name);
     records.push({id:i.id,heading:i.layout.quarter,berthSide:i.layout.berthSide,walkableNodes:q.length,counters:vendors.length});
    }
    return {failures,records};

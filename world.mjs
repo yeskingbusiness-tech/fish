@@ -143,6 +143,7 @@ export function createWorld(scene){
     const glow=(w,h,d,x,y,z,c)=>glows.push({w,h,d,x,y,z,c});
     const add=(w,h,d,x,y,z,c,more={})=>S.push({w,h,d,x,y,z,c,...more});
     const block=(x,z,r,top)=>localColliders.push({zone:zone.id,x,z,r,top});
+    const blockRect=(x,z,w,d,top)=>localColliders.push({zone:zone.id,x,z,top,rect:{minX:x-w/2,maxX:x+w/2,minZ:z-d/2,maxZ:z+d/2}});
     // Stepped, genuinely walkable island footprint. No invisible terrain walls.
     add(58,3.2,46,0,-1.2,34,zone.rock);
     add(58,.5,46,0,.25,34,zone.sand);
@@ -499,7 +500,7 @@ export function createWorld(scene){
       if(st.kind==='market'){add(1.65,.1,.8,x-.8,base+1.26,z-.1,0xe6e5d3);add(.85,.24,.3,x-.8,base+1.4,z-.1,0x84aeb9);add(.25,.34,.16,x-1.3,base+1.4,z-.1,0x61919c);}
       if(st.kind==='port'){add(.55,.18,.95,x-1.1,base+1.35,z-.1,0x759b9e);add(.05,.6,.05,x-1.1,base+1.7,z-.1,0xe4d5ad);add(.3,.25,.08,x-.95,base+1.8,z-.1,0xe9c476);}
       group.add(label(st.banner,x,base+2.95,z-1.83,4.9,.65));
-      block(x,z,2.7,4.5);
+      blockRect(x,z,5.0,4.5,4.5);
       stalls.push({...st,zone:zone.id,...islandToWorld(zone,x,z),approach:islandToWorld(zone,x,z-3.8),yaw:layout.yaw});
     }
     add(.2,2,.2,d-4.1,2,11,0x62716a);
@@ -507,7 +508,11 @@ export function createWorld(scene){
     group.add(mergeBoxes(S));
     if(glows.length)group.add(mergeBoxes(glows,true));
     islands.push(group);
-    colliders.push(...localColliders.map(b=>({...b,...islandToWorld(zone,b.x,b.z)})));
+    colliders.push(...localColliders.map(b=>{
+      const out={...b,...islandToWorld(zone,b.x,b.z)};
+      if(b.rect){const a=islandToWorld(zone,b.rect.minX,b.rect.minZ),c=islandToWorld(zone,b.rect.maxX,b.rect.maxZ);out.rect={minX:Math.min(a.x,c.x),maxX:Math.max(a.x,c.x),minZ:Math.min(a.z,c.z),maxZ:Math.max(a.z,c.z)};out.r=Math.hypot(out.rect.maxX-out.rect.minX,out.rect.maxZ-out.rect.minZ)/2;}
+      return out;
+    }));
     // Distant islands retain their skyline without drawing every item in a stall.
     const distant=mergeBoxes(S.filter(b=>b.w>=7||(b.h>=2.5&&b.w>=1.2)));
     distant.position.copy(group.position);distant.rotation.copy(group.rotation);root.add(distant);distantIslands.push(distant);
@@ -549,7 +554,7 @@ export function createWorld(scene){
   function groundAt(x,z,zone){
     const y=surfaceAt(x,z,zone);
     if(y===null||y>1.2)return null;
-    for(const b of colliders)if(b.zone===zone&&Math.hypot(x-b.x,z-b.z)<b.r)return null;
+    for(const b of colliders)if(b.zone===zone&&(b.rect?(x>=b.rect.minX-.28&&x<=b.rect.maxX+.28&&z>=b.rect.minZ-.28&&z<=b.rect.maxZ+.28):Math.hypot(x-b.x,z-b.z)<b.r))return null;
     return y;
   }
   function inWater(p){ return p.x>SEA_BOUNDS.minX&&p.x<SEA_BOUNDS.maxX&&p.z>SEA_BOUNDS.minZ&&p.z<SEA_BOUNDS.maxZ&&surfaceAt(p.x,p.z)===null; }
