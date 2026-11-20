@@ -9,7 +9,7 @@ const URL=process.env.TEST_URL||'http://127.0.0.1:3100',shots=process.env.SCREEN
  const watch=p=>{p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});};
  const frame=p=>p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
  async function startGame(p){await p.click('#startBtn');if(await p.locator('#tutorialOverlay').isVisible())await p.click('#tutorialSkip');}
- async function boot(p){watch(p);await p.addInitScript(()=>{HTMLCanvasElement.prototype.requestPointerLock=undefined;localStorage.setItem('reel-deal-progress-reset-v2.3.0','done');});await p.goto(URL,{waitUntil:'networkidle'});await p.waitForFunction(()=>window.__reelDeal);await startGame(p);}
+ async function boot(p){watch(p);await p.addInitScript(()=>{HTMLCanvasElement.prototype.requestPointerLock=undefined;localStorage.setItem('reel-deal-progress-reset-v2.3.1','done');});await p.goto(URL,{waitUntil:'networkidle'});await p.waitForFunction(()=>window.__reelDeal);await startGame(p);}
  async function vendor(kind,zone=0){await page.evaluate(({kind,zone})=>{const a=__reelDeal;a.closeShop();a.closeMarket();a.closeChart();a.closeIndex();a.closeBag();a.spawnAtIsland(zone);const s=a.world.stalls.find(s=>s.zone===zone&&s.kind===kind);a.G.px=s.approach.x;a.G.pz=s.approach.z;a.G.state='aim';a.updateStats();},{kind,zone});await frame(page);}
  try{
   page=await browser.newPage({viewport:{width:1280,height:820}});await boot(page);

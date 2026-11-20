@@ -441,13 +441,13 @@ function saveGame(){
     return false;
   }
 }
-const PROGRESS_RESET_KEY='reel-deal-progress-reset-v2.3.0';
+const PROGRESS_RESET_KEY='reel-deal-progress-reset-v2.3.1';
 function loadGame(){
   try{
     if(!localStorage.getItem(PROGRESS_RESET_KEY)){
       const previous={};for(const key of [SAVE_KEY,...LEGACY_KEYS]){const value=localStorage.getItem(key);if(value)previous[key]=value;}
-      if(Object.keys(previous).length&&!localStorage.getItem('reel-deal-progress-backup-v2.3.0')){
-        try{localStorage.setItem('reel-deal-progress-backup-v2.3.0',JSON.stringify(previous));}catch{}
+      if(Object.keys(previous).length&&!localStorage.getItem('reel-deal-progress-backup-v2.3.1')){
+        try{localStorage.setItem('reel-deal-progress-backup-v2.3.1',JSON.stringify(previous));}catch{}
       }
       for(const key of [SAVE_KEY,...LEGACY_KEYS])localStorage.removeItem(key);
       localStorage.setItem(PROGRESS_RESET_KEY,'done');

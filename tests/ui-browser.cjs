@@ -16,9 +16,9 @@ module.exports=async function testUI(browser,url,shots){
     await page.keyboard.press('ArrowRight');assert.equal(await page.locator('#tutorialTitle').textContent(),'Cast and hook');
     await page.keyboard.press('ArrowLeft');await page.click('#tutorialSkip');assert.equal(await page.locator('#tutorialOverlay').isVisible(),false);
     // Simulate the requested one-time population reset against a prior local save.
-    await page.evaluate(()=>{const a=__reelDeal;a.G.state='menu';localStorage.removeItem('reel-deal-progress-reset-v2.3.0');localStorage.setItem('reel-deal-save-v9',JSON.stringify({version:9,coins:9876,xp:54321,caught:50}));});
+    await page.evaluate(()=>{const a=__reelDeal;a.G.state='menu';localStorage.removeItem('reel-deal-progress-reset-v2.3.1');localStorage.setItem('reel-deal-save-v9',JSON.stringify({version:9,coins:9876,xp:54321,caught:50}));});
     await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>!!window.__reelDeal);
-    const fresh=await page.evaluate(()=>({coins:__reelDeal.G.coins,xp:__reelDeal.G.xp,caught:__reelDeal.G.caught,old:localStorage.getItem('reel-deal-save-v9'),backup:JSON.parse(localStorage.getItem('reel-deal-progress-backup-v2.3.0'))['reel-deal-save-v9']}));
+    const fresh=await page.evaluate(()=>({coins:__reelDeal.G.coins,xp:__reelDeal.G.xp,caught:__reelDeal.G.caught,old:localStorage.getItem('reel-deal-save-v9'),backup:JSON.parse(localStorage.getItem('reel-deal-progress-backup-v2.3.1'))['reel-deal-save-v9']}));
     assert.deepEqual([fresh.coins,fresh.xp,fresh.caught,fresh.old],[0,0,0,null]);assert.equal(JSON.parse(fresh.backup).coins,9876);
     await page.click('#startBtn');assert.equal(await page.locator('#tutorialOverlay').isVisible(),false,'restarting progress does not repeat a completed tutorial');
   }

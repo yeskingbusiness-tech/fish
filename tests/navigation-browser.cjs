@@ -5,7 +5,7 @@ module.exports=async function testNavigation(browser,url,shots){
  const errors=[],watch=p=>{p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});};
  const frame=p=>p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
  async function startGame(p){await p.click('#startBtn');if(await p.locator('#tutorialOverlay').isVisible())await p.click('#tutorialSkip');}
- async function boot(p){watch(p);await p.addInitScript(()=>{HTMLCanvasElement.prototype.requestPointerLock=undefined;localStorage.setItem('reel-deal-progress-reset-v2.3.0','done');});await p.goto(url,{waitUntil:'networkidle'});await p.waitForFunction(()=>window.__reelDeal);await startGame(p);}
+ async function boot(p){watch(p);await p.addInitScript(()=>{HTMLCanvasElement.prototype.requestPointerLock=undefined;localStorage.setItem('reel-deal-progress-reset-v2.3.1','done');});await p.goto(url,{waitUntil:'networkidle'});await p.waitForFunction(()=>window.__reelDeal);await startGame(p);}
  async function capture(p,name){await p.evaluate(()=>document.getElementById('toast').classList.add('hidden'));await p.screenshot({path:`${shots}/${name}.png`});}
  const page=await browser.newPage({viewport:{width:1280,height:820}});
  try{
