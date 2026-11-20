@@ -27,7 +27,7 @@ test('fish behavior telegraphs distinct hold/release responses',()=>{
 });
 
 test('sudden fish tugs can pull tension sharply toward either end and scale slightly with strength',()=>{
-  assert.equal(chooseFishTug(1,()=>0),98);
-  assert.equal(chooseFishTug(1,()=>0.9),-98);
-  assert.equal(chooseFishTug(4,()=>0),164);
+  assert.equal(chooseFishTug(1,()=>0),81);
+  assert.equal(chooseFishTug(1,()=>0.9),-81);
+  assert.equal(chooseFishTug(4,()=>0),129);
 });

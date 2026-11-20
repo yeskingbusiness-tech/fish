@@ -1800,13 +1800,13 @@ function tick(){
     G.fishTugTimer-=dt;
     if(G.fishTugTimer<=0&&G.fishTugDur<=0){
       G.fishTug=chooseFishTug(G.fishStrength);
-      G.fishTugDur=0.38;G.fishTugTimer=rand(3.2,5.2);
+      G.fishTugDur=0.34;G.fishTugTimer=rand(3.8,5.8);
     }
     if(G.fishTugDur>0)G.fishTugDur=Math.max(0,G.fishTugDur-dt);
     else G.fishTug=0;
     // Faster response than the previous build, with modest background sway.
     const wobble=rand(-1,1)*(4+G.fishStrength*5);
-    const rate=(reelInput+fishPull*G.rateMul+wobble+G.fishTug)*1.3;
+    const rate=(reelInput+fishPull*G.rateMul+wobble+G.fishTug)*1.22;
 
     G.tension = clamp(G.tension + rate * dt, 0, 100);
     const inSafe = G.tension >= G.bandLo && G.tension <= G.bandHi;

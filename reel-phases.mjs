@@ -20,5 +20,5 @@ export function phasePull(phase,reelHeld){
 }
 export function chooseFishTug(strength,random=Math.random){
   const direction=random()<0.5?1:-1;
-  return direction*(76+Math.max(0,Number(strength)||0)*22);
+  return direction*(65+Math.max(0,Number(strength)||0)*16);
 }
