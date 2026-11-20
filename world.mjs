@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { exposedCuboidFaces } from './voxel-geometry.mjs?v=42';
-import { ISLANDS, BOATS } from './archipelago.mjs?v=42';
-import { dockLocation, SEA_BOUNDS, territoryCenter } from './navigation.mjs?v=42';
-import { islandToWorld, worldToIsland, islandSurfaces } from './island-layout.mjs?v=42';
-import { villagePathTiles } from './village-paths.mjs?v=42';
+import { exposedCuboidFaces } from './voxel-geometry.mjs?v=43';
+import { ISLANDS, BOATS } from './archipelago.mjs?v=43';
+import { dockLocation, SEA_BOUNDS, territoryCenter } from './navigation.mjs?v=43';
+import { islandToWorld, worldToIsland, islandSurfaces } from './island-layout.mjs?v=43';
+import { villagePathTiles } from './village-paths.mjs?v=43';
 
 const UNIT = new THREE.BoxGeometry(1, 1, 1);
 const scratch = new THREE.Object3D();

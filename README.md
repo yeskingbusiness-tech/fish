@@ -4,7 +4,7 @@
 
 The environment, shops, boats and basic angler are cuboid-built. **The fish are not cubes:** anatomical sculpts, fins, jaws, tails, shells, legs and tentacles also generate their matching illustrated thumbnails.
 
-Version **2.1.1**, browser cache **v42**, save schema **v9**, world layout **2**. Static browser game; no build, account, backend or runtime dependency installation required.
+Version **2.2.0**, browser cache **v43**, save schema **v9**, world layout **2**. Static browser game; no build, account, backend or runtime dependency installation required.
 
 ## Run
 
@@ -23,7 +23,7 @@ The development server binds `0.0.0.0`, serves `.mjs` with module MIME types, an
 - This teleports **you to your own parked boat**, not the boat to you and not to a selected island. Its position and heading persist while you walk around or reload. Finish any cast/fight and close panels first.
 - **W/S** accelerates/reverses; **A/D** steers. Touch uses the joystick. All hulls turn **20% faster** than v41.
 - The helm camera sits low above the hull/canopy and looks **beyond the bow toward the horizon**, rather than down at the boat. Fishing and trophy cameras retain their own behavior.
-- **Q / Stop & fish** stops the engine and returns to fishing controls. Q again takes the helm. Boats cannot move during a cast or fight.
+- **Q / Stop & fish** stops the engine. While stopped, use **WASD / joystick to walk around the deck** without moving the hull; the deck boundary keeps you aboard. Q again returns you to the helm. Boats cannot move during a cast or fight.
 - **E / Dock** disembarks when close to an unlocked island's berth. Shops and markets require walking up to their actual counters; no remote selling from the water.
 - The **minimap** shows heading, territory boundaries, rotated land/docks, your parked boat and a waypoint. Click it or press **M** for the full north-up chart. Choose a numbered island to read its name/details, mark a destination and steer there yourself. The chart no longer has a rectangular grid or a snake-route line.
 - Entering a new island's surrounding water displays its name and environment briefly.
@@ -98,7 +98,7 @@ Hold click / Space and release to cast; click / Space on a bite to hook. During 
 - Heavier individuals of the **same species** look larger. Different species do not share one pounds-to-length curve. Body proportions remain anatomical; the camera backs up rather than shrinking genuine giants.
 - Catch weights persist to **six decimal places**, so millipound fish never round down to zero. The HUD, Bag, index and market use readable precision.
 - The expanded economy has an explicit **×0.85 default sale multiplier**. Collection bonuses apply afterward at sale time, including to fish already in the Bag.
-- Future catch XP has an explicit **×0.90 multiplier**, larger-specimen bonuses and a **one-time +50% discovery reward**. Higher-rarity local catches give better XP even when physically small.
+- Future catch XP retains its explicit **×0.90 base multiplier**, then applies a **×1.20 leveling-speed boost** (net ×1.08 versus the earlier baseline), plus larger-specimen bonuses and the **one-time +50% discovery reward**. Higher-rarity local catches give better XP even when physically small.
 - The original cumulative XP curve is extended to **level 400**. Existing coins and XP are never reduced. Audits budget actual repeat-catch pools and weight quantiles, not guaranteed discoveries or destination-only bait.
 - Offshore audits exclude sailing time, missed catches and collection bonuses. Returning to the market and choosing an offshore spot add play time; the scripts do not claim fixed minutes per level.
 
@@ -151,7 +151,7 @@ CHROMIUM_PATH=/path/to/chrome npm run test:browser
 # TEST_URL can override http://127.0.0.1:3100.
 ```
 
-**128 Node tests** cover the full catalog, rarity availability, 800 bait/territory combinations, precise weights, reward multipliers, level gates, 40-tier equipment, save/map migration, transformed village plans, navigable routes around locked cylinders, persistent boat positions, swept boat collisions, shore luck, low helm/trophy camera fitting, coplanar face removal and performance utilities.
+**133 Node tests** cover the full catalog, rarity availability, 800 bait/territory combinations, precise weights, reward multipliers and the 20% leveling boost, level gates, 40-tier equipment, save/map migration, transformed village plans and walkable boat decks, navigable routes around locked cylinders, persistent boat positions, swept boat collisions, shore luck, low helm/trophy camera fitting, coplanar face removal and performance utilities.
 
 The current browser runner replaces the superseded automatic-voyage/four-tier fixtures. It exercises all **60 local equipment shops** plus every market/boatyard approach, full pier-to-counter walking connectivity, **160 boat/island berths**, exact purchases, all eight full-size hulls in the low camera, every level boundary, manual throttle/steering/docking, return-to-boat/save/reload, mobile controls, non-overlapping irregular chart targets and waypoints, real tiny-fish catches, red/yellow/green fights, one-time rewards, original-save migration, all **520 current/legacy GPU models**, all **400 production holding/camera paths**, twenty environment captures, accessible UI and continuous renderer adaptation.
 
@@ -159,7 +159,7 @@ Current screenshots and audit logs go to `.artifacts/navigation-v42/` (ignored b
 
 ## Rebalancing proposals
 
-[`BALANCE_NOTES.md`](BALANCE_NOTES.md) records the current catch-effort audit and proposed gear/XP smoothing, optional boat trade-ins, species-relative trophy rewards and collection-streak protection. **These are recommendations, not enabled mechanics.** v42 leaves existing prices, sale/XP multipliers, natural fish sizes and collection rewards unchanged; only the requested shore extent and navigation/handling were adjusted.
+[`BALANCE_NOTES.md`](BALANCE_NOTES.md) records the earlier catch-effort audit and proposed gear/XP smoothing, optional boat trade-ins, species-relative trophy rewards and collection-streak protection. **Those proposals remain recommendations, not enabled mechanics.** Version 2.2.0 separately applies the requested 20% leveling-speed boost; prices, sales, natural fish sizes and collection rewards are unchanged.
 
 ## Source map
 

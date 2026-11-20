@@ -20,6 +20,6 @@ export function islandProgressionRows(options={}){return ISLANDS.map(i=>{
   return {id:i.id,island:i.short,fromLevel,toLevel,xpNeeded,arrival:setup(Math.max(0,i.id*2-1)),local:setup(i.id*2+1)};
 });}
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
-  console.log('Future catches ×0.90 XP. Neutral offshore repeats only; no discoveries, no boat travel time.');
+  console.log('Future catches: ×0.90 base XP ×1.20 leveling boost. Neutral offshore repeats only; no discoveries, no boat travel time.');
   console.table(islandProgressionRows().map(r=>({island:r.island,levels:`${r.fromLevel} → ${r.toLevel}`,xp:r.xpNeeded,'arrival catches':r.arrival.catches?.toFixed(1)??'new bait required','premium catches':r.local.catches?.toFixed(1)})));
 }

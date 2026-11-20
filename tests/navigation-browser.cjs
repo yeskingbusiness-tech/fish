@@ -14,6 +14,13 @@ module.exports=async function testNavigation(browser,url,shots){
   assert.deepEqual(await page.evaluate(()=>[__reelDeal.G.onBoat,__reelDeal.G.state,__reelDeal.chartOpen,document.activeElement.id]),[true,'aim',false,'scene']);
   const walked=await page.evaluate(()=>__reelDeal.G.walked);await page.keyboard.down('w');await page.waitForTimeout(750);await page.keyboard.up('w');await page.keyboard.press('q');
   assert.equal(await page.evaluate(()=>__reelDeal.G.walked),walked,'helm input cannot also cause footsteps/walk bob');
+  const deckStart=await page.evaluate(()=>({x:__reelDeal.G.px,z:__reelDeal.G.pz,boat:{...__reelDeal.G.sailing}}));
+  await page.keyboard.down('w');await page.waitForTimeout(700);await page.keyboard.up('w');
+  const deckWalk=await page.evaluate(()=>({x:__reelDeal.G.px,z:__reelDeal.G.pz,boat:{...__reelDeal.G.sailing}}));
+  assert.ok(Math.hypot(deckWalk.x-deckStart.x,deckWalk.z-deckStart.z)>.2,'stopped player can walk on deck');
+  assert.deepEqual(deckWalk.boat,deckStart.boat,'walking does not move the parked hull');
+  await page.keyboard.press('q');assert.deepEqual(await page.evaluate(()=>[__reelDeal.G.px,__reelDeal.G.pz]),[deckStart.boat.x,deckStart.boat.z],'taking helm returns player to helm position');
+  await page.keyboard.press('q');
   await page.keyboard.press('e');assert.equal(await page.evaluate(()=>__reelDeal.G.onBoat),false);
   const parked=await page.evaluate(()=>({...__reelDeal.G.boatPosition}));
   await page.evaluate(()=>{const a=__reelDeal,s=a.world.stalls.find(s=>s.zone===0&&s.kind==='line');a.G.px=s.approach.x;a.G.pz=s.approach.z;a.updateBoatUI();});await frame(page);
@@ -76,12 +83,12 @@ module.exports=async function testNavigation(browser,url,shots){
 
   await page.setViewportSize({width:1280,height:820});
   const historic=await page.evaluate(async()=>{
-   const a=__reelDeal,{V41_ISLAND_ANCHORS}=await import('./legacy-v41-world.mjs?v=42'),id=15,p=V41_ISLAND_ANCHORS[id],b=a.BOATS[6];
+   const a=__reelDeal,{V41_ISLAND_ANCHORS}=await import('./legacy-v41-world.mjs?v=43'),id=15,p=V41_ISLAND_ANCHORS[id],b=a.BOATS[6];
    const raw={version:9,zone:id,boat:b.id,ownedBoats:[0,b.id],xp:a.xpForLevel(275),coins:87654321,caught:11,completedIslands:[0,1],licenses:[0,1,id],owned:{rod:[0,31],line:[0,31],bait:[0,31]},gear:{rod:31,line:31,bait:31},bag:[{id:a.SPECIES[80].id,w:a.SPECIES[80].minW}],sailing:{x:p.x+14+b.size*4,z:p.z-6-b.size*2,yaw:.3}};
    a.G.state='menu';localStorage.setItem('reel-deal-save-v9',JSON.stringify(raw));return raw;
   });
   await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await page.click('#startBtn');
-  const migrated=await page.evaluate(async()=>{const a=__reelDeal,n=await import('./navigation.mjs?v=42');a.saveGame();return {zone:a.G.zone,aboard:a.G.onBoat,boat:a.G.boat,coins:a.G.coins,xp:a.G.xp,gear:a.G.gear,earned:a.G.completedIslands,weight:a.bag[0].weight,valid:n.validBoatPose(a.G.sailing,a.BOATS[a.G.boat],a.G),save:JSON.parse(localStorage.getItem('reel-deal-save-v9'))};});
+  const migrated=await page.evaluate(async()=>{const a=__reelDeal,n=await import('./navigation.mjs?v=43');a.saveGame();return {zone:a.G.zone,aboard:a.G.onBoat,boat:a.G.boat,coins:a.G.coins,xp:a.G.xp,gear:a.G.gear,earned:a.G.completedIslands,weight:a.bag[0].weight,valid:n.validBoatPose(a.G.sailing,a.BOATS[a.G.boat],a.G),save:JSON.parse(localStorage.getItem('reel-deal-save-v9'))};});
   assert.equal(migrated.zone,15);assert.equal(migrated.aboard,true);assert.equal(migrated.boat,6);assert.equal(migrated.coins,historic.coins);assert.equal(migrated.xp,historic.xp);assert.deepEqual(migrated.gear,historic.gear);assert.deepEqual(migrated.earned,historic.completedIslands);assert.equal(migrated.weight,historic.bag[0].w);assert.equal(migrated.valid,true);assert.equal(migrated.save.worldLayout,2);
   await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await page.click('#startBtn');
   assert.deepEqual(await page.evaluate(()=>{__reelDeal.saveGame();return JSON.parse(localStorage.getItem('reel-deal-save-v9'));}),migrated.save);

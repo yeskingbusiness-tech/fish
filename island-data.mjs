@@ -1,4 +1,4 @@
-import { ISLAND_LAYOUTS } from './island-layout.mjs?v=42';
+import { ISLAND_LAYOUTS } from './island-layout.mjs?v=43';
 // Exact destination order/unlock levels from the 400-entry collection brief.
 // Environments and landmark geometry are presentation data, not rarity/size rules.
 const rows=[

@@ -1,5 +1,5 @@
-import { SPECIES, RODS, LINES, BAITS, RARITY, RARITY_ORDER, ISLAND_RARITIES, fishValue } from './game-data.mjs?v=42';
-import { ISLANDS, MAX_LEVEL, GEAR_PER_ISLAND } from './island-data.mjs?v=42';
+import { SPECIES, RODS, LINES, BAITS, RARITY, RARITY_ORDER, ISLAND_RARITIES, fishValue } from './game-data.mjs?v=43';
+import { ISLANDS, MAX_LEVEL, GEAR_PER_ISLAND } from './island-data.mjs?v=43';
 export { ISLANDS, MAX_LEVEL, GEAR_PER_ISLAND };
 const ISLAND_SPECIES=ISLANDS.map(i=>SPECIES.filter(s=>s.island===i.id));
 export const ISLAND_COLLECTION_BONUS=5;
@@ -31,12 +31,13 @@ export function xpForLevel(level){const n=Math.max(0,Math.min(MAX_LEVEL-1,Math.f
 export function levelForXp(xp){const n=Number.isFinite(xp)?Math.max(0,xp):0;return Math.min(MAX_LEVEL,Math.floor((-90+Math.sqrt(8100+88*n))/44)+1);}
 export function levelProgress(xp){const level=levelForXp(xp),start=xpForLevel(level),next=xpForLevel(level+1);return {level,current:Math.max(0,xp-start),needed:next-start,ratio:level===MAX_LEVEL?1:(xp-start)/(next-start)};}
 export const CATCH_XP_MULTIPLIER=.90;
+export const LEVELING_SPEED_MULTIPLIER=1.20;
 export const CATCH_XP_BY_RARITY=Object.freeze(Object.fromEntries(RARITY_ORDER.map((key,tier)=>[key,[20,30,45,68,103,155,233,350,525,788,1182,1773][tier]])));
 export const ISLAND_XP_MULTIPLIERS=Object.freeze(ISLANDS.map((i,n)=>n===0?1:Math.max(.1,(xpForLevel(ISLANDS[n+1]?.level||MAX_LEVEL)-xpForLevel(i.level)||900000)/(80*1.8*CATCH_XP_BY_RARITY[RARITY_ORDER[ISLAND_RARITIES[n][0]]]))));
 export function catchXP(sp,weight,isNew=false){
   const ratio=Number(weight)/sp.maxW,size=Number.isFinite(ratio)?Math.max(0,Math.min(1,ratio)):0;
   const base=CATCH_XP_BY_RARITY[sp.rarity]*ISLAND_XP_MULTIPLIERS[sp.island];
-  return Math.max(1,Math.round(base*(1+.4*size)*(isNew?1.5:1)*CATCH_XP_MULTIPLIER));
+  return Math.max(1,Math.round(base*(1+.4*size)*(isNew?1.5:1)*CATCH_XP_MULTIPLIER*LEVELING_SPEED_MULTIPLIER));
 }
 // Frozen reward for v6 inference ONLY; caller supplies frozen legacy species.
 export function legacyCatchXP(sp,weight,isNew=false){return Math.round((20+sp.island*22+RARITY[sp.rarity].tier*6+8*Math.min(1,weight/sp.maxW))*(isNew?1.5:1));}

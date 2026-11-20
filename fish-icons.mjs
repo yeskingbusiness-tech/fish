@@ -1,5 +1,5 @@
-import { fishSVG } from './fish-geometry.mjs?v=42';
-import { fishAppearance } from './fish-appearance.mjs?v=42';
+import { fishSVG } from './fish-geometry.mjs?v=43';
+import { fishAppearance } from './fish-appearance.mjs?v=43';
 
 const escape = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 

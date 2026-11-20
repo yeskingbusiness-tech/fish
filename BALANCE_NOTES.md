@@ -1,6 +1,6 @@
 # Rebalancing ideas — proposals, not enabled
 
-Audit for **2.1.1 / v42**. The navigation update does **not** change prices, catch rewards, bait luck, natural fish sizes, unlock levels or collection bonuses. The requested smaller shore area is the only fishing-balance change in that update.
+This is the balance audit prepared for **v2.1.1 / v42** before the later level-speed boost. The proposals below remain **unimplemented**: no price, bait-luck, natural-size, unlock-level or collection-bonus proposal is enabled here. The 2.2.0 catch-XP boost is a separate requested change.
 
 `npm run economy` and `npm run progression` integrate the actual eligible species pools and specimen-weight quantiles. The figures below assume **neutral charge, offshore fishing, repeat catches and no collection bonuses**. They include the existing **×0.85 sale multiplier** and **×0.90 catch-XP multiplier**. They are expected successful catches, not guaranteed counts or real-time completion estimates. Sailing, shop visits and failed fights add time; discoveries and permanent bonuses can reduce the totals.
 

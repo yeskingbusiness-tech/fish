@@ -33,7 +33,7 @@ module.exports=async function testFishing(browser,url,shots){
   });assert.equal(awards.xp,awards.expected);assert.equal(awards.bonus,5);assert.equal(awards.newFlag,true);assert.equal(awards.reward,true);assert.equal(awards.duplicate,0);assert.ok(awards.after>=awards.prior);await page.click('#continueBtn');
   // Real old-save boot: all 120 catches, moved islands, reduced gear, and permanent boosts.
   const old=await page.evaluate(async()=>{
-   const a=__reelDeal,{LEGACY_V8_SPECIES:fish}=await import('./legacy-v8-data.mjs?v=42');
+   const a=__reelDeal,{LEGACY_V8_SPECIES:fish}=await import('./legacy-v8-data.mjs?v=43');
    const raw={version:8,coins:54321,xp:123456,caught:120,boat:5,ownedBoats:[0,5],zone:5,visited:[0,1,2,3,4,5],licenses:[0,1,2,3,4,5],owned:{rod:[0,23],line:[0,23],bait:[0,23]},gear:{rod:23,line:23,bait:23},bag:fish.map(s=>({n:s.name,w:s.maxW})),log:fish.map(s=>({n:s.name,w:s.maxW})),discoveries:Object.fromEntries(fish.map(s=>[s.id,{count:1,best:s.maxW,first:'2026-11-13'}]))};
    a.G.state='menu'; // Allow the explicit historical fixture to survive pagehide.
    localStorage.removeItem('reel-deal-save-v9');localStorage.setItem('reel-deal-save-v8',JSON.stringify(raw));return raw;

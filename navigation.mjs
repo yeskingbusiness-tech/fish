@@ -1,7 +1,7 @@
 // Pure boating geometry. The level barriers are invisible vertical cylinders;
 // swept movement prevents fast boats/large frames from tunnelling through them.
-import { ISLANDS, hasIslandLicense } from './archipelago.mjs?v=42';
-import { islandToWorld, islandRectToWorld, islandSurfaces } from './island-layout.mjs?v=42';
+import { ISLANDS, hasIslandLicense } from './archipelago.mjs?v=43';
+import { islandToWorld, islandRectToWorld, islandSurfaces } from './island-layout.mjs?v=43';
 export const TERRITORY_RADIUS=300; // 7.44× the old 110m territory area.
 export const SHORE_FULL_PENALTY_DISTANCE=6;
 export const SHORE_CLEAR_DISTANCE=48;
@@ -11,6 +11,13 @@ export const territoryCenter=i=>islandToWorld(i,0,25);
 export const LAND_RECTS=Object.freeze(ISLANDS.flatMap(i=>islandSurfaces(i).map(r=>Object.freeze(islandRectToWorld(i,r)))));
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export function territoryAt(x,z){return ISLANDS.find(i=>{const c=territoryCenter(i);return Math.hypot(x-c.x,z-c.z)<TERRITORY_RADIUS;})?.id??null;}
+// Player walking coordinates are clamped to the open deck, expressed in the
+// boat's rotated local frame so every hull orientation behaves consistently.
+export function clampBoatDeckPosition(x,z,boat,size=1){
+  const dx=x-boat.x,dz=z-boat.z,c=Math.cos(boat.yaw||0),s=Math.sin(boat.yaw||0);
+  const lx=clamp(c*dx-s*dz,-.88*size,.88*size),lz=clamp(s*dx+c*dz,-2.15*size,2.15*size);
+  return {x:boat.x+c*lx+s*lz,z:boat.z-s*lx+c*lz};
+}
 export function distanceToShore(x,z){return Math.min(...LAND_RECTS.map(r=>Math.hypot(x-clamp(x,r.minX,r.maxX),z-clamp(z,r.minZ,r.maxZ))));}
 export function shoreLuckPenalty(x,z){const distance=distanceToShore(x,z);return -.95*(1-clamp((distance-SHORE_FULL_PENALTY_DISTANCE)/(SHORE_CLEAR_DISTANCE-SHORE_FULL_PENALTY_DISTANCE),0,1))||0;}
 function circleHit(a,b,c,r){const dx=b.x-a.x,dz=b.z-a.z,len=dx*dx+dz*dz;const t=len?clamp(((c.x-a.x)*dx+(c.z-a.z)*dz)/len,0,1):0;return Math.hypot(a.x+dx*t-c.x,a.z+dz*t-c.z)<r;}

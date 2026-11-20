@@ -1,4 +1,4 @@
-import { COLLECTION_ROSTER } from './collection-roster.mjs?v=42';
+import { COLLECTION_ROSTER } from './collection-roster.mjs?v=43';
 
 // Art direction, not game balance. Every roster ID has a deliberately authored
 // anatomy, proportions, fins and field marks. Related fish share construction

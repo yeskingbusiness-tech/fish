@@ -12,26 +12,26 @@ const rand  = (a,b) => a + Math.random() * (b-a);
 const hexc  = c => '#' + c.toString(16).padStart(6,'0');
 const fmt   = n => n.toLocaleString('en-US');
 
-import { advanceReelPhase, REEL_PHASES, phasePull, chooseFishTug } from './reel-phases.mjs?v=42';
+import { advanceReelPhase, REEL_PHASES, phasePull, chooseFishTug } from './reel-phases.mjs?v=43';
 import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow, sortFishIndex, castLuckModifier, effectiveLuck,
-  eligibleSpecies, roundWeight, formatWeight, GEAR_PER_ISLAND, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=42';
+  eligibleSpecies, roundWeight, formatWeight, GEAR_PER_ISLAND, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=43';
 import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, hasIslandLicense, travelRequirement,
-  MAX_LEVEL, ISLAND_COLLECTION_BONUS, islandCollectionProgress, completedCollections, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=42';
-import { createWorld } from './world.mjs?v=42';
-import { fishSVG, fishGeometryCacheStats } from './fish-geometry.mjs?v=42';
-import { createFishIcons } from './fish-icons.mjs?v=42';
-import { createAdaptiveQuality, memoLast, createBaitPoolLookup } from './render-performance.mjs?v=42';
-import { createFishModel, animateFishModel, disposeFishModel } from './fish-model.mjs?v=42';
-import { boatViewPose, createPlayerModel, heldFishSpan, heldFishLayout, firstPersonFishPose, frontViewPose } from './player-view.mjs?v=42';
-import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=42';
-import { BAG_TABS, bagGearKind, nextBagTab, contextualHint, HELP_CONTROLS } from './ui-state.mjs?v=42';
+  MAX_LEVEL, ISLAND_COLLECTION_BONUS, islandCollectionProgress, completedCollections, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=43';
+import { createWorld } from './world.mjs?v=43';
+import { fishSVG, fishGeometryCacheStats } from './fish-geometry.mjs?v=43';
+import { createFishIcons } from './fish-icons.mjs?v=43';
+import { createAdaptiveQuality, memoLast, createBaitPoolLookup } from './render-performance.mjs?v=43';
+import { createFishModel, animateFishModel, disposeFishModel } from './fish-model.mjs?v=43';
+import { boatViewPose, createPlayerModel, heldFishSpan, heldFishLayout, firstPersonFishPose, frontViewPose } from './player-view.mjs?v=43';
+import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=43';
+import { BAG_TABS, bagGearKind, nextBagTab, contextualHint, HELP_CONTROLS } from './ui-state.mjs?v=43';
 
-import { ALL_CATCH_SPECIES, LEGACY_SPECIES } from './legacy-catalog.mjs?v=42';
-import { territoryAt, territoryCenter, TERRITORY_RADIUS, shoreLuckPenalty, distanceToShore, stepBoat, nearbyDock, dockPose, returnBoatPose, mapPoint, SEA_BOUNDS } from './navigation.mjs?v=42';
-import { WORLD_LAYOUT_VERSION } from './island-data.mjs?v=42';
-import { islandToWorld, islandSpawn } from './island-layout.mjs?v=42';
+import { ALL_CATCH_SPECIES, LEGACY_SPECIES } from './legacy-catalog.mjs?v=43';
+import { territoryAt, territoryCenter, TERRITORY_RADIUS, shoreLuckPenalty, distanceToShore, stepBoat, nearbyDock, dockPose, returnBoatPose, clampBoatDeckPosition, mapPoint, SEA_BOUNDS } from './navigation.mjs?v=43';
+import { WORLD_LAYOUT_VERSION } from './island-data.mjs?v=43';
+import { islandToWorld, islandSpawn } from './island-layout.mjs?v=43';
 
-import { drawMinimap } from './minimap.mjs?v=42';
+import { drawMinimap } from './minimap.mjs?v=43';
 const fishIcons = createFishIcons(ALL_CATCH_SPECIES);
 const discoveredCount=()=>SPECIES.filter(sp=>G.discoveries[sp.id]).length;
 const fishPlace=sp=>ISLANDS[sp.island].short+(sp.legacy?' · Legacy catch':'');
@@ -1300,14 +1300,16 @@ function boardBoat(){
 }
 function toggleBoatMode(){
   if(!G.onBoat||G.state!=='aim'||uiBusy())return false;
-  if(!isDriving())stowFish();
-  G.boatMode=isDriving()?'fish':'drive';G.sailing.speed=0;clearInput();
+  const wasDriving=isDriving();
+  if(!wasDriving)stowFish();
+  G.boatMode=wasDriving?'fish':'drive';G.sailing.speed=0;clearInput();
+  if(!wasDriving){G.px=G.sailing.x;G.pz=G.sailing.z;}
   G.yaw=G.sailing.yaw;G.pitch=-.12;setState('aim');updateBoatUI();canvas.focus({preventScroll:true});
-  showToast(isDriving()?'At the helm. Steer freely.':'Engine stopped. Cast here, or Q to drive.');return true;
+  showToast(isDriving()?'At the helm. Steer freely.':isTouch?'Engine stopped. Walk the deck or cast; tap Take helm to steer.':'Engine stopped. Walk the deck, cast, or Q to take the helm.');return true;
 }
 function dockBoat(){
   if(!G.onBoat||G.state!=='aim'||uiBusy())return false;
-  const id=nearbyDock(G.px,G.pz);
+  const id=nearbyDock(G.sailing?.x??G.px,G.sailing?.z??G.pz);
   if(id===null||!hasLicense(id)){showToast('Approach an unlocked island’s dock to disembark.',true);return false;}
   G.boatPosition={x:G.sailing.x,z:G.sailing.z,yaw:G.sailing.yaw};
   clearInput();spawnAtIsland(id);if(!G.visited.includes(id))G.visited.push(id);
@@ -1322,9 +1324,11 @@ function updateBoatUI(){
   if($('boardBoatBtn').disabled!==!idle)$('boardBoatBtn').disabled=!idle;
   setHidden($('boatControls'),!G.onBoat||!idle);
   setText($('boatModeBtn'),(isDriving()?'Stop & fish':'Take helm')+(isTouch?'':' · Q'));
-  const dock=G.onBoat?nearbyDock(G.px,G.pz):null;
+  const dock=G.onBoat?nearbyDock(G.sailing?.x??G.px,G.sailing?.z??G.pz):null;
   if($('dockBoatBtn').disabled!==(dock===null))$('dockBoatBtn').disabled=dock===null;setText($('dockBoatBtn'),dock===null?'Approach a dock':`Dock · ${ISLANDS[dock].short}${isTouch?"":" · E"}`);
   setHidden($('boatReadout'),!G.onBoat);setText($('boatSpeed'),`${Math.round(Math.abs(G.sailing?.speed||0))} / ${BOATS[G.boat].speed} m/s`);
+  const readoutHint=isDriving()?(isTouch?'Joystick steer':'W/S throttle · A/D steer'):(isTouch?'Joystick walk on deck':'WASD walk on deck · Q helm'),readoutHintEl=$('boatReadout').querySelector('span');
+  if(readoutHintEl.textContent!==readoutHint)readoutHintEl.textContent=readoutHint;
   const penalty=shoreLuckPenalty(G.px,G.pz),territory=fishingTerritory();
   setText($('shoreLuck'),territory===null?'OPEN OCEAN · FIND A TERRITORY':penalty<-.001?`SHORE LUCK ${Math.round(penalty*100)}% · HEAD OFFSHORE`:'OFFSHORE · FULL LUCK');
   $('shoreLuck').classList.toggle('offshore',penalty>=-.001&&territory!==null);
@@ -1341,9 +1345,10 @@ function tickBoat(dt){
       const block=G.sailing.block;showToast(block.kind==='level'?`${ISLANDS[block.island].name} territory · level ${block.level} required`:block.kind==='edge'?'The edge of the chart. Turn back.':'Shallows ahead. Reverse or turn toward clear water.',true);lastBorderNotice=G.time;
     }
   }else G.sailing.speed=0;
-  G.px=G.sailing.x;G.pz=G.sailing.z;G.boatPosition={x:G.px,z:G.pz,yaw:G.sailing.yaw};
-  world.boat.position.set(G.px,.15+Math.sin(G.time*2)*.04,G.pz);world.boat.rotation.set(0,G.sailing.yaw,Math.sin(G.time*1.6)*.008);
-  const id=territoryAt(G.px,G.pz);
+  if(isDriving()){G.px=G.sailing.x;G.pz=G.sailing.z;}
+  G.boatPosition={x:G.sailing.x,z:G.sailing.z,yaw:G.sailing.yaw};
+  world.boat.position.set(G.sailing.x,.15+Math.sin(G.time*2)*.04,G.sailing.z);world.boat.rotation.set(0,G.sailing.yaw,Math.sin(G.time*1.6)*.008);
+  const id=territoryAt(G.sailing.x,G.sailing.z);
   if(id!==lastTerritory){lastTerritory=id;if(id!==null){G.zone=id;if(!G.visited.includes(id))G.visited.push(id);announceTerritory(id);}updateStats();saveGame();}
   if(G.time-lastBoatSave>10){lastBoatSave=G.time;saveGame();}
 }
@@ -1679,7 +1684,7 @@ function tick(){
 
   // ---- walking ----
   let mf = 0, ms = 0;
-  if(G.state === 'aim' && !uiBusy() && !G.onBoat){
+  if(G.state === 'aim' && !uiBusy() && (!G.onBoat||!isDriving())){
     if(keys.f) mf += 1;
     if(keys.b) mf -= 1;
     if(keys.r) ms += 1;
@@ -1696,7 +1701,9 @@ function tick(){
     const rx = Math.cos(G.yaw), rz = -Math.sin(G.yaw);
     const dx = (fx * mf + rx * ms) * spd;
     const dz = (fz * mf + rz * ms) * spd;
-    if(walkable(G.px + dx, G.pz + dz)){ G.px += dx; G.pz += dz; }
+    if(G.onBoat&&!isDriving()){
+      const p=clampBoatDeckPosition(G.px+dx,G.pz+dz,G.sailing,BOATS[G.boat].size);G.px=p.x;G.pz=p.z;
+    }else if(walkable(G.px + dx, G.pz + dz)){ G.px += dx; G.pz += dz; }
     else if(walkable(G.px + dx, G.pz)){ G.px += dx; }
     else if(walkable(G.px, G.pz + dz)){ G.pz += dz; }
     G.bob += dt * 11;

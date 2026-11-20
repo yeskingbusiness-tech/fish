@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ISLANDS, BOATS, xpForLevel } from '../archipelago.mjs';
 import { islandToWorld } from '../island-layout.mjs';
-import { TERRITORY_RADIUS, SHORE_FULL_PENALTY_DISTANCE, SHORE_CLEAR_DISTANCE, BOAT_TURN_RATE, territoryCenter, territoryAt, boatMoveBlock, stepBoat, shoreLuckPenalty, distanceToShore, dockLocation, dockPose, nearbyDock, SEA_BOUNDS, mapPoint, validBoatPose, returnBoatPose } from '../navigation.mjs';
+import { TERRITORY_RADIUS, SHORE_FULL_PENALTY_DISTANCE, SHORE_CLEAR_DISTANCE, BOAT_TURN_RATE, territoryCenter, territoryAt, boatMoveBlock, stepBoat, shoreLuckPenalty, distanceToShore, dockLocation, dockPose, nearbyDock, SEA_BOUNDS, mapPoint, validBoatPose, returnBoatPose, clampBoatDeckPosition } from '../navigation.mjs';
 const access={xp:xpForLevel(400)},largest=BOATS.at(-1),near=(a,b)=>assert.ok(Math.abs(a-b)<1e-9,`${a} != ${b}`);
 
 test('twenty fixed irregular territories have 7.4 times the old area and navigable gaps',()=>{
@@ -27,6 +27,13 @@ test('all eight hulls cross every level cylinder only when unlocked, from every 
 test('swept barriers reject a full high-speed leap across a locked territory',()=>{
  const c=territoryCenter(ISLANDS[19]),r=TERRITORY_RADIUS+20;
  assert.equal(boatMoveBlock({x:c.x-r,z:c.z},{x:c.x+r,z:c.z},{radius:1})?.kind,'level');
+});
+test('walking positions clamp to the rotated deck footprint on all eight hull sizes',()=>{
+ for(const b of BOATS){const boat={x:17,z:-21,yaw:Math.PI/3};const p=clampBoatDeckPosition(boat.x+100,boat.z-100,boat,b.size);
+  const dx=p.x-boat.x,dz=p.z-boat.z,c=Math.cos(boat.yaw),s=Math.sin(boat.yaw),lx=c*dx-s*dz,lz=s*dx+c*dz;
+  assert.ok(Math.abs(lx)<=.88*b.size+1e-9);assert.ok(Math.abs(lz)<=2.15*b.size+1e-9);
+  assert.deepEqual(clampBoatDeckPosition(boat.x,boat.z,boat,b.size),{x:boat.x,z:boat.z});
+ }
 });
 test('all 160 oriented berths are clear, dockable and connected to open water',()=>{
  for(const i of ISLANDS)for(const b of BOATS){
