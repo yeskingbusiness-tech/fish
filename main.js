@@ -12,7 +12,7 @@ const rand  = (a,b) => a + Math.random() * (b-a);
 const hexc  = c => '#' + c.toString(16).padStart(6,'0');
 const fmt   = n => n.toLocaleString('en-US');
 
-import { advanceReelPhase, REEL_PHASES, phasePull, chooseFishTug } from './reel-phases.mjs?v=44';
+import { advanceReelPhase, REEL_PHASES, phasePull, fishTugImpulse, alternateTugDirection } from './reel-phases.mjs?v=44';
 import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow, sortFishIndex, castLuckModifier, effectiveLuck,
   eligibleSpecies, roundWeight, formatWeight, GEAR_PER_ISLAND, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=44';
 import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, hasIslandLicense, travelRequirement,
@@ -290,7 +290,7 @@ const G = {
   tension:15, progress:0, fishStrength:0.3,
   surgeTimer:0, surgeDur:0, yankTimer:0, yank:0, yankDur:0, reelHeld:false,
   reelPhase:'calm', reelPhaseTime:3.2,
-  fishTugTimer:0, fishTugWarn:0, fishTugDur:0, fishTug:0,
+  fishTugTimer:0, fishTugWarn:0, fishTugDur:0, fishTug:0, nextFishTugDirection:1,
   time:0, rodSwing:0, bobDip:0,
   castT:0, castDur:1, biteWindow:0, waitTimer:4,
   caughtAnim:0,
@@ -305,11 +305,11 @@ const G = {
 };
 const EYE = 1.62;
 let shopOpen = false, marketOpen = false, shopKind = 'rod';
-let chartOpen = false, indexOpen = false, bagOpen = false, helpOpen = false, hudHidden = false;
-let bagTab = 'fish', lastGearTab = 'rods';
+let chartOpen = false, indexOpen = false, bagOpen = false, helpOpen = false, tutorialOpen=false, hudHidden = false;
+let tutorialIndex=0, bagTab = 'fish', lastGearTab = 'rods';
 let selectedIsland = 0, indexIsland = -1, fleetTab = false;
 let nearbyStall = null;
-const uiBusy = () => shopOpen || marketOpen || chartOpen || indexOpen || bagOpen || helpOpen || hudHidden || drawerOpen;
+const uiBusy = () => shopOpen || marketOpen || chartOpen || indexOpen || bagOpen || helpOpen || tutorialOpen || hudHidden || drawerOpen;
 const level = () => levelForXp(G.xp);
 const hasLicense = target => hasIslandLicense(target,G.xp,G.licenses);
 
@@ -338,8 +338,8 @@ const reelFishName = $('reelFishName'), reelPct = $('reelPct'), catchModal = $('
 const toastEl = $('toast'), logDrawer = $('logDrawer'), logList = $('logList'), logSummary = $('logSummary');
 const lockHint = $('lockHint'), shopBtnEl = $('shopBtn'), shopOverlay = $('shopOverlay'), shopBody = $('shopBody');
 const marketBtnEl = $('marketBtn'), marketOverlayEl = $('marketOverlay'), marketBody = $('marketBody');
-const bagOverlay = $('bagOverlay'), bagBody = $('bagBody'), helpOverlay = $('helpOverlay');
-const reelWarn = $('reelWarn'), stickEl = $('stick'), stickKnob = document.querySelector('.stick-knob');
+const bagOverlay = $('bagOverlay'), bagBody = $('bagBody'), helpOverlay = $('helpOverlay'), tutorialOverlay=$('tutorialOverlay');
+const stickEl = $('stick'), stickKnob = document.querySelector('.stick-knob');
 const portBtnEl = $('portBtn'), tensionTrack = $('tensionTrack'), castPowerValue = $('castPowerValue'), castLuck = $('castLuck');
 const setText = (el,text) => {if(el.textContent!==text)el.textContent=text;};
 const setHidden = (el,hidden) => {if(el.classList.contains('hidden')!==hidden)el.classList.toggle('hidden',hidden);};
@@ -441,8 +441,19 @@ function saveGame(){
     return false;
   }
 }
+const PROGRESS_RESET_KEY='reel-deal-progress-reset-v2.3.0';
 function loadGame(){
   try{
+    if(!localStorage.getItem(PROGRESS_RESET_KEY)){
+      const previous={};for(const key of [SAVE_KEY,...LEGACY_KEYS]){const value=localStorage.getItem(key);if(value)previous[key]=value;}
+      if(Object.keys(previous).length&&!localStorage.getItem('reel-deal-progress-backup-v2.3.0')){
+        try{localStorage.setItem('reel-deal-progress-backup-v2.3.0',JSON.stringify(previous));}catch{}
+      }
+      for(const key of [SAVE_KEY,...LEGACY_KEYS])localStorage.removeItem(key);
+      localStorage.setItem(PROGRESS_RESET_KEY,'done');
+      if(Object.keys(previous).length)showToast('Fresh start! Everyone begins again at Reedhaven.');
+      return; // One requested world-wide restart; prior data is not imported.
+    }
     let raw=localStorage.getItem(SAVE_KEY), legacyKey=null;
     if(!raw){for(const key of LEGACY_KEYS){raw=localStorage.getItem(key);if(raw){legacyKey=key;break;}}}
     if(!raw) return;
@@ -743,7 +754,7 @@ function hookFish(){
   G.fishWeight = hookedWeight;
   fightSetup(hookedSpecies, hookedWeight);
   G.reelPhase='calm'; G.reelPhaseTime=REEL_PHASES.calm.duration;
-  G.fishTugTimer=rand(2.4,3.8);G.fishTugWarn=0;G.fishTugDur=0;G.fishTug=0;
+  G.fishTugTimer=rand(2.4,3.8);G.fishTugWarn=0;G.fishTugDur=0;G.fishTug=0;G.nextFishTugDirection=Math.random()<.5?1:-1;
   G.surgeTimer=0; G.surgeDur=0;
   G.yankTimer=0; G.yank=0; G.yankDur=0;
   G.reelHeld = false;
@@ -1137,6 +1148,40 @@ function resumeWorld(){
   if(G.state==='aim')setState('aim');
   updateLockHint();
 }
+const TUTORIAL_SEEN_KEY='reel-deal-tutorial-seen-v1';
+const TUTORIAL_SLIDES=[
+  {art:'⌖',title:'Explore the shore',copy:'Look around with the mouse or by dragging. Walk with WASD; Shift jogs. On touch screens, drag the joystick. Find the pier and your boat.'},
+  {art:'↗',title:'Cast and hook',copy:'Hold click or Space, then release to cast. When the bite cue appears, click or press Space to hook the fish. On touch, tap and hold, then tap the bite.'},
+  {art:'≈',title:'Fight the fish',copy:'Watch the moving tension needle. Green makes reeling progress, yellow pauses it, and either red end loses the fish. Hold/release to move tension; the fish’s rhythm phases change how it pulls.'},
+  {art:'⇢',title:'Read the tug cue',copy:'A bright arrow appears before each sudden fish tug. It points in the direction tension will jump; the one-word label names the movement. Surges and dives alternate.'},
+  {art:'⌂',title:'Travel and grow',copy:'R boards or returns you to your own boat. Q stops or takes the helm; walk the deck while stopped. Level up to unlock islands, catch local fish, upgrade at stalls and sell at markets.'},
+];
+function renderTutorialSlide(){
+  const slide=TUTORIAL_SLIDES[tutorialIndex],card=tutorialOverlay.querySelector('.tutorial-card');
+  $('tutorialArt').textContent=slide.art;$('tutorialTitle').textContent=slide.title;$('tutorialCopy').textContent=slide.copy;
+  setText($('tutorialStep'),`${String(tutorialIndex+1).padStart(2,'0')} / ${String(TUTORIAL_SLIDES.length).padStart(2,'0')}`);
+  $('tutorialProgressFill').style.width=`${(tutorialIndex+1)/TUTORIAL_SLIDES.length*100}%`;
+  $('tutorialBack').disabled=tutorialIndex===0;
+  setText($('tutorialNext'),tutorialIndex===TUTORIAL_SLIDES.length-1?'Start fishing →':'Next →');
+  card.classList.remove('tutorial-enter');void card.offsetWidth;card.classList.add('tutorial-enter');
+}
+function openTutorial(){
+  if(G.state!=='aim')return false;
+  if(helpOpen)closeHelp();tutorialIndex=0;tutorialOpen=true;clearInput();tutorialOverlay.classList.remove('hidden');renderTutorialSlide();focusPanel('tutorialNext');return true;
+}
+function closeTutorial(){
+  if(!tutorialOpen)return;
+  tutorialOpen=false;tutorialOverlay.classList.add('hidden');
+  try{localStorage.setItem(TUTORIAL_SEEN_KEY,'done');}catch{}
+  resumeWorld();
+}
+function stepTutorial(delta){
+  if(!tutorialOpen)return;
+  const next=tutorialIndex+delta;
+  if(next<0)return;
+  if(next>=TUTORIAL_SLIDES.length){closeTutorial();return;}
+  tutorialIndex=next;renderTutorialSlide();
+}
 // Help is an idle-only panel, just like the bag: it cannot consume a bite,
 // leave a stuck movement key, or take focus away from an active fight.
 function openHelp(){
@@ -1435,6 +1480,11 @@ addEventListener('keydown', e => {
     else if(e.code==='Tab')$('restoreHudBtn').focus({preventScroll:true});
     return; // Restoring the UI is never also a cast, walk, view change or panel action.
   }
+  if(tutorialOpen){
+    if(e.code==='Escape'){e.preventDefault();closeTutorial();return;}
+    if(e.code==='ArrowRight'){e.preventDefault();stepTutorial(1);return;}
+    if(e.code==='ArrowLeft'){e.preventDefault();stepTutorial(-1);return;}
+  }
   if(e.code==='Escape'){
     if(bagOpen){closeBag();return;}
     if(helpOpen){closeHelp();return;}
@@ -1445,7 +1495,7 @@ addEventListener('keydown', e => {
     if(drawerOpen){closeLog();return;}
   }
   if(e.code==='Tab'&&(uiBusy()||G.state==='caught')){
-    const panel=bagOpen?bagOverlay:helpOpen?helpOverlay:shopOpen?shopOverlay:marketOpen?marketOverlayEl:chartOpen?$('chartOverlay'):indexOpen?$('indexOverlay'):drawerOpen?logDrawer:catchModal;
+    const panel=tutorialOpen?tutorialOverlay:bagOpen?bagOverlay:helpOpen?helpOverlay:shopOpen?shopOverlay:marketOpen?marketOverlayEl:chartOpen?$('chartOverlay'):indexOpen?$('indexOverlay'):drawerOpen?logDrawer:catchModal;
     const focusable=Array.from(panel.querySelectorAll('button:not(:disabled),select,summary,[tabindex="0"]')).filter(n=>n.tabIndex>=0&&n.getClientRects().length);
     const first=focusable[0],last=focusable[focusable.length-1];
     if(!panel.contains(document.activeElement)){(e.shiftKey?last:first)?.focus();e.preventDefault();}
@@ -1508,8 +1558,9 @@ $('startBtn').addEventListener('click', () => {
   G.yaw=G.onBoat?G.sailing.yaw:islandSpawn(ISLANDS[G.zone]).yaw;G.pitch=-.10;
   applyGear();
   setState('aim');
-  requestLock();
   $('startBtn').blur();
+  let tutorialSeen=false;try{tutorialSeen=localStorage.getItem(TUTORIAL_SEEN_KEY)==='done';}catch{}
+  if(tutorialSeen)requestLock();else openTutorial();
   showToast('Welcome to '+ISLANDS[G.zone].name+'! '+(isTouch?'Tap Board boat for the helm.':'Board boat / R takes you straight to the helm.'));
 });
 $('continueBtn').addEventListener('click', () => {
@@ -1586,6 +1637,11 @@ $('helpControls').innerHTML=HELP_CONTROLS.map(c=>`<div><dt>${c.action}</dt><dd>$
 $('helpKeyboardNote').classList.toggle('hidden',isTouch);
 $('helpBtn').addEventListener('click',openHelp);
 $('helpClose').addEventListener('click',closeHelp);
+$('openTutorialBtn').addEventListener('click',()=>openTutorial());
+$('tutorialBack').addEventListener('click',()=>stepTutorial(-1));
+$('tutorialNext').addEventListener('click',()=>stepTutorial(1));
+$('tutorialSkip').addEventListener('click',closeTutorial);
+tutorialOverlay.addEventListener('click',e=>{if(e.target===tutorialOverlay)closeTutorial();});
 helpOverlay.addEventListener('click',e=>{if(e.target===helpOverlay)closeHelp();});
 $('hideHudBtn').addEventListener('click',()=>setHudHidden(true));
 $('restoreHudBtn').addEventListener('click',()=>setHudHidden(false));
@@ -1794,11 +1850,9 @@ function tick(){
   // sharp, directional lunge. The HUD calls out each tug so faster movement
   // still rewards a reaction rather than an unseen random yank.
   if(G.state === 'reeling'){
-    const r2 = RODS[G.gear.rod], l2 = LINES[G.gear.line];
+    const r2=RODS[G.gear.rod];
     const phaseStep=advanceReelPhase(G.reelPhase,G.reelPhaseTime,dt);
     G.reelPhase=phaseStep.phase;G.reelPhaseTime=phaseStep.timeLeft;
-    const phase=REEL_PHASES[G.reelPhase];
-    const surging=G.reelPhase==='run';
     const fishPull=phasePull(G.reelPhase,G.reelHeld);
     const base=12+G.fishStrength*18;
     const reelInput=G.reelHeld?base*G.rateMul:-12*(0.7+0.3*G.rateMul);
@@ -1806,7 +1860,8 @@ function tick(){
     // edge. Its direction is announced in the HUD for a fair reaction window.
     G.fishTugTimer-=dt;
     if(G.fishTugTimer<=0&&G.fishTugWarn<=0&&G.fishTugDur<=0){
-      G.fishTug=chooseFishTug(G.fishStrength);G.fishTugWarn=.7;G.fishTugTimer=rand(3.8,5.8);
+      G.fishTug=fishTugImpulse(G.fishStrength,G.nextFishTugDirection);G.nextFishTugDirection=alternateTugDirection(G.nextFishTugDirection);
+      G.fishTugWarn=.7;G.fishTugTimer=rand(3.8,5.8);
     }
     const wasTugWarning=G.fishTugWarn>0;
     if(wasTugWarning){
@@ -1818,18 +1873,18 @@ function tick(){
     const tugging=G.fishTugDur>0;
     // Faster response than the previous build, with modest background sway.
     const wobble=rand(-1,1)*(4+G.fishStrength*5);
-    const rate=(reelInput+fishPull*G.rateMul+wobble+(tugging?G.fishTug:0))*1.22;
+    const rate=(reelInput+fishPull*G.rateMul+wobble+(tugging?G.fishTug:0))*1.22*1.15;
     const tugEl=$('fishTugCue'),tugDirection=G.fishTug>0?'surge':'dive';
     tugEl.classList.toggle('show',tugCue);tugEl.classList.toggle('surge',tugDirection==='surge');tugEl.classList.toggle('dive',tugDirection==='dive');
     tugEl.classList.toggle('incoming',wasTugWarning);tugEl.classList.toggle('active',tugging);
-    setText($('fishTugLabel'),wasTugWarning?(G.fishTug>0?'SURGE INCOMING · GET READY':'DIVE INCOMING · GET READY'):(G.fishTug>0?'SURGE! RELEASE':'DIVE! HOLD'));
+    setText($('fishTugLabel'),G.fishTug>0?'SURGE':'DIVE');
 
     G.tension = clamp(G.tension + rate * dt, 0, 100);
     const inSafe = G.tension >= G.bandLo && G.tension <= G.bandHi;
 
     // Green progress depends on reel speed only, NEVER cast charge or distance.
     if(inSafe){
-      G.progress += dt * 20 * 0.85 * r2.reel;
+      G.progress += dt * 20 * 0.85 * r2.reel / 1.45;
       if(Math.random() < dt * 10) sfx.reelTick();
     }
     G.progress = clamp(G.progress, 0, 100);
@@ -1852,15 +1907,6 @@ function tick(){
 
     tensionTrack.classList.toggle('danger', G.tension > G.bandHi);
     tensionTrack.classList.toggle('slack', G.tension < G.bandLo);
-    const warning =
-      G.over > 0.25 ? 'LINE OVERLOADED — ' + Math.round(G.fishWeight) + 'lb ON ' + l2.rating + 'lb LINE' :
-      G.fishTugWarn>0 ? (G.fishTug>0?'SURGE INCOMING — GET READY TO RELEASE':'DIVE INCOMING — GET READY TO HOLD') :
-      G.fishTugDur>0 ? (G.fishTug>0?'FISH SURGE! RELEASE TO EASE TENSION':'FISH DIVING! HOLD TO KEEP TENSION') :
-      G.tension > G.bandHi ? 'TOO TIGHT — RELEASE TO LOWER IT' :
-      G.tension < G.bandLo ? 'TOO SLACK — HOLD TO RAISE IT' :
-      phase.label+' · '+phase.hint+' · '+Math.ceil(G.reelPhaseTime)+'s';
-    setText(reelWarn,warning);
-    reelWarn.classList.toggle('warn',!!warning);
 
     if(hookedFish){
       hookedFish.position.set(
@@ -1880,7 +1926,6 @@ function tick(){
       if(Math.random() < dt * 2.5) spawnSplash(bobberPos, 2, 0.4);
     }
   } else {
-    if(reelWarn.textContent){ reelWarn.textContent = ''; reelWarn.classList.remove('warn'); }
     const tugCueEl=$('fishTugCue');if(tugCueEl.classList.contains('show'))tugCueEl.classList.remove('show','incoming','active');
   }
 
@@ -1970,9 +2015,9 @@ window.__reelDeal = window.__reelLife = {
   G, SPECIES, RODS, LINES, BAITS, ISLANDS, BOATS, RARITY, RARITY_ORDER, ALL_CATCH_SPECIES, LEGACY_SPECIES, formatWeight,roundWeight,shoreLuckPenalty,territoryAt,territoryCenter,TERRITORY_RADIUS,stepBoat,nearbyDock,drawMinimap,islandToWorld,islandSpawn,dockPose,returnBoatPose,
   renderer, scene, camera, world, bobber, bobberPos, water, rodRig, aimMarker, bag,
   get shopOpen(){return shopOpen;},get chartOpen(){return chartOpen;},get indexOpen(){return indexOpen;},
-  get bagOpen(){return bagOpen;},get bagTab(){return bagTab;},get helpOpen(){return helpOpen;},get hudHidden(){return hudHidden;},
+  get bagOpen(){return bagOpen;},get bagTab(){return bagTab;},get helpOpen(){return helpOpen;},get tutorialOpen(){return tutorialOpen;},get hudHidden(){return hudHidden;},get tutorialIndex(){return tutorialIndex;},
   get fishBagOpen(){return bagOpen&&bagTab==='fish';},get heldCatch(){return heldCatch;},get carriedModel(){return carriedModel;},
-  openBag,closeBag,selectBagTab,renderBag,openHelp,closeHelp,setHudHidden,updateContextHint,
+  openBag,closeBag,selectBagTab,renderBag,openHelp,closeHelp,openTutorial,closeTutorial,stepTutorial,setHudHidden,updateContextHint,
   playerModel,boatViewPose,frontCamera,heldFishRig,carriedSize,heldFishSpan,heldFishLayout,firstPersonFishPose,frontViewPose,activeCamera,activeRodTip,toggleView,openFishBag,closeFishBag,holdFish,stowFish,renderFishBag,updatePlayerView,
   openShop,closeShop,openKit,openMarket,closeMarket,buyGear,sellAll,sellFish,
   openChart,closeChart,renderChart,buyBoat,boardBoat,dockBoat,toggleBoatMode,tickBoat,updateBoatUI,openIndex,closeIndex,renderIndex,

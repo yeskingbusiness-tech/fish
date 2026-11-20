@@ -4,8 +4,9 @@ module.exports=async function testModels(browser,url,shots){
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await page.addInitScript(()=>{HTMLCanvasElement.prototype.requestPointerLock=undefined;});
  const frame=()=>page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+ async function startGame(p){await p.click('#startBtn');if(await p.locator('#tutorialOverlay').isVisible())await p.click('#tutorialSkip');}
  try{
-  await page.goto(url,{waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await page.click('#startBtn');
+  await page.goto(url,{waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await startGame(page);
   const models=await page.evaluate(async()=>{
    const a=__reelDeal,T=await import('three'),failures=[],records=[];
    for(const sp of [...a.SPECIES,...a.LEGACY_SPECIES]){

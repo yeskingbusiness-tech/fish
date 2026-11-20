@@ -15,7 +15,7 @@ test('cast modifiers clamp invalid and extreme inputs without touching eligibili
 });
 test('fight progress remains independent of distance, charge and shoreline luck',()=>{
  const text=readFileSync(new URL('../main.js',import.meta.url),'utf8');const start=text.indexOf('// Green progress depends'),end=text.indexOf('G.progress = clamp',start),rule=text.slice(start,end);
- assert.match(rule,/dt \* 20 \* 0\.85 \* r2\.reel/);assert.doesNotMatch(rule,/castDist|castPower|shorePenalty|shoreLuck/);
+ assert.match(rule,/dt \* 20 \* 0\.85 \* r2\.reel \/ 1\.45/);assert.doesNotMatch(rule,/castDist|castPower|shorePenalty|shoreLuck/);
  assert.match(text,/G\.castShorePenalty=shoreLuckPenalty\(G\.px,G\.pz\)/);assert.doesNotMatch(text,/function sailTo|function tickVoyage|skipVoyage/);
 });
 

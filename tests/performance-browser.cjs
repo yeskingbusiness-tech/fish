@@ -7,6 +7,7 @@ module.exports=async function testPerformance(browser,url,shots){
   let page=await browser.newPage({viewport:{width:1280,height:800}});
   const watch=p=>{p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});};
   const frame=(p,count=2)=>p.evaluate(count=>new Promise(resolve=>{function next(){if(--count<=0)resolve();else requestAnimationFrame(next);}requestAnimationFrame(next);}),count);
+  async function startGame(p){await p.click('#startBtn');if(await p.locator('#tutorialOverlay').isVisible())await p.click('#tutorialSkip');}
   async function boot(p){
     watch(p);await p.addInitScript(()=>{HTMLCanvasElement.prototype.requestPointerLock=undefined;});
     await p.goto(url,{waitUntil:'networkidle'});await p.waitForFunction(()=>window.__reelDeal);
@@ -21,7 +22,7 @@ module.exports=async function testPerformance(browser,url,shots){
     for(let y=0;y<height+step;y+=step){await p.locator('#'+id).evaluate((e,y)=>e.scrollTop=y,y);await ready(p,id);}
   }
   try{
-    await boot(page);await page.click('#startBtn');await page.click('#indexBtn');
+    await boot(page);await startGame(page);await page.click('#indexBtn');
     assert.equal(await page.locator('#fishGrid img,[data-anatomy]').count(),0);
     assert.equal(await page.evaluate(()=>__reelDeal.performanceStats.icons.images),0);
     await page.click('#indexClose');
@@ -32,7 +33,7 @@ module.exports=async function testPerformance(browser,url,shots){
         bag:fish,log:fish.slice(0,200),licenses:a.ISLANDS.map(i=>i.id),
         discoveries:Object.fromEntries(a.SPECIES.map(s=>[s.id,{count:2,best:s.maxW,first:''}]))}));
     });
-    await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await page.click('#startBtn');
+    await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await startGame(page);
     assert.equal(await page.locator('#logList .log-item,#logList img,#logList path').count(),0,'closed history stays unbuilt at boot');
     assert.equal(await page.evaluate(()=>__reelDeal.performanceStats.icons.images),0);
     await page.evaluate(()=>{__reelDeal.saveGame();window.perfSave=localStorage.getItem('reel-deal-save-v9');});
@@ -128,7 +129,7 @@ module.exports=async function testPerformance(browser,url,shots){
 
     await page.close();page=await browser.newPage({viewport:{width:960,height:640},deviceScaleFactor:2});await boot(page);
     await page.evaluate(async()=>{const T=await import('three');window.originalDelta=T.Clock.prototype.getDelta;window.qualityDt=1/60;T.Clock.prototype.getDelta=function(){const real=window.originalDelta.call(this);return window.qualityDt??real;};});
-    await page.click('#startBtn');await frame(page,180);
+    await startGame(page);await frame(page,180);
     assert.equal(await page.evaluate(()=>__reelDeal.renderer.getPixelRatio()),1.5);
     await page.evaluate(()=>{__reelDeal.saveGame();window.qualitySave=localStorage.getItem('reel-deal-save-v9');window.qualityDt=1/25;});
     await page.waitForFunction(()=>__reelDeal.renderer.getPixelRatio()<1.5);

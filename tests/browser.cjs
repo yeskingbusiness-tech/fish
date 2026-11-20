@@ -8,7 +8,8 @@ const URL=process.env.TEST_URL||'http://127.0.0.1:3100',shots=process.env.SCREEN
  const browser=await chromium.launch({executablePath,headless:true,args}),errors=[];let page;
  const watch=p=>{p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});};
  const frame=p=>p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
- async function boot(p){watch(p);await p.addInitScript(()=>{HTMLCanvasElement.prototype.requestPointerLock=undefined;});await p.goto(URL,{waitUntil:'networkidle'});await p.waitForFunction(()=>window.__reelDeal);await p.click('#startBtn');}
+ async function startGame(p){await p.click('#startBtn');if(await p.locator('#tutorialOverlay').isVisible())await p.click('#tutorialSkip');}
+ async function boot(p){watch(p);await p.addInitScript(()=>{HTMLCanvasElement.prototype.requestPointerLock=undefined;localStorage.setItem('reel-deal-progress-reset-v2.3.0','done');});await p.goto(URL,{waitUntil:'networkidle'});await p.waitForFunction(()=>window.__reelDeal);await startGame(p);}
  async function vendor(kind,zone=0){await page.evaluate(({kind,zone})=>{const a=__reelDeal;a.closeShop();a.closeMarket();a.closeChart();a.closeIndex();a.closeBag();a.spawnAtIsland(zone);const s=a.world.stalls.find(s=>s.zone===zone&&s.kind===kind);a.G.px=s.approach.x;a.G.pz=s.approach.z;a.G.state='aim';a.updateStats();},{kind,zone});await frame(page);}
  try{
   page=await browser.newPage({viewport:{width:1280,height:820}});await boot(page);
@@ -60,7 +61,7 @@ const URL=process.env.TEST_URL||'http://127.0.0.1:3100',shots=process.env.SCREEN
   assert.equal(hook.id,'clown-killifish');assert.ok(hook.weight>0&&hook.weight<.01);assert.match(hook.text,/Unidentified/);
   const state=await page.evaluate(()=>new Promise(resolve=>{const a=__reelDeal,start=performance.now();function steer(){if(a.G.state!=='reeling'||performance.now()-start>50000){resolve(a.G.state);return;}a.G.reelHeld=a.G.tension<(a.G.bandLo+a.G.bandHi)/2;requestAnimationFrame(steer);}steer();}));assert.equal(state,'caught');
   assert.equal(await page.locator('#catchName').textContent(),'Clown Killifish');assert.ok(await page.evaluate(()=>__reelDeal.bag.at(-1).weight)>0);await page.screenshot({path:`${shots}/tiny-catch.png`});await page.click('#continueBtn');
-  await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await page.click('#startBtn');assert.equal(await page.evaluate(()=>__reelDeal.G.onBoat),true);assert.equal(await page.evaluate(()=>__reelDeal.bag.at(-1).sp.id),'clown-killifish');assert.ok(await page.evaluate(()=>__reelDeal.bag.at(-1).weight)>0);
+  await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await startGame(page);assert.equal(await page.evaluate(()=>__reelDeal.G.onBoat),true);assert.equal(await page.evaluate(()=>__reelDeal.bag.at(-1).sp.id),'clown-killifish');assert.ok(await page.evaluate(()=>__reelDeal.bag.at(-1).weight)>0);
   await vendor('market',4);await page.evaluate(()=>__reelDeal.openMarket());const sale=await page.evaluate(()=>{const a=__reelDeal,n=a.G.coins,v=a.bagTotal();a.sellAll();return {got:a.G.coins-n,expected:v,discovered:!!a.G.discoveries['clown-killifish']};});assert.equal(sale.got,sale.expected);assert.equal(sale.discovered,true);await page.click('#marketClose');
   console.log('PASS real boat-based charge/flight/tiny-fish hook/tension/landing, sailing-position save/reload and accurate market payment');
   // Mobile: layout, touch-style boat controls, minimap and fully selectable map.

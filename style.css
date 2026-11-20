@@ -528,3 +528,23 @@ button:disabled{cursor:not-allowed}.primary-btn:disabled{background:#c8d1ca;colo
 }
 @media(pointer:coarse){.nav-btn.board-boat{min-height:44px}}
 @media(max-height:590px){.equipment-strip{bottom:7px}.shore-luck{bottom:32px}}
+
+/* First-run/replayable How to Play slideshow. */
+.tutorial-overlay{z-index:30;background:rgba(8,26,34,.78);backdrop-filter:blur(3px)}
+.tutorial-card{width:min(560px,calc(100vw - 28px));padding:clamp(20px,5vw,34px);border:4px solid var(--ink);background:linear-gradient(145deg,#fff7df,#eee6cd);box-shadow:10px 10px 0 #091b25b8;text-align:center;}
+.tutorial-card.tutorial-enter{animation:tutorial-in .26s cubic-bezier(.2,.75,.3,1) both}
+@keyframes tutorial-in{from{opacity:.35;transform:translateY(12px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+.tutorial-header{display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left}
+.tutorial-step{font:900 11px 'Courier New',monospace;color:var(--teal-dark);letter-spacing:1px}
+.tutorial-art{width:88px;height:78px;margin:20px auto 14px;display:grid;place-items:center;border:3px solid #173943;background:linear-gradient(145deg,#9de3de,#48a7b2);box-shadow:5px 5px 0 #173943;color:#123945;font:900 47px/1 'Courier New',monospace;animation:tutorial-float 2.8s ease-in-out infinite alternate}
+@keyframes tutorial-float{from{transform:translateY(2px) rotate(-2deg)}to{transform:translateY(-4px) rotate(2deg)}}
+.tutorial-card h2{margin:8px 0 10px;font:900 clamp(22px,5vw,30px)/1.15 'Silkscreen','Courier New',monospace;color:#183c45}
+.tutorial-copy{min-height:66px;max-width:440px;margin:0 auto 18px;font-size:15px;line-height:1.55;color:#31494a}
+.tutorial-progress{height:8px;margin:0 0 20px;border:2px solid #173943;background:#d1cbb7;overflow:hidden}
+#tutorialProgressFill{height:100%;width:20%;background:#32aeb0;transition:width .28s ease-out}
+.tutorial-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:center}
+.tutorial-actions button{min-height:44px;white-space:nowrap}
+.tutorial-actions button:disabled{opacity:.45;cursor:default}
+.tutorial-help-button{margin:0 0 10px;min-height:44px}
+@media(max-width:480px){.tutorial-card{padding:18px}.tutorial-art{width:70px;height:64px;margin:14px auto 10px;font-size:38px}.tutorial-copy{min-height:0;font-size:13px;margin-bottom:14px}.tutorial-actions{gap:6px}.tutorial-actions button{padding-inline:6px;font-size:11px}}
+@media(prefers-reduced-motion:reduce){.tutorial-card.tutorial-enter,.tutorial-art{animation:none}#tutorialProgressFill{transition:none}}

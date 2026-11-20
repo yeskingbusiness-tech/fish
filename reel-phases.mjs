@@ -18,7 +18,7 @@ export function phasePull(phase,reelHeld){
   if(phase==='headshake')return reelHeld?14:1;
   return reelHeld?8:-3;
 }
-export function chooseFishTug(strength,random=Math.random){
-  const direction=random()<0.5?1:-1;
-  return direction*(65+Math.max(0,Number(strength)||0)*16);
+export function fishTugImpulse(strength,direction){
+  return (direction<0?-1:1)*(65+Math.max(0,Number(strength)||0)*16);
 }
+export function alternateTugDirection(direction){return direction<0?1:-1;}

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {advanceReelPhase,REEL_PHASES,phasePull,chooseFishTug} from '../reel-phases.mjs';
+import {advanceReelPhase,REEL_PHASES,phasePull,fishTugImpulse,alternateTugDirection} from '../reel-phases.mjs';
 
 test('readable fight phases advance in a stable calm, run, headshake cycle',()=>{
   let p={phase:'calm',timeLeft:REEL_PHASES.calm.duration};
@@ -26,8 +26,9 @@ test('fish behavior telegraphs distinct hold/release responses',()=>{
   assert.match(REEL_PHASES.run.hint,/RELEASE/);
 });
 
-test('sudden fish tugs can pull tension sharply toward either end and scale slightly with strength',()=>{
-  assert.equal(chooseFishTug(1,()=>0),81);
-  assert.equal(chooseFishTug(1,()=>0.9),-81);
-  assert.equal(chooseFishTug(4,()=>0),129);
+test('fish tugs alternate between dives and surges and both push tension sharply',()=>{
+  let direction=-1;const dive=fishTugImpulse(1,direction);direction=alternateTugDirection(direction);
+  const surge=fishTugImpulse(1,direction);direction=alternateTugDirection(direction);
+  assert.equal(dive,-81);assert.equal(surge,81);assert.equal(direction,-1);
+  assert.equal(fishTugImpulse(4,1),129);
 });

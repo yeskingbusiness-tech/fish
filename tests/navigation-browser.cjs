@@ -4,7 +4,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
 module.exports=async function testNavigation(browser,url,shots){
  const errors=[],watch=p=>{p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});};
  const frame=p=>p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
- async function boot(p){watch(p);await p.addInitScript(()=>{HTMLCanvasElement.prototype.requestPointerLock=undefined;});await p.goto(url,{waitUntil:'networkidle'});await p.waitForFunction(()=>window.__reelDeal);await p.click('#startBtn');}
+ async function startGame(p){await p.click('#startBtn');if(await p.locator('#tutorialOverlay').isVisible())await p.click('#tutorialSkip');}
+ async function boot(p){watch(p);await p.addInitScript(()=>{HTMLCanvasElement.prototype.requestPointerLock=undefined;localStorage.setItem('reel-deal-progress-reset-v2.3.0','done');});await p.goto(url,{waitUntil:'networkidle'});await p.waitForFunction(()=>window.__reelDeal);await startGame(p);}
  async function capture(p,name){await p.evaluate(()=>document.getElementById('toast').classList.add('hidden'));await p.screenshot({path:`${shots}/${name}.png`});}
  const page=await browser.newPage({viewport:{width:1280,height:820}});
  try{
@@ -34,7 +35,7 @@ module.exports=async function testNavigation(browser,url,shots){
   // A waypoint is never a teleport destination. Even if the player is elsewhere,
   // Return to boat must move them to the old berth, not bring that boat to them.
   await page.evaluate(()=>{const a=__reelDeal;a.G.xp=a.xpForLevel(400);a.G.licenses=a.ISLANDS.map(i=>i.id);a.spawnAtIsland(1);a.updateStats();a.updateBoatUI();a.saveGame();});
-  await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await page.click('#startBtn');await frame(page);
+  await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await startGame(page);await frame(page);
   assert.deepEqual(await page.evaluate(()=>({boat:__reelDeal.G.boatPosition,sailing:__reelDeal.G.sailing,aboard:__reelDeal.G.onBoat,zone:__reelDeal.G.zone})),{boat:parked,sailing:null,aboard:false,zone:1});
   assert.deepEqual(await page.evaluate(()=>({x:__reelDeal.world.boat.position.x,z:__reelDeal.world.boat.position.z,yaw:__reelDeal.world.boat.rotation.y})),parked);
   await page.keyboard.press('m');await page.locator('[data-destination="19"]').click();await page.click('#waypointBtn');await page.keyboard.press('r');assert.equal(await page.evaluate(()=>__reelDeal.G.onBoat),false,'map focus must block a return shortcut');await page.keyboard.press('Escape');
@@ -87,10 +88,10 @@ module.exports=async function testNavigation(browser,url,shots){
    const raw={version:9,zone:id,boat:b.id,ownedBoats:[0,b.id],xp:a.xpForLevel(275),coins:87654321,caught:11,completedIslands:[0,1],licenses:[0,1,id],owned:{rod:[0,31],line:[0,31],bait:[0,31]},gear:{rod:31,line:31,bait:31},bag:[{id:a.SPECIES[80].id,w:a.SPECIES[80].minW}],sailing:{x:p.x+14+b.size*4,z:p.z-6-b.size*2,yaw:.3}};
    a.G.state='menu';localStorage.setItem('reel-deal-save-v9',JSON.stringify(raw));return raw;
   });
-  await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await page.click('#startBtn');
+  await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await startGame(page);
   const migrated=await page.evaluate(async()=>{const a=__reelDeal,n=await import('./navigation.mjs?v=44');a.saveGame();return {zone:a.G.zone,aboard:a.G.onBoat,boat:a.G.boat,coins:a.G.coins,xp:a.G.xp,gear:a.G.gear,earned:a.G.completedIslands,weight:a.bag[0].weight,valid:n.validBoatPose(a.G.sailing,a.BOATS[a.G.boat],a.G),save:JSON.parse(localStorage.getItem('reel-deal-save-v9'))};});
   assert.equal(migrated.zone,15);assert.equal(migrated.aboard,true);assert.equal(migrated.boat,6);assert.equal(migrated.coins,historic.coins);assert.equal(migrated.xp,historic.xp);assert.deepEqual(migrated.gear,historic.gear);assert.deepEqual(migrated.earned,historic.completedIslands);assert.equal(migrated.weight,historic.bag[0].w);assert.equal(migrated.valid,true);assert.equal(migrated.save.worldLayout,2);
-  await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await page.click('#startBtn');
+  await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await startGame(page);
   assert.deepEqual(await page.evaluate(()=>{__reelDeal.saveGame();return JSON.parse(localStorage.getItem('reel-deal-save-v9'));}),migrated.save);
   console.log('PASS: real v41-grid save migration and idempotent reload, preserving boating state, coins, XP, ownership, exact tiny weight and permanent bonuses');
  }catch(e){if(!page.isClosed())await capture(page,'navigation-failure');throw e;}finally{await page.close();}

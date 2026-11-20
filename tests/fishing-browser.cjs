@@ -2,9 +2,10 @@ const assert=require('node:assert/strict');
 module.exports=async function testFishing(browser,url,shots){
  const page=await browser.newPage({viewport:{width:1100,height:760}}),errors=[];
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ const startGame=async()=>{await page.click('#startBtn');if(await page.locator('#tutorialOverlay').isVisible())await page.click('#tutorialSkip');};
  await page.addInitScript(()=>{HTMLCanvasElement.prototype.requestPointerLock=undefined;});
  try{
-  await page.goto(url,{waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await page.click('#startBtn');
+  await page.goto(url,{waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await startGame();
   // Drive the real frame loop with a deterministic delta, not a copied equation.
   const result=await page.evaluate(async()=>{
    const a=__reelDeal,T=await import('three'),oldDelta=T.Clock.prototype.getDelta,oldRandom=Math.random,records=[];let visualCue=null;
@@ -19,7 +20,7 @@ module.exports=async function testFishing(browser,url,shots){
       const pre={visible:cue.classList.contains('show')&&getComputedStyle(cue).display!=='none',incoming:cue.classList.contains('incoming'),animated:getComputedStyle(cue).animationName==='tug-flash',label:document.getElementById('fishTugLabel').textContent};
       a.G.fishTugWarn=.02;await frame();await frame();
       const live={visible:cue.classList.contains('show'),active:cue.classList.contains('active'),animated:getComputedStyle(cue).animationName==='tug-jolt',label:document.getElementById('fishTugLabel').textContent};
-      if(!pre.visible||!pre.incoming||!pre.animated||!pre.label.includes('INCOMING')||!live.visible||!live.active||!live.animated||!live.label.includes('HOLD'))throw Error('fish counter-move needs visible animated advance cue and live direction');
+      if(!pre.visible||!pre.incoming||!pre.animated||pre.label!=='DIVE'||!live.visible||!live.active||!live.animated||live.label!=='DIVE')throw Error('fish counter-move needs a visible animated one-word advance cue and live direction');
       visualCue={warning:pre,tug:live};a.G.fishTugTimer=10000;a.G.fishTugWarn=0;a.G.fishTugDur=0;a.G.fishTug=0;a.G.tension=45;a.G.progress=20;
      }
      await frame();records.push(a.G.progress-20);
@@ -28,7 +29,7 @@ module.exports=async function testFishing(browser,url,shots){
      a.triggerBite();a.hookFish();a.G.tension=93;a.G.reelHeld=true;await frame();if(a.G.state!=='aim')throw Error('tight did not lose');
     }
    }finally{Math.random=oldRandom;T.Clock.prototype.getDelta=oldDelta;}
-   return {records,expected:17*.02*a.RODS[1].reel,visualCue};
+   return {records,expected:17*.02*a.RODS[1].reel/1.45,visualCue};
   });for(const n of result.records)assert.ok(Math.abs(n-result.expected)<1e-8);
   console.log('PASS live green progress at all cast powers/distances, yellow stalls, both red ends lose immediately');
   const awards=await page.evaluate(()=>{
@@ -45,7 +46,7 @@ module.exports=async function testFishing(browser,url,shots){
    const raw={version:8,coins:54321,xp:123456,caught:120,boat:5,ownedBoats:[0,5],zone:5,visited:[0,1,2,3,4,5],licenses:[0,1,2,3,4,5],owned:{rod:[0,23],line:[0,23],bait:[0,23]},gear:{rod:23,line:23,bait:23},bag:fish.map(s=>({n:s.name,w:s.maxW})),log:fish.map(s=>({n:s.name,w:s.maxW})),discoveries:Object.fromEntries(fish.map(s=>[s.id,{count:1,best:s.maxW,first:'2026-11-13'}]))};
    a.G.state='menu'; // Allow the explicit historical fixture to survive pagehide.
    localStorage.removeItem('reel-deal-save-v9');localStorage.setItem('reel-deal-save-v8',JSON.stringify(raw));return raw;
-  });await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await page.click('#startBtn');
+  });await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await startGame();
   const migrated=await page.evaluate(()=>{const a=__reelDeal;return {coins:a.G.coins,xp:a.G.xp,zone:a.G.zone,gear:a.G.gear,bag:a.bag.map(e=>({name:e.sp.name,w:e.weight,legacy:e.sp.legacy})),bonus:a.collectionCoinBonus(a.G.discoveries,a.G.completedIslands),backup:!!localStorage.getItem('reel-deal-save-v8'),version:JSON.parse(localStorage.getItem('reel-deal-save-v9')).version};});
   assert.equal(migrated.coins,old.coins);assert.equal(migrated.xp,old.xp);assert.equal(migrated.zone,15);assert.deepEqual(migrated.gear,{rod:31,line:31,bait:31});assert.equal(migrated.bonus,30);assert.equal(migrated.backup,true);assert.equal(migrated.version,9);assert.deepEqual(migrated.bag.map(e=>({n:e.name,w:e.w})),old.bag);assert.ok(migrated.bag.every(e=>e.legacy));
   await page.click('#indexBtn');await page.locator('[data-index-island="-2"]').click();assert.equal(await page.locator('.fish-entry.discovered').count(),120);await page.click('#indexClose');
