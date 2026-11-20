@@ -12,7 +12,7 @@ const rand  = (a,b) => a + Math.random() * (b-a);
 const hexc  = c => '#' + c.toString(16).padStart(6,'0');
 const fmt   = n => n.toLocaleString('en-US');
 
-import { advanceReelPhase, REEL_PHASES, phasePull } from './reel-phases.mjs?v=42';
+import { advanceReelPhase, REEL_PHASES, phasePull, chooseFishTug } from './reel-phases.mjs?v=42';
 import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow, sortFishIndex, castLuckModifier, effectiveLuck,
   eligibleSpecies, roundWeight, formatWeight, GEAR_PER_ISLAND, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=42';
 import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, hasIslandLicense, travelRequirement,
@@ -290,6 +290,7 @@ const G = {
   tension:15, progress:0, fishStrength:0.3,
   surgeTimer:0, surgeDur:0, yankTimer:0, yank:0, yankDur:0, reelHeld:false,
   reelPhase:'calm', reelPhaseTime:3.2,
+  fishTugTimer:0, fishTugDur:0, fishTug:0,
   time:0, rodSwing:0, bobDip:0,
   castT:0, castDur:1, biteWindow:0, waitTimer:4,
   caughtAnim:0,
@@ -742,6 +743,7 @@ function hookFish(){
   G.fishWeight = hookedWeight;
   fightSetup(hookedSpecies, hookedWeight);
   G.reelPhase='calm'; G.reelPhaseTime=REEL_PHASES.calm.duration;
+  G.fishTugTimer=rand(2.4,3.8);G.fishTugDur=0;G.fishTug=0;
   G.surgeTimer=0; G.surgeDur=0;
   G.yankTimer=0; G.yank=0; G.yankDur=0;
   G.reelHeld = false;
@@ -1781,9 +1783,9 @@ function tick(){
   }
 
   // ---- readable-phase reeling minigame ----
-  // The fish cycles through a calm window, a run, and a headshake. The HUD
-  // names and previews each behavior; use the same hold/release control to
-  // react, with no hidden random yanks deciding the fight.
+  // The fish cycles through readable phases and occasionally commits to a
+  // sharp, directional lunge. The HUD calls out each tug so faster movement
+  // still rewards a reaction rather than an unseen random yank.
   if(G.state === 'reeling'){
     const r2 = RODS[G.gear.rod], l2 = LINES[G.gear.line];
     const phaseStep=advanceReelPhase(G.reelPhase,G.reelPhaseTime,dt);
@@ -1793,10 +1795,18 @@ function tick(){
     const fishPull=phasePull(G.reelPhase,G.reelHeld);
     const base=12+G.fishStrength*18;
     const reelInput=G.reelHeld?base*G.rateMul:-12*(0.7+0.3*G.rateMul);
-    // Gentle continuous motion keeps the line alive, while phase behavior is
-    // the predictable, dominant force the player learns to read.
-    const wobble=rand(-1,1)*(3+G.fishStrength*4);
-    const rate=reelInput+fishPull*G.rateMul+wobble;
+    // A short fish-driven tug periodically kicks tension toward either red
+    // edge. Its direction is announced in the HUD for a fair reaction window.
+    G.fishTugTimer-=dt;
+    if(G.fishTugTimer<=0&&G.fishTugDur<=0){
+      G.fishTug=chooseFishTug(G.fishStrength);
+      G.fishTugDur=0.38;G.fishTugTimer=rand(3.2,5.2);
+    }
+    if(G.fishTugDur>0)G.fishTugDur=Math.max(0,G.fishTugDur-dt);
+    else G.fishTug=0;
+    // Faster response than the previous build, with modest background sway.
+    const wobble=rand(-1,1)*(4+G.fishStrength*5);
+    const rate=(reelInput+fishPull*G.rateMul+wobble+G.fishTug)*1.3;
 
     G.tension = clamp(G.tension + rate * dt, 0, 100);
     const inSafe = G.tension >= G.bandLo && G.tension <= G.bandHi;
@@ -1828,6 +1838,7 @@ function tick(){
     tensionTrack.classList.toggle('slack', G.tension < G.bandLo);
     const warning =
       G.over > 0.25 ? 'LINE OVERLOADED — ' + Math.round(G.fishWeight) + 'lb ON ' + l2.rating + 'lb LINE' :
+      G.fishTugDur>0 ? (G.fishTug>0?'FISH SURGE! RELEASE TO EASE TENSION':'FISH DIVING! HOLD TO KEEP TENSION') :
       G.tension > G.bandHi ? 'TOO TIGHT — RELEASE TO LOWER IT' :
       G.tension < G.bandLo ? 'TOO SLACK — HOLD TO RAISE IT' :
       phase.label+' · '+phase.hint+' · '+Math.ceil(G.reelPhaseTime)+'s';

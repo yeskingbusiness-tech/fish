@@ -48,7 +48,7 @@
     <div id="reelUI" class="reel-ui hidden">
       <div class="reel-head"><span id="reelFishName">Fish on!</span><span id="reelPct">0%</span></div>
       <div class="reel-bars"><div class="bar-wrap"><label>LINE TENSION</label><div class="tension-track" id="tensionTrack"><div id="tensionSafe" class="tension-safe"></div><div id="tensionNeedle"></div></div></div><div class="bar-wrap"><label>REEL PROGRESS</label><div class="progress-track"><div id="progressFill"></div></div></div></div>
-      <div id="reelWarn" class="reel-warn" role="status" aria-live="polite"></div><p class="reel-hint">Watch the fish: calm = hold · run/headshake = release<br><span>Green reels · yellow stalls · red loses the fish</span></p>
+      <div id="reelWarn" class="reel-warn" role="status" aria-live="polite"></div><p class="reel-hint">Calm: hold · run/headshake: release<br><span>React to surges/dive cues · red loses the fish</span></p>
     </div>
     <button id="shopBtn" class="shop-btn hidden">Rod Works <b>E</b></button>
     <button id="marketBtn" class="shop-btn market hidden">Fish Market <b>E</b></button>
@@ -86,7 +86,7 @@
   <div id="helpOverlay" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
     <div class="shop-card help-card"><div class="shop-head"><div><span id="helpPlatform" class="eyebrow">DESKTOP CONTROLS</span><h2 id="helpTitle">A little help.</h2></div><button id="helpClose" class="shop-close" aria-label="Close help">✕</button></div>
       <div id="helpBody" class="help-body" tabindex="0">
-        <p class="help-intro">Read the fish’s rhythm: during <b>calm water</b>, hold to reel. When it runs or shakes its head, <b>release</b> to ease tension. Keep the needle in green to make progress; yellow stalls and either red end loses the fish. The HUD calls out each phase and counts down its change.</p>
+        <p class="help-intro">Read the fish’s rhythm: during <b>calm water</b>, hold to reel. When it runs or shakes its head, <b>release</b> to ease tension. Sudden surges and dives are called out—release for a surge, hold against a dive. Keep the needle in green to make progress; yellow stalls and either red end loses the fish. The HUD counts down each phase.</p>
         <dl id="helpControls" class="help-controls"></dl>
         <p class="help-note"><b>Boating:</b> tap Board boat / Return to boat, or press R, from anywhere when not fishing. You return to your own parked boat; it never travels to a selected island for you. W/S accelerates/reverses; A/D steers (or use the joystick). Q stops to fish or resumes driving. E docks when nearby. Any boat can enter any level-unlocked territory; locked territories have invisible circular barriers. Click the minimap or M for the full chart and a waypoint.</p><p class="help-note"><b>Shore luck:</b> −95% within 6m of shore, gradually recovering to full luck at 48m. Luck is measured at your position when you release the cast, not the bobber—take the boat offshore. Between territories, cruise onward to find fishing waters.</p><p class="help-note">Hold fish from Bag → Fish; they stay there until sold at a market. Equip owned tackle anywhere. New gear is sold at local stalls.</p>
         <p class="help-note">For a clean screenshot, frame your shot, then choose <b>Hide HUD</b>. Tap or click anywhere to return—your first tap only restores the interface.</p>
