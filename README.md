@@ -65,7 +65,9 @@ Each has **20 numbered entries, two rods, two lines and two baits**. That's **40
 | 19 | Eternity's Reach | 350 | Ancient cosmic ocean · enormous hourglass ruin |
 | 20 | Origin's End | 400 | Primordial ocean · first spring and concentric terraces |
 
-Landform shapes, elevations, plants, landmarks, water/sky palettes and local building details differ. **Every island has a distinct authored shop arrangement**: docking orientation/berth side, pier offsets, paths, trees, lamps and landmark placement also vary. Rendering, walking/boat collision, counter approaches, spawn points and map footprints use the same orthogonal transforms. Paths connect each counter to the pier without running through another stall. Roofs use local craft: timber, vines, coral, snow/icicles, forge chimneys or stone temple details.
+Each island now has its own stepped voxel landform profile as well as its landmark: Reedhaven reedbanks; Pinewater split stream-knolls; Ironwood tiered falls; Brackwater mangrove pools; Sunscar a ringed lagoon; Coralreach branching reef towers; Breaker broken sea cliffs; Stormbreak basalt blades; Thornwild braided delta; Emberforge a caldera; Frostfall fractured ice shelves; Skyglass twin fjord walls; Shattered a canyon cleft; Leviathan's fossil ribs; Ashen chimney fields; Moontide temple terraces; Starfall a meteor crater; Null a split rift; Eternity pinched strata; and Origin concentric spring terraces. Big landforms are built from shrinking, offset cuboid layers—not smooth meshes or giant plain boxes. Water channels sit flush with the terrain, and all island scenery is merged into existing batched meshes.
+
+**Every island has a distinct authored shop arrangement** too: docking orientation/berth side, pier offsets, paths, trees, lamps and landmark placement vary. Rendering, walking/boat collision, counter approaches, spawn points and map footprints use the same orthogonal transforms. Paths connect each counter to the pier without running through another stall. Roofs use local craft: timber, vines, coral, snow/icicles, forge chimneys or stone temple details.
 
 ## Collection and fishing
 
@@ -151,11 +153,11 @@ CHROMIUM_PATH=/path/to/chrome npm run test:browser
 # TEST_URL can override http://127.0.0.1:3100.
 ```
 
-**133 Node tests** cover the full catalog, rarity availability, 800 bait/territory combinations, precise weights, reward multipliers and the 20% leveling boost, level gates, 40-tier equipment, save/map migration, transformed village plans and walkable boat decks, navigable routes around locked cylinders, persistent boat positions, swept boat collisions, shore luck, low helm/trophy camera fitting, coplanar face removal and performance utilities.
+**134 Node tests** cover the full catalog, rarity availability, 800 bait/territory combinations, precise weights, reward multipliers and the 20% leveling boost, level gates, 40-tier equipment, save/map migration, transformed village plans and walkable boat decks, navigable routes around locked cylinders, persistent boat positions, swept boat collisions, shore luck, low helm/trophy camera fitting, coplanar face removal and performance utilities.
 
 The current browser runner replaces the superseded automatic-voyage/four-tier fixtures. It exercises all **60 local equipment shops** plus every market/boatyard approach, full pier-to-counter walking connectivity, **160 boat/island berths**, exact purchases, all eight full-size hulls in the low camera, every level boundary, manual throttle/steering/docking, return-to-boat/save/reload, mobile controls, non-overlapping irregular chart targets and waypoints, real tiny-fish catches, red/yellow/green fights, one-time rewards, original-save migration, all **520 current/legacy GPU models**, all **400 production holding/camera paths**, twenty environment captures, accessible UI and continuous renderer adaptation.
 
-Current screenshots and audit logs go to `.artifacts/navigation-v42/` (ignored by Git). In the twenty environment captures, the maximum was **28 draw calls / 29,212 triangles**; the expanded sea does not add mesh subdivisions. The idle HUD check still makes zero DOM mutations or empty-particle uploads over 30 frames. Software-GPU measurements are regression checks, not an FPS promise for every device.
+Current screenshots and audit logs go to `.artifacts/navigation-v42/` (ignored by Git). In the twenty environment captures, the maximum was **28 draw calls / 29,916 triangles**; the expanded sea does not add mesh subdivisions. The idle HUD check still makes zero DOM mutations or empty-particle uploads over 30 frames. Software-GPU measurements are regression checks, not an FPS promise for every device.
 
 ## Rebalancing proposals
 

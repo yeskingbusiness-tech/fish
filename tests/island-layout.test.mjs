@@ -6,6 +6,10 @@ import { LAND_RECTS } from '../navigation.mjs';
 import { villagePathTiles } from '../village-paths.mjs';
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-9,`${a} != ${b}`);
 
+test('all twenty islands have distinct authored terrain profiles as well as distinct village plans',()=>{
+ assert.equal(new Set(ISLANDS.map(i=>i.theme)).size,20);
+ assert.equal(new Set(ISLANDS.map(i=>JSON.stringify(i.landforms))).size,20);
+});
 test('all twenty authored village plans differ in placement, not just palette or rotation',()=>{
  assert.equal(WORLD_LAYOUT_VERSION,2);assert.equal(ISLAND_LAYOUTS.length,20);
  assert.equal(new Set(ISLAND_LAYOUTS.map(l=>JSON.stringify(l.stalls))).size,20);

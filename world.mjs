@@ -148,9 +148,18 @@ export function createWorld(scene){
     add(58,.5,46,0,.25,34,zone.sand);
     add(54,.45,43,0,.725,34.5,zone.land);
     for(const f of zone.landforms){
-      add(f.w,f.h,f.d,f.x,f.h/2-.8,f.z,zone.rock);
-      add(f.w*.84,.4,f.d*.84,f.x,f.h-.59,f.z,zone.land);
-      if(f.h>6)add(f.w*.5,f.h*.34,f.d*.52,f.x,f.h*1.16-.8,f.z,zone.theme==='fjord'||zone.theme==='ice'?0xdcebf0:zone.rock);
+      // Build landforms as stacked, shrinking strata instead of a single
+      // giant cuboid. Offset alternate tiers for a fractured voxel silhouette.
+      const tiers=Math.max(2,Math.ceil(f.h/2.6)),th=f.h/tiers;
+      for(let k=0;k<tiers;k++){
+        const taper=1-k*.105,offset=k%2?(zone.id%2?.38:-.38):0;
+        const layerColor=k===tiers-1?zone.land:k===0?zone.sand:zone.rock;
+        add(f.w*taper,th+.03,f.d*taper,f.x+offset,.8+k*th+th/2,f.z+offset*.5,layerColor);
+      }
+      if(f.h>7){
+        const cap=zone.theme==='ice'||zone.theme==='fjord'?0xdcebf0:zone.theme==='volcanic'||zone.theme==='vents'?0x4b4d59:zone.accent;
+        add(f.w*.32,Math.min(3,f.h*.14),f.d*.3,f.x+zone.id%3-1,.8+f.h+.25,f.z,cap);
+      }
     }
     // A connected peninsula carries each island's signature landmark.
     add(11,2.9,18,layout.landmarkX,-1.05,8,zone.rock);
@@ -334,13 +343,113 @@ export function createWorld(scene){
       for(const b of localColliders.slice(colliderStart))b.x=-b.x;
       for(const child of group.children.slice(childStart)){child.position.x=-child.position.x;child.rotation.y=-child.rotation.y;}
     }
-    // Distinct ridge behind each village, stepped instead of polygonal terrain.
-    for(let k=0;k<4;k++){
-      const x=-22+k*14+((zone.id+k)%3-1),h=4+((zone.id+k*2)%4)*1.7;
-      add(13,h,11,x,.8+h/2,54,zone.rock);
-      add(10,h*.65,8,x,.8+h*1.3,54,zone.land);
-      add(6,h*.3,5,x,.8+h*1.72,54,zone.theme==='ice'?0xf2f6ef:zone.land);
-      block(x,53,5.6,.8+h*1.9);
+    // Twenty authored block-terrain silhouettes. The village remains level
+    // and walkable; the island's back-country now reads as its own geology,
+    // not a shared four-lump ridge recolored per destination.
+    const tadd=(w,h,d,x,y,z,c,more={})=>add(w,h,d,x,y,z-8,c,more);
+    const tglow=(w,h,d,x,y,z,c)=>glow(w,h,d,x,y,z-8,c);
+    const mesa=(x,z,w,d,h,color=zone.rock)=>{
+      z-=8; // pull each authored landform closer to the village/pier view
+      // Submerged footings make offshore shelves read as solid land, not
+      // floating voxel stacks at the waterline.
+      add(w*1.08,1.8,d*1.08,x,-.1,z,zone.rock);
+      const tiers=Math.max(2,Math.ceil(h/2.4)),th=h/tiers;
+      for(let k=0;k<tiers;k++){
+        const shrink=k===0?0:.12*k;
+        add(w*(1-shrink),th+.04,d*(1-shrink),x,.8+k*th+th/2,z,k===tiers-1?zone.land:color);
+      }
+    };
+    const pillar=(x,z,w,d,h,color=zone.rock)=>{
+      z-=8;
+      add(w*1.35,1.9,d*1.35,x,-.05,z,zone.rock);
+      const tiers=Math.max(2,Math.ceil(h/2.6)),th=h/tiers;
+      for(let k=0;k<tiers;k++)add(w*(1-k*.11),th+.03,d*(1-k*.1),x,.8+k*th+th/2,z,k===tiers-1?zone.accent:color);
+    };
+    const waterTile=(x,z,w,d,color=zone.water)=>add(w,.06,d,x,.92,z-8,color);
+    if(zone.theme==='harbor'){
+      // Reed beds, a low horseshoe bank and lily-pad shelves around a pool.
+      mesa(-20,58,18,7,2.8,zone.rock);mesa(19,60,15,6,2.2,zone.rock);waterTile(0,61,16,8,0x3b9b9b);
+      for(let k=0;k<9;k++){const x=-25+k*6;tadd(.22,1.3+(k%3)*.35,.22,x,1.45,52+(k%2)*3,0x718c4a);tadd(.35,.22,.35,x,2.2+(k%3)*.35,52+(k%2)*3,0xd3be68);}
+    }else if(zone.theme==='forest'){
+      // Two wooded knolls split by a stepped stream cut.
+      mesa(-18,61,18,15,10);mesa(18,61,20,17,14);for(let k=0;k<5;k++)waterTile(-2+k,58+k*1.3,2.2,9,0x4c9ca1);
+      for(const x of [-24,-17,17,24])pillar(x,56,1.4,1.4,7,0x466d54);
+    }else if(zone.theme==='river'){
+      // A blocky escarpment with three separated falls pouring into a basin.
+      mesa(0,63,46,15,16);waterTile(-14,56,4,11,0x76c8d3);waterTile(0,56,4,13,0x8bd9de);waterTile(14,56,4,10,0x6db9c7);
+      for(const x of [-14,0,14]){tadd(5,.35,4,x,.92,49,0xc5e0dd);pillar(x,68,6,4,5,zone.rock);}
+    }else if(zone.theme==='swamp'){
+      // Silt islands and cypress-root columns divide black-green pools.
+      for(const x of [-22,-11,0,11,22]){mesa(x,62,8,9,2.2,0x596b4e);for(const dx of [-2,0,2])tadd(.4,4+(dx===0?2:0),.4,x+dx,2.8,58,0x5d6344);}
+      waterTile(-12,62,7,13,0x465c4d);waterTile(12,62,7,13,0x465c4d);tadd(1,7,1,0,4.3,70,0x716c4b,{rz:.18});
+    }else if(zone.theme==='tropical'){
+      // A stepped coral-sand atoll encircles a luminous lagoon opening.
+      for(let k=0;k<8;k++){const a=k*Math.PI/4,x=Math.cos(a)*20,z=61+Math.sin(a)*10;mesa(x,z,9,7,2.3,zone.sand);}
+      waterTile(0,61,19,13,0x39bdba);for(const x of [-27,27])pillar(x,62,3,3,8,0xd8c18f);
+    }else if(zone.theme==='coral'){
+      // Branching reef towers with arms, fans and a channel through the reef.
+      for(let k=0;k<7;k++){const x=-25+k*8,h=6+(k%3)*3;pillar(x,61,1.5,1.5,h,[0xdd9cab,0xd9c292,0x8cc9be][k%3]);for(const side of [-1,1])tadd(.8,1.2,.9,x+side*1.5,h*.55+1,61,[0xe2b5a8,0x91c8ba,0xf1d6a4][k%3],{rz:side*.35});}
+      waterTile(0,62,6,18,0x35bec2);for(let k=0;k<5;k++)tadd(2,1.1,2,-18+k*9,1.35,72,0xe5cbb6);
+    }else if(zone.theme==='coast'){
+      // Broken stepped sea cliffs, detached stacks and a squared natural arch.
+      mesa(-19,62,14,12,15);mesa(19,62,14,12,11);pillar(-28,55,5,5,12);pillar(28,56,5,5,16);
+      tadd(5,2.5,4,-19,15.5,62,zone.rock);tadd(5,2.5,4,19,11.5,62,zone.rock);tadd(42,3.2,4,0,19,62,zone.rock);
+    }else if(zone.theme==='storm'){
+      // Lightning-split basalt blades: alternating heights and broken tops.
+      for(let k=0;k<9;k++){const x=-28+k*7,h=7+(k*7%5)*2.5;pillar(x,61+(k%2)*4,3.5,4,h,k%2?0x586b79:zone.rock);tadd(1.1,1.2,1.1,x+1,h+1,61+(k%2)*4,0xb7c5bf);}
+      mesa(0,72,14,5,3,0x455b70);
+    }else if(zone.theme==='jungle'){
+      // Braided delta bars, with three ramps feeding a split-channel valley.
+      for(let arm=0;arm<3;arm++){const x=-18+arm*18;for(let k=0;k<3;k++)mesa(x+(k-1)*2,54+k*7,11,7,3+k, k%2?0x567d57:0x71845c);}
+      waterTile(-8,65,5,18,0x4ca99a);waterTile(9,65,5,18,0x3b9186);
+      for(const x of [-25,0,25])pillar(x,72,2,2,11,0x486d4c);
+    }else if(zone.theme==='volcanic'){
+      // A broken caldera ring surrounds a sunken lava lake and basalt teeth.
+      for(let k=0;k<10;k++){const a=k*Math.PI/5,x=Math.cos(a)*19,z=62+Math.sin(a)*13;mesa(x,z,9,7,7+(k%3)*2,0x4a4e5c);}
+      waterTile(0,62,16,11,0xf07848);tglow(16,.18,11,0,1.08,62,0xffa15c);
+      for(let k=0;k<5;k++)pillar(-22+k*11,75,1.5,1.5,11+(k%2)*4,0x51515e);
+    }else if(zone.theme==='ice'){
+      // Layered blue ice floes, fractured ridges and clear crevasse stripes.
+      for(let k=0;k<7;k++){const x=-27+k*9;mesa(x,62,12,18,4+(k%3)*3,k%2?0x91bfca:0xaed8e0);tadd(1.2,7+k%3*2,1.1,x,4.3+k%3*1.3,67,0xc6edf0);}
+      waterTile(0,62,3,22,0x3987a8);waterTile(-15,60,2,14,0x63b6d0);waterTile(15,60,2,14,0x63b6d0);
+    }else if(zone.theme==='fjord'){
+      // Opposing glacial walls climb in broad steps around a narrow inlet.
+      for(let k=0;k<7;k++){const h=12+(k%3)*7;mesa(-25+k*1.2,64,12,25,h,0x729bad);mesa(25-k*1.2,64,12,25,h+4,0x85b4c6);}
+      waterTile(0,64,10,28,0x2c91b2);for(let k=0;k<4;k++)pillar(-29+k*19,50,4,3,8+k%2*4,0xd2edf0);
+    }else if(zone.theme==='canyon'){
+      // Twin mesa walls drop into a visibly dark square-bottomed chasm.
+      mesa(-21,64,12,25,19,0x586c7a);mesa(21,64,12,25,22,0x74838d);
+      for(let k=0;k<6;k++)tadd(2.2,2.2,2.2,-20+k*8,1.1,64,0x263d50);waterTile(0,64,8,28,0x204b60);
+      for(let k=0;k<5;k++)pillar(-24+k*12,50,3,3,9+(k%2)*5,0x647d8a);
+    }else if(zone.theme==='wreck'){
+      // A line of fossil ribs rises from a layered seabed and broken hull.
+      mesa(0,68,45,15,6,0x76776d);for(let k=0;k<8;k++){const x=-24+k*7;tadd(.65,9+(k%3)*2,.8,x,5.5,62,0xd0c7aa,{rz:(k%2?1:-1)*.16});tadd(4,.75,.8,x,10,66,0xe1dbc5);}
+      tadd(15,3,26,0,3.3,67,0x675f53,{rz:.12});for(const x of [-24,24])pillar(x,72,2,2,12,0xbeb8a5);
+    }else if(zone.theme==='vents'){
+      // Hydrothermal chimney field with tiered cones and suspended smoke caps.
+      for(let k=0;k<9;k++){const x=-28+(k%3)*14,z=57+Math.floor(k/3)*9,h=7+(k*5%4)*2;mesa(x,z,5,5,h,0x4e5260);tadd(1.1,h+2,1.1,x,h+1.8,z,0x957e69);tglow(2,.18,2,x,h+2.5,z,0xf4ab6a);tadd(2.4,1.2,2.4,x,h+6,z,0x777684);}
+      waterTile(0,66,18,10,0x6a6f83);
+    }else if(zone.theme==='lunar'){
+      // Concentric temple terraces step down to a moonlit square basin.
+      mesa(0,65,40,28,5,0x6a688d);mesa(0,65,30,20,5,0x8884ad);mesa(0,65,20,12,4,0xa9a3c4);waterTile(0,65,8,5,0xb4c2e1);
+      for(let k=0;k<8;k++){const a=k*Math.PI/4,x=Math.cos(a)*22,z=65+Math.sin(a)*15;pillar(x,z,2.5,2.5,12,0x726e99);}
+    }else if(zone.theme==='celestial'){
+      // Meteor crater rim and scattered square impact ejecta.
+      for(let k=0;k<12;k++){const a=k*Math.PI/6,x=Math.cos(a)*19,z=64+Math.sin(a)*15;mesa(x,z,8,7,4+(k%4)*2,0x667798);}
+      waterTile(0,64,16,12,0x425f94);for(let k=0;k<8;k++)pillar(-27+k*8,76,1.7,1.7,5+(k%4)*2,0xa7bdd9);
+      for(let k=0;k<5;k++)tglow(1.4,.3,1.4,-16+k*8,4,80,0xaadfff);
+    }else if(zone.theme==='void'){
+      // The trench is a cleft, not a plain: tall black walls face an empty rift.
+      for(const x of [-22,22]){mesa(x,65,13,30,24,x<0?0x2d3245:0x393c50);for(let k=0;k<4;k++)pillar(x+(k-1.5)*3,58,1.5,2.5,18+(k%2)*7,0x474b60);}
+      waterTile(0,65,8,32,0x151a2b);tglow(.2,18,.25,0,9,65,0x777caf);
+    }else if(zone.theme==='time'){
+      // Layered hourglass-shaped cliffs pinch inward, then fan into broad shelves.
+      for(let k=0;k<7;k++){const w=42-k*4.2,z=52+k*5.2;tadd(w,2.2,5,-0,.8+1.1, z, k%2?0x897f70:0xb4aa95);tadd(w*.68,2.2,4,0,.8+3.3,z+2,0x777e88);}
+      pillar(-24,68,3,3,16,0x817c70);pillar(24,68,3,3,16,0x817c70);tglow(.2,8,.2,0,10,62,0xf4dfa4);
+    }else if(zone.theme==='origin'){
+      // Broad concentric primordial terraces descend toward the first spring.
+      mesa(0,65,46,34,3,0xcbd3c7);mesa(0,65,36,26,3,0xdce1d2);mesa(0,65,26,18,3,0xe9e4d1);mesa(0,65,14,9,2,0x9dc9c0);
+      waterTile(0,65,8,5,0x76cfc2);for(let k=0;k<8;k++){const a=k*Math.PI/4,x=Math.cos(a)*25,z=65+Math.sin(a)*18;pillar(x,z,2.4,2.4,4+k%3*2,0x9eb6aa);}
     }
     // Stalls, merchandise and friendly cube vendors. Separate stock, no tabs of remote purchases.
     for(const st of stallLayout){
