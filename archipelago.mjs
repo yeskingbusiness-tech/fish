@@ -1,5 +1,5 @@
-import { SPECIES, RODS, LINES, BAITS, RARITY, RARITY_ORDER, ISLAND_RARITIES, fishValue } from './game-data.mjs?v=43';
-import { ISLANDS, MAX_LEVEL, GEAR_PER_ISLAND } from './island-data.mjs?v=43';
+import { SPECIES, RODS, LINES, BAITS, RARITY, RARITY_ORDER, ISLAND_RARITIES, fishValue } from './game-data.mjs?v=44';
+import { ISLANDS, MAX_LEVEL, GEAR_PER_ISLAND } from './island-data.mjs?v=44';
 export { ISLANDS, MAX_LEVEL, GEAR_PER_ISLAND };
 const ISLAND_SPECIES=ISLANDS.map(i=>SPECIES.filter(s=>s.island===i.id));
 export const ISLAND_COLLECTION_BONUS=5;

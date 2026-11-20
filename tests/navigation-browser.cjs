@@ -83,12 +83,12 @@ module.exports=async function testNavigation(browser,url,shots){
 
   await page.setViewportSize({width:1280,height:820});
   const historic=await page.evaluate(async()=>{
-   const a=__reelDeal,{V41_ISLAND_ANCHORS}=await import('./legacy-v41-world.mjs?v=43'),id=15,p=V41_ISLAND_ANCHORS[id],b=a.BOATS[6];
+   const a=__reelDeal,{V41_ISLAND_ANCHORS}=await import('./legacy-v41-world.mjs?v=44'),id=15,p=V41_ISLAND_ANCHORS[id],b=a.BOATS[6];
    const raw={version:9,zone:id,boat:b.id,ownedBoats:[0,b.id],xp:a.xpForLevel(275),coins:87654321,caught:11,completedIslands:[0,1],licenses:[0,1,id],owned:{rod:[0,31],line:[0,31],bait:[0,31]},gear:{rod:31,line:31,bait:31},bag:[{id:a.SPECIES[80].id,w:a.SPECIES[80].minW}],sailing:{x:p.x+14+b.size*4,z:p.z-6-b.size*2,yaw:.3}};
    a.G.state='menu';localStorage.setItem('reel-deal-save-v9',JSON.stringify(raw));return raw;
   });
   await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await page.click('#startBtn');
-  const migrated=await page.evaluate(async()=>{const a=__reelDeal,n=await import('./navigation.mjs?v=43');a.saveGame();return {zone:a.G.zone,aboard:a.G.onBoat,boat:a.G.boat,coins:a.G.coins,xp:a.G.xp,gear:a.G.gear,earned:a.G.completedIslands,weight:a.bag[0].weight,valid:n.validBoatPose(a.G.sailing,a.BOATS[a.G.boat],a.G),save:JSON.parse(localStorage.getItem('reel-deal-save-v9'))};});
+  const migrated=await page.evaluate(async()=>{const a=__reelDeal,n=await import('./navigation.mjs?v=44');a.saveGame();return {zone:a.G.zone,aboard:a.G.onBoat,boat:a.G.boat,coins:a.G.coins,xp:a.G.xp,gear:a.G.gear,earned:a.G.completedIslands,weight:a.bag[0].weight,valid:n.validBoatPose(a.G.sailing,a.BOATS[a.G.boat],a.G),save:JSON.parse(localStorage.getItem('reel-deal-save-v9'))};});
   assert.equal(migrated.zone,15);assert.equal(migrated.aboard,true);assert.equal(migrated.boat,6);assert.equal(migrated.coins,historic.coins);assert.equal(migrated.xp,historic.xp);assert.deepEqual(migrated.gear,historic.gear);assert.deepEqual(migrated.earned,historic.completedIslands);assert.equal(migrated.weight,historic.bag[0].w);assert.equal(migrated.valid,true);assert.equal(migrated.save.worldLayout,2);
   await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await page.click('#startBtn');
   assert.deepEqual(await page.evaluate(()=>{__reelDeal.saveGame();return JSON.parse(localStorage.getItem('reel-deal-save-v9'));}),migrated.save);

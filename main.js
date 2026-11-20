@@ -12,26 +12,26 @@ const rand  = (a,b) => a + Math.random() * (b-a);
 const hexc  = c => '#' + c.toString(16).padStart(6,'0');
 const fmt   = n => n.toLocaleString('en-US');
 
-import { advanceReelPhase, REEL_PHASES, phasePull, chooseFishTug } from './reel-phases.mjs?v=43';
+import { advanceReelPhase, REEL_PHASES, phasePull, chooseFishTug } from './reel-phases.mjs?v=44';
 import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow, sortFishIndex, castLuckModifier, effectiveLuck,
-  eligibleSpecies, roundWeight, formatWeight, GEAR_PER_ISLAND, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=43';
+  eligibleSpecies, roundWeight, formatWeight, GEAR_PER_ISLAND, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=44';
 import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, hasIslandLicense, travelRequirement,
-  MAX_LEVEL, ISLAND_COLLECTION_BONUS, islandCollectionProgress, completedCollections, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=43';
-import { createWorld } from './world.mjs?v=43';
-import { fishSVG, fishGeometryCacheStats } from './fish-geometry.mjs?v=43';
-import { createFishIcons } from './fish-icons.mjs?v=43';
-import { createAdaptiveQuality, memoLast, createBaitPoolLookup } from './render-performance.mjs?v=43';
-import { createFishModel, animateFishModel, disposeFishModel } from './fish-model.mjs?v=43';
-import { boatViewPose, createPlayerModel, heldFishSpan, heldFishLayout, firstPersonFishPose, frontViewPose } from './player-view.mjs?v=43';
-import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=43';
-import { BAG_TABS, bagGearKind, nextBagTab, contextualHint, HELP_CONTROLS } from './ui-state.mjs?v=43';
+  MAX_LEVEL, ISLAND_COLLECTION_BONUS, islandCollectionProgress, completedCollections, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=44';
+import { createWorld } from './world.mjs?v=44';
+import { fishSVG, fishGeometryCacheStats } from './fish-geometry.mjs?v=44';
+import { createFishIcons } from './fish-icons.mjs?v=44';
+import { createAdaptiveQuality, memoLast, createBaitPoolLookup } from './render-performance.mjs?v=44';
+import { createFishModel, animateFishModel, disposeFishModel } from './fish-model.mjs?v=44';
+import { boatViewPose, createPlayerModel, heldFishSpan, heldFishLayout, firstPersonFishPose, frontViewPose } from './player-view.mjs?v=44';
+import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=44';
+import { BAG_TABS, bagGearKind, nextBagTab, contextualHint, HELP_CONTROLS } from './ui-state.mjs?v=44';
 
-import { ALL_CATCH_SPECIES, LEGACY_SPECIES } from './legacy-catalog.mjs?v=43';
-import { territoryAt, territoryCenter, TERRITORY_RADIUS, shoreLuckPenalty, distanceToShore, stepBoat, nearbyDock, dockPose, returnBoatPose, clampBoatDeckPosition, mapPoint, SEA_BOUNDS } from './navigation.mjs?v=43';
-import { WORLD_LAYOUT_VERSION } from './island-data.mjs?v=43';
-import { islandToWorld, islandSpawn } from './island-layout.mjs?v=43';
+import { ALL_CATCH_SPECIES, LEGACY_SPECIES } from './legacy-catalog.mjs?v=44';
+import { territoryAt, territoryCenter, TERRITORY_RADIUS, shoreLuckPenalty, distanceToShore, stepBoat, nearbyDock, dockPose, returnBoatPose, clampBoatDeckPosition, mapPoint, SEA_BOUNDS } from './navigation.mjs?v=44';
+import { WORLD_LAYOUT_VERSION } from './island-data.mjs?v=44';
+import { islandToWorld, islandSpawn } from './island-layout.mjs?v=44';
 
-import { drawMinimap } from './minimap.mjs?v=43';
+import { drawMinimap } from './minimap.mjs?v=44';
 const fishIcons = createFishIcons(ALL_CATCH_SPECIES);
 const discoveredCount=()=>SPECIES.filter(sp=>G.discoveries[sp.id]).length;
 const fishPlace=sp=>ISLANDS[sp.island].short+(sp.legacy?' · Legacy catch':'');
@@ -290,7 +290,7 @@ const G = {
   tension:15, progress:0, fishStrength:0.3,
   surgeTimer:0, surgeDur:0, yankTimer:0, yank:0, yankDur:0, reelHeld:false,
   reelPhase:'calm', reelPhaseTime:3.2,
-  fishTugTimer:0, fishTugDur:0, fishTug:0,
+  fishTugTimer:0, fishTugWarn:0, fishTugDur:0, fishTug:0,
   time:0, rodSwing:0, bobDip:0,
   castT:0, castDur:1, biteWindow:0, waitTimer:4,
   caughtAnim:0,
@@ -743,7 +743,7 @@ function hookFish(){
   G.fishWeight = hookedWeight;
   fightSetup(hookedSpecies, hookedWeight);
   G.reelPhase='calm'; G.reelPhaseTime=REEL_PHASES.calm.duration;
-  G.fishTugTimer=rand(2.4,3.8);G.fishTugDur=0;G.fishTug=0;
+  G.fishTugTimer=rand(2.4,3.8);G.fishTugWarn=0;G.fishTugDur=0;G.fishTug=0;
   G.surgeTimer=0; G.surgeDur=0;
   G.yankTimer=0; G.yank=0; G.yankDur=0;
   G.reelHeld = false;
@@ -1805,15 +1805,24 @@ function tick(){
     // A short fish-driven tug periodically kicks tension toward either red
     // edge. Its direction is announced in the HUD for a fair reaction window.
     G.fishTugTimer-=dt;
-    if(G.fishTugTimer<=0&&G.fishTugDur<=0){
-      G.fishTug=chooseFishTug(G.fishStrength);
-      G.fishTugDur=0.34;G.fishTugTimer=rand(3.8,5.8);
+    if(G.fishTugTimer<=0&&G.fishTugWarn<=0&&G.fishTugDur<=0){
+      G.fishTug=chooseFishTug(G.fishStrength);G.fishTugWarn=.7;G.fishTugTimer=rand(3.8,5.8);
     }
-    if(G.fishTugDur>0)G.fishTugDur=Math.max(0,G.fishTugDur-dt);
-    else G.fishTug=0;
+    const wasTugWarning=G.fishTugWarn>0;
+    if(wasTugWarning){
+      G.fishTugWarn=Math.max(0,G.fishTugWarn-dt);
+      if(G.fishTugWarn===0)G.fishTugDur=.42;
+    }else if(G.fishTugDur>0)G.fishTugDur=Math.max(0,G.fishTugDur-dt);
+    if(G.fishTugDur<=0)G.fishTug=0;
+    const tugCue=wasTugWarning||G.fishTugDur>0;
+    const tugging=G.fishTugDur>0;
     // Faster response than the previous build, with modest background sway.
     const wobble=rand(-1,1)*(4+G.fishStrength*5);
-    const rate=(reelInput+fishPull*G.rateMul+wobble+G.fishTug)*1.22;
+    const rate=(reelInput+fishPull*G.rateMul+wobble+(tugging?G.fishTug:0))*1.22;
+    const tugEl=$('fishTugCue'),tugDirection=G.fishTug>0?'surge':'dive';
+    tugEl.classList.toggle('show',tugCue);tugEl.classList.toggle('surge',tugDirection==='surge');tugEl.classList.toggle('dive',tugDirection==='dive');
+    tugEl.classList.toggle('incoming',wasTugWarning);tugEl.classList.toggle('active',tugging);
+    setText($('fishTugLabel'),wasTugWarning?(G.fishTug>0?'SURGE INCOMING · GET READY':'DIVE INCOMING · GET READY'):(G.fishTug>0?'SURGE! RELEASE':'DIVE! HOLD'));
 
     G.tension = clamp(G.tension + rate * dt, 0, 100);
     const inSafe = G.tension >= G.bandLo && G.tension <= G.bandHi;
@@ -1845,6 +1854,7 @@ function tick(){
     tensionTrack.classList.toggle('slack', G.tension < G.bandLo);
     const warning =
       G.over > 0.25 ? 'LINE OVERLOADED — ' + Math.round(G.fishWeight) + 'lb ON ' + l2.rating + 'lb LINE' :
+      G.fishTugWarn>0 ? (G.fishTug>0?'SURGE INCOMING — GET READY TO RELEASE':'DIVE INCOMING — GET READY TO HOLD') :
       G.fishTugDur>0 ? (G.fishTug>0?'FISH SURGE! RELEASE TO EASE TENSION':'FISH DIVING! HOLD TO KEEP TENSION') :
       G.tension > G.bandHi ? 'TOO TIGHT — RELEASE TO LOWER IT' :
       G.tension < G.bandLo ? 'TOO SLACK — HOLD TO RAISE IT' :
@@ -1871,6 +1881,7 @@ function tick(){
     }
   } else {
     if(reelWarn.textContent){ reelWarn.textContent = ''; reelWarn.classList.remove('warn'); }
+    const tugCueEl=$('fishTugCue');if(tugCueEl.classList.contains('show'))tugCueEl.classList.remove('show','incoming','active');
   }
 
   // ---- caught animation: fish leaps toward the camera ----

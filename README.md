@@ -4,7 +4,7 @@
 
 The environment, shops, boats and basic angler are cuboid-built. **The fish are not cubes:** anatomical sculpts, fins, jaws, tails, shells, legs and tentacles also generate their matching illustrated thumbnails.
 
-Version **2.2.0**, browser cache **v43**, save schema **v9**, world layout **2**. Static browser game; no build, account, backend or runtime dependency installation required.
+Version **2.3.0**, browser cache **v44**, save schema **v9**, world layout **2**. Static browser game; no build, account, backend or runtime dependency installation required.
 
 ## Run
 
@@ -92,7 +92,7 @@ Unknown entries contain **no real name, silhouette, rarity, image metadata or an
 
 Bait rarity windows and territory determine eligibility. Cast distance does not select species. Full power adds **+10 luck percentage points** and minimum power subtracts **10**, before the environmental penalty. Luck reweights only eligible species.
 
-Hold click / Space and release to cast; click / Space on a bite to hook. During a fight, hold to raise tension and release to lower it. **Green reels automatically, yellow stalls, and either red end immediately loses the fish.** Green progress depends on reel speed, never charge, cast distance or shore penalty.
+Hold click / Space and release to cast; click / Space on a bite to hook. During a fight, hold to raise tension and release to lower it. **Green reels automatically, yellow stalls, and either red end immediately loses the fish.** Calm/run/headshake phases are named and timed; sudden fish surges and dives get a large, animated, directional warning **before** the tug, then flash again while it happens. Green progress depends on reel speed, never charge, cast distance or shore penalty.
 
 ### Weights, sizing and rewards
 
@@ -161,7 +161,7 @@ Current screenshots and audit logs go to `.artifacts/navigation-v42/` (ignored b
 
 ## Rebalancing proposals
 
-[`BALANCE_NOTES.md`](BALANCE_NOTES.md) records the earlier catch-effort audit and proposed gear/XP smoothing, optional boat trade-ins, species-relative trophy rewards and collection-streak protection. **Those proposals remain recommendations, not enabled mechanics.** Version 2.2.0 separately applies the requested 20% leveling-speed boost; prices, sales, natural fish sizes and collection rewards are unchanged.
+[`BALANCE_NOTES.md`](BALANCE_NOTES.md) records the earlier catch-effort audit and proposed gear/XP smoothing, optional boat trade-ins, species-relative trophy rewards and collection-streak protection. **Those proposals remain recommendations, not enabled mechanics.** The requested 20% leveling-speed boost was added in 2.2.0; prices, sales, natural fish sizes and collection rewards remain unchanged.
 
 ## Source map
 

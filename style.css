@@ -87,6 +87,20 @@ html,body{height:100%;overflow:hidden;background:#7fc4e0;color:var(--ink);
 .progress-track{height:12px;background:#e2d7c2;border:2px solid var(--ink);margin-top:3px;overflow:hidden}
 #progressFill{height:100%;width:0;background:var(--teal);transition:width .1s linear}
 .reel-hint{font-size:11px;font-weight:900;color:var(--ink-soft);margin-top:7px;text-align:center;line-height:1.25}
+/* Directional fish-tug warning: high-contrast, animated, and shown before the
+   impulse so players can react without having to read the small status line. */
+.fish-tug-cue{display:none;position:absolute;left:0;right:0;bottom:calc(100% + 7px);min-height:34px;align-items:center;justify-content:space-between;gap:8px;padding:4px 10px;border:3px solid #172d36;box-shadow:4px 4px 0 #10242e88;color:#fff;font:900 13px/1.1 'Silkscreen','Courier New',monospace;letter-spacing:.5px;text-align:center;z-index:8;pointer-events:none}
+.fish-tug-cue.show{display:flex}
+.fish-tug-cue.surge{background:#a92720;border-color:#ffe08a}
+.fish-tug-cue.dive{background:#075f78;border-color:#c7f4ff}
+.tug-arrow{font:900 20px/1 Arial,sans-serif;white-space:nowrap;color:#fff5be;text-shadow:1px 2px #172d36}
+.fish-tug-cue.dive .tug-arrow{color:#c7f4ff}
+.fish-tug-cue.surge .tug-arrow-left,.fish-tug-cue.dive .tug-arrow-right{visibility:hidden}
+.fish-tug-cue.incoming{animation:tug-flash .22s steps(2,end) infinite alternate}
+.fish-tug-cue.active{animation:tug-jolt .12s steps(2,end) infinite alternate}
+@keyframes tug-flash{from{filter:brightness(.85);transform:scale(.98)}to{filter:brightness(1.45);transform:scale(1.015)}}
+@keyframes tug-jolt{from{transform:translateX(-2px)}to{transform:translateX(2px)}}
+@media(prefers-reduced-motion:reduce){.fish-tug-cue.incoming,.fish-tug-cue.active{animation:none}}
 
 /* ---------- modal ---------- */
 .modal{position:absolute;inset:0;display:grid;place-items:center;background:rgba(8,30,40,.5);z-index:20}

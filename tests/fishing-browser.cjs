@@ -7,20 +7,28 @@ module.exports=async function testFishing(browser,url,shots){
   await page.goto(url,{waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await page.click('#startBtn');
   // Drive the real frame loop with a deterministic delta, not a copied equation.
   const result=await page.evaluate(async()=>{
-   const a=__reelDeal,T=await import('three'),oldDelta=T.Clock.prototype.getDelta,oldRandom=Math.random,records=[];
+   const a=__reelDeal,T=await import('three'),oldDelta=T.Clock.prototype.getDelta,oldRandom=Math.random,records=[];let visualCue=null;
    const frame=()=>new Promise(r=>requestAnimationFrame(r));
    try{
     T.Clock.prototype.getDelta=()=>.02;Math.random=()=>.5;
     for(const power of [0,.5,1])for(const distance of [5,100]){
      a.G.state='aim';a.G.gear={rod:1,line:1,bait:0};a.G.castTerritory=0;a.G.castPower=power;a.G.castShorePenalty=-.95;a.triggerBite();a.hookFish();a.G.castDist=distance;
      a.G.bandLo=25;a.G.bandHi=65;a.G.tension=45;a.G.progress=20;a.G.surgeTimer=a.G.yankTimer=10000;a.G.surgeDur=a.G.yankDur=0;a.G.reelHeld=false;
+     if(power===0&&distance===5){
+      a.G.fishTugTimer=0;await frame();let cue=document.getElementById('fishTugCue');
+      const pre={visible:cue.classList.contains('show')&&getComputedStyle(cue).display!=='none',incoming:cue.classList.contains('incoming'),animated:getComputedStyle(cue).animationName==='tug-flash',label:document.getElementById('fishTugLabel').textContent};
+      a.G.fishTugWarn=.02;await frame();await frame();
+      const live={visible:cue.classList.contains('show'),active:cue.classList.contains('active'),animated:getComputedStyle(cue).animationName==='tug-jolt',label:document.getElementById('fishTugLabel').textContent};
+      if(!pre.visible||!pre.incoming||!pre.animated||!pre.label.includes('INCOMING')||!live.visible||!live.active||!live.animated||!live.label.includes('HOLD'))throw Error('fish counter-move needs visible animated advance cue and live direction');
+      visualCue={warning:pre,tug:live};a.G.fishTugTimer=10000;a.G.fishTugWarn=0;a.G.fishTugDur=0;a.G.fishTug=0;a.G.tension=45;a.G.progress=20;
+     }
      await frame();records.push(a.G.progress-20);
      a.G.progress=20;a.G.tension=70;await frame();if(a.G.progress!==20)throw Error('yellow progressed');
      a.G.tension=7;await frame();if(a.G.state!=='aim')throw Error('slack did not lose');
      a.triggerBite();a.hookFish();a.G.tension=93;a.G.reelHeld=true;await frame();if(a.G.state!=='aim')throw Error('tight did not lose');
     }
    }finally{Math.random=oldRandom;T.Clock.prototype.getDelta=oldDelta;}
-   return {records,expected:17*.02*a.RODS[1].reel};
+   return {records,expected:17*.02*a.RODS[1].reel,visualCue};
   });for(const n of result.records)assert.ok(Math.abs(n-result.expected)<1e-8);
   console.log('PASS live green progress at all cast powers/distances, yellow stalls, both red ends lose immediately');
   const awards=await page.evaluate(()=>{
@@ -33,7 +41,7 @@ module.exports=async function testFishing(browser,url,shots){
   });assert.equal(awards.xp,awards.expected);assert.equal(awards.bonus,5);assert.equal(awards.newFlag,true);assert.equal(awards.reward,true);assert.equal(awards.duplicate,0);assert.ok(awards.after>=awards.prior);await page.click('#continueBtn');
   // Real old-save boot: all 120 catches, moved islands, reduced gear, and permanent boosts.
   const old=await page.evaluate(async()=>{
-   const a=__reelDeal,{LEGACY_V8_SPECIES:fish}=await import('./legacy-v8-data.mjs?v=43');
+   const a=__reelDeal,{LEGACY_V8_SPECIES:fish}=await import('./legacy-v8-data.mjs?v=44');
    const raw={version:8,coins:54321,xp:123456,caught:120,boat:5,ownedBoats:[0,5],zone:5,visited:[0,1,2,3,4,5],licenses:[0,1,2,3,4,5],owned:{rod:[0,23],line:[0,23],bait:[0,23]},gear:{rod:23,line:23,bait:23},bag:fish.map(s=>({n:s.name,w:s.maxW})),log:fish.map(s=>({n:s.name,w:s.maxW})),discoveries:Object.fromEntries(fish.map(s=>[s.id,{count:1,best:s.maxW,first:'2026-11-13'}]))};
    a.G.state='menu'; // Allow the explicit historical fixture to survive pagehide.
    localStorage.removeItem('reel-deal-save-v9');localStorage.setItem('reel-deal-save-v8',JSON.stringify(raw));return raw;
