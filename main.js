@@ -12,6 +12,7 @@ const rand  = (a,b) => a + Math.random() * (b-a);
 const hexc  = c => '#' + c.toString(16).padStart(6,'0');
 const fmt   = n => n.toLocaleString('en-US');
 
+import { advanceReelPhase, REEL_PHASES, phasePull } from './reel-phases.mjs?v=42';
 import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow, sortFishIndex, castLuckModifier, effectiveLuck,
   eligibleSpecies, roundWeight, formatWeight, GEAR_PER_ISLAND, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=42';
 import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, gearIsland, hasIslandLicense, travelRequirement,
@@ -288,6 +289,7 @@ const G = {
   power:0, powerDir:1, castPower:0.5, // live charge vs. released cast snapshot (not saved)
   tension:15, progress:0, fishStrength:0.3,
   surgeTimer:0, surgeDur:0, yankTimer:0, yank:0, yankDur:0, reelHeld:false,
+  reelPhase:'calm', reelPhaseTime:3.2,
   time:0, rodSwing:0, bobDip:0,
   castT:0, castDur:1, biteWindow:0, waitTimer:4,
   caughtAnim:0,
@@ -739,8 +741,9 @@ function hookFish(){
   G.fishStrength = hookedSpecies.strength;
   G.fishWeight = hookedWeight;
   fightSetup(hookedSpecies, hookedWeight);
-  G.surgeTimer = rand(0.6, 1.4); G.surgeDur = 0;
-  G.yankTimer = 0.4; G.yank = 0; G.yankDur = 0;
+  G.reelPhase='calm'; G.reelPhaseTime=REEL_PHASES.calm.duration;
+  G.surgeTimer=0; G.surgeDur=0;
+  G.yankTimer=0; G.yank=0; G.yankDur=0;
   G.reelHeld = false;
   reelFishName.innerHTML = G.discoveries[hookedSpecies.id] ? `<span class="reel-fish">${fishIcons.markup(hookedSpecies,{eager:true})}</span>${hookedSpecies.name}` : `<span class="reel-fish">${unknownFishSVG()}</span>Unidentified fish`;
   paintTensionBand();
@@ -1777,34 +1780,23 @@ function tick(){
     bobber.position.copy(bobberPos);
   }
 
-  // ---- reeling minigame ----
-  // Green band = the line does the work, it winds in by itself. Yellow on either
-  // side = nothing happens, the fish just sits there. Red at the far ends = gone.
-  // The needle is deliberately twitchy: surges, random yanks and constant wobble.
+  // ---- readable-phase reeling minigame ----
+  // The fish cycles through a calm window, a run, and a headshake. The HUD
+  // names and previews each behavior; use the same hold/release control to
+  // react, with no hidden random yanks deciding the fight.
   if(G.state === 'reeling'){
     const r2 = RODS[G.gear.rod], l2 = LINES[G.gear.line];
-
-    // surges: the fish bolts
-    G.surgeTimer -= dt;
-    if(G.surgeTimer <= 0){ G.surgeTimer = rand(0.6, 1.5); G.surgeDur = rand(0.35, 1.0); }
-    if(G.surgeDur > 0) G.surgeDur -= dt;
-    const surging = G.surgeDur > 0;
-
-    // yanks: short violent jerks in either direction
-    G.yankTimer = (G.yankTimer || 0) - dt;
-    if(G.yankTimer <= 0){
-      G.yankTimer = rand(0.30, 1.00);
-      G.yank = (Math.random() < 0.5 ? -1 : 1) * rand(45, 115);
-      G.yankDur = 0.12;
-    }
-    if(G.yankDur > 0) G.yankDur -= dt;
-
-    const base = 12 + G.fishStrength * 18;              // 15..43 per second
-    const rise = base * G.rateMul * rand(0.86, 1.16) * (surging ? 1.9 : 1);
-    const fall = 24 * (0.7 + 0.3 * G.rateMul) * rand(0.88, 1.14);
-    let rate = G.reelHeld ? rise : -fall;
-    rate += rand(-1, 1) * (26 + G.fishStrength * 34);   // the lake is never still
-    if(G.yankDur > 0) rate += G.yank;
+    const phaseStep=advanceReelPhase(G.reelPhase,G.reelPhaseTime,dt);
+    G.reelPhase=phaseStep.phase;G.reelPhaseTime=phaseStep.timeLeft;
+    const phase=REEL_PHASES[G.reelPhase];
+    const surging=G.reelPhase==='run';
+    const fishPull=phasePull(G.reelPhase,G.reelHeld);
+    const base=12+G.fishStrength*18;
+    const reelInput=G.reelHeld?base*G.rateMul:-12*(0.7+0.3*G.rateMul);
+    // Gentle continuous motion keeps the line alive, while phase behavior is
+    // the predictable, dominant force the player learns to read.
+    const wobble=rand(-1,1)*(3+G.fishStrength*4);
+    const rate=reelInput+fishPull*G.rateMul+wobble;
 
     G.tension = clamp(G.tension + rate * dt, 0, 100);
     const inSafe = G.tension >= G.bandLo && G.tension <= G.bandHi;
@@ -1838,7 +1830,7 @@ function tick(){
       G.over > 0.25 ? 'LINE OVERLOADED — ' + Math.round(G.fishWeight) + 'lb ON ' + l2.rating + 'lb LINE' :
       G.tension > G.bandHi ? 'TOO TIGHT — RELEASE TO LOWER IT' :
       G.tension < G.bandLo ? 'TOO SLACK — HOLD TO RAISE IT' :
-      surging ? "IT'S SURGING — STAY ON IT" : 'WINDING IN';
+      phase.label+' · '+phase.hint+' · '+Math.ceil(G.reelPhaseTime)+'s';
     setText(reelWarn,warning);
     reelWarn.classList.toggle('warn',!!warning);
 
