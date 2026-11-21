@@ -52,43 +52,6 @@ function cube(w,h,d,color,x=0,y=0,z=0){
   const m=new THREE.Mesh(UNIT,new THREE.MeshLambertMaterial({color}));
   m.scale.set(w,h,d); m.position.set(x,y,z); return m;
 }
-function coloredMeshBuilder(){const positions=[],colors=[];const tri=(a,b,c,color)=>{const col=new THREE.Color(color);for(const p of [a,b,c]){positions.push(...p);colors.push(col.r,col.g,col.b);}};return {tri,quad:(a,b,c,d,color)=>{tri(a,b,c,color);tri(a,c,d,color);},mesh:(name,material=new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true,side:THREE.DoubleSide}))=>{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));g.computeVertexNormals();const m=new THREE.Mesh(g,material);m.name=name;return m;}};}
-function reedhavenHeight(x,z){const g=(cx,cz,rx,rz,a)=>a*Math.exp(-(((x-cx)/rx)**2+((z-cz)/rz)**2)),village=Math.max(0,Math.min(1,(Math.hypot(x,z-31)-14)/9)),lake=Math.exp(-(((x/10)**4)+(((z-49)/6)**4)));const ridges=g(-18,51,9,13,8)+g(18,52,10,13,9)+g(0,61,15,6,4);return .95+ridges*(1-.96*lake)+village*(1-lake)*(.22*Math.sin(x*.34+z*.17)+.16*Math.cos(z*.28-x*.2));}
-function reedhavenTerrain(zone){const b=coloredMeshBuilder(),nx=36,nz=28,verts=[];for(let j=0;j<=nz;j++){verts[j]=[];const z=13+j*43/nz;for(let i=0;i<=nx;i++){const x=-27+i*54/nx,y=reedhavenHeight(x,z),c=new THREE.Color(zone.land);if(y>1.08)c.lerp(new THREE.Color(zone.accent),Math.min(.7,(y-1.08)*.6));if(y>1.3)c.lerp(new THREE.Color(zone.rock),Math.min(.7,(y-1.3)*.35));verts[j][i]=[x,y,z,c.getHex()];}}
-  for(let j=0;j<nz;j++)for(let i=0;i<nx;i++){const a=verts[j][i],bb=verts[j][i+1],c=verts[j+1][i],d=verts[j+1][i+1];if((i+j)%2){b.tri(a.slice(0,3),bb.slice(0,3),c.slice(0,3),a[3]);b.tri(bb.slice(0,3),d.slice(0,3),c.slice(0,3),bb[3]);}else{b.tri(a.slice(0,3),d.slice(0,3),c.slice(0,3),a[3]);b.tri(a.slice(0,3),bb.slice(0,3),d.slice(0,3),bb[3]);}}
-  return b.mesh('reedhaven-triangulated-highland');}
-function angularShop(st,zone,b){const x=st.x,z=st.z,y=1,front=z-2.05,back=z+2.05,accent=st.color,wall=0xd8c6a2,stone=0x867965,roof=0x516875,roofLight=0x718d98,glass=0x397d89;
-  // A gabled, faceted timber-and-stone shop with a visible service window.
-  b.quad([x-2.35,y,front],[x+2.35,y,front],[x+2.35,y+2.35,front],[x-2.35,y+2.35,front],wall);
-  b.tri([x-2.35,y+2.35,front],[x+2.35,y+2.35,front],[x,y+3.65,front],accent);
-  b.quad([x+2.35,y,back],[x-2.35,y,back],[x-2.35,y+2.35,back],[x+2.35,y+2.35,back],wall);
-  b.tri([x+2.35,y+2.35,back],[x-2.35,y+2.35,back],[x,y+3.65,back],wall);
-  b.quad([x-2.35,y,front],[x-2.35,y,back],[x-2.35,y+2.35,back],[x-2.35,y+2.35,front],stone);
-  b.quad([x+2.35,y,back],[x+2.35,y,front],[x+2.35,y+2.35,front],[x+2.35,y+2.35,back],0x9c8970);
-  b.quad([x-2.7,y+2.3,front-.2],[x,y+3.85,front-.2],[x,y+3.85,back+.2],[x-2.7,y+2.3,back+.2],roof);
-  b.quad([x,y+3.85,front-.2],[x+2.7,y+2.3,front-.2],[x+2.7,y+2.3,back+.2],[x,y+3.85,back+.2],roofLight);
-  // Recessed teal glazing, timber mullions, stone sill and a bright awning.
-  b.quad([x-1.05,y+1.25,front-.035],[x+1.05,y+1.25,front-.035],[x+1.05,y+2.05,front-.035],[x-1.05,y+2.05,front-.035],glass);
-  for(const dx of [-1.18,0,1.18])b.quad([x+dx-.07,y+1.18,front-.07],[x+dx+.07,y+1.18,front-.07],[x+dx+.07,y+2.12,front-.07],[x+dx-.07,y+2.12,front-.07],0x745b42);
-  b.quad([x-1.22,y+1.1,front-.1],[x+1.22,y+1.1,front-.1],[x+1.22,y+1.24,front-.1],[x-1.22,y+1.24,front-.1],0xe0c58f);
-  b.quad([x-1.35,y+2.12,front-.15],[x+1.35,y+2.12,front-.15],[x+1.15,y+2.48,front-.45],[x-1.15,y+2.48,front-.45],accent);
-  b.quad([x-2.3,y+2.25,front-.12],[x+2.3,y+2.25,front-.12],[x+2.3,y+2.39,front-.12],[x-2.3,y+2.39,front-.12],0xe9d6ad);
-  const z0=front-.72;b.quad([x-1.5,y+.18,z0],[x+1.5,y+.18,z0],[x+1.5,y+.65,z0],[x-1.5,y+.65,z0],0x86694a);b.quad([x-1.5,y+.65,z0],[x+1.5,y+.65,z0],[x+1.35,y+.82,z0+.14],[x-1.35,y+.82,z0+.14],0xd1b684);
-  return {sign:label(st.banner,x,y+3.1,front-.18,3.8,.55,'#f7e8c7'),vendor:{x:x+.72,y:y+1.55,z:front-.75,color:accent},goods:[-1,0,1].map((n)=>({x:x+n*.35,y:y+.95,z:z0-.25,color:[0xd3a467,0x76a9ac,0xc77d68][n+1]}))};}
-function reedhavenLighthouse(){const b=coloredMeshBuilder(),cx=-22,cz=6,n=8,ring=(y,r)=>Array.from({length:n},(_,i)=>[cx+Math.cos(i*Math.PI*2/n+Math.PI/8)*r,y,cz+Math.sin(i*Math.PI*2/n+Math.PI/8)*r]),frustum=(y0,r0,y1,r1,color)=>{const lo=ring(y0,r0),hi=ring(y1,r1);for(let i=0;i<n;i++)b.quad(lo[i],lo[(i+1)%n],hi[(i+1)%n],hi[i],color);};
-  frustum(.9,2.15,12.7,1.05,0xe7dcc4);for(const[y,r,h]of[[2.4,1.82,.42],[8.4,1.17,.45],[12.65,1.4,.32]])frustum(y-h/2,r*.88,y+h/2,r,0xc36d59);
-  // Recessed narrow windows follow the eight sharp lighthouse facets.
-  for(const y of[4.4,6.1,9.75]){const r=2.15-(y-.9)/11.8*1.1;for(let i=0;i<n;i++){const a=i*Math.PI*2/n+Math.PI/8,rad=r+.012,tx=-Math.sin(a)*.11,tz=Math.cos(a)*.11,x=cx+Math.cos(a)*rad,z=cz+Math.sin(a)*rad;b.quad([x-tx,y-.27,z-tz],[x+tx,y-.27,z+tz],[x+tx,y+.27,z+tz],[x-tx,y+.27,z-tz],0x34535d);}}
-  frustum(12.72,1.48,13.08,1.72,0x47616b);frustum(13.08,.92,14.53,.92,0x76aeb2);const low=ring(14.53,.92),peak=[cx,15.55,cz];for(let i=0;i<n;i++)b.tri(low[i],low[(i+1)%n],peak,0xc36d59);
-  const oct=[[0,.46,0],[0,-.46,0],...Array.from({length:4},(_,i)=>[Math.cos(i*Math.PI/2)*.32,0,Math.sin(i*Math.PI/2)*.32])];for(let i=0;i<4;i++){const p=oct[i+2],q=oct[(i+1)%4+2];b.tri([cx+oct[0][0],13.8+oct[0][1],cz+oct[0][2]],[cx+p[0],13.8+p[1],cz+p[2]],[cx+q[0],13.8+q[1],cz+q[2]],0xffdc91);b.tri([cx+oct[1][0],13.8+oct[1][1],cz+oct[1][2]],[cx+q[0],13.8+q[1],cz+q[2]],[cx+p[0],13.8+p[1],cz+p[2]],0xe9b85f);}
-  const lighthouse=b.mesh('reedhaven-faceted-lighthouse');return lighthouse;}
-function reedhavenRidges(zone,forms){const b=coloredMeshBuilder(),outline=[[-.5,-.5],[.3,-.5],[.52,-.18],[.44,.3],[.12,.52],[-.36,.45],[-.54,.08]];for(const f of forms){const rings=[{s:1,y:.8,c:zone.rock},{s:.78,y:.8+f.h*.45,c:zone.rock},{s:.42,y:.8+f.h*.78,c:zone.sand},{s:.13,y:.8+f.h,c:zone.accent}];for(let r=0;r<rings.length-1;r++)for(let i=0;i<outline.length;i++){const p=outline[i],q=outline[(i+1)%outline.length],A=[f.x+p[0]*f.w*rings[r].s,rings[r].y,f.z+p[1]*f.d*rings[r].s],B=[f.x+q[0]*f.w*rings[r].s,rings[r].y,f.z+q[1]*f.d*rings[r].s],C=[f.x+p[0]*f.w*rings[r+1].s,rings[r+1].y,f.z+p[1]*f.d*rings[r+1].s],D=[f.x+q[0]*f.w*rings[r+1].s,rings[r+1].y,f.z+q[1]*f.d*rings[r+1].s];b.quad(A,B,D,C,rings[r].c);}}return b.mesh('reedhaven-angular-rock-strata');}
-function reedhavenPath(paving,zone){const b=coloredMeshBuilder(),stones=[0xd2c09b,0xb9aa8c,0xe0cda4,0xc7b48d];paving.forEach((p,i)=>{const j=((i*17)%7)*.035,x=p.x,z=p.z,s=.77,y=reedhavenHeight(x,z)+.075;const pts=[[x-s+j,y,z-s],[x+s,y,z-s+j],[x+s-j,y,z+s],[x-s,y,z+s-j]];b.quad(...pts,stones[i%stones.length]);});return b.mesh('reedhaven-cut-slate-causeway');}
-function reedhavenPond(zone){const points=[],b=coloredMeshBuilder(),n=14;for(let i=0;i<n;i++){const a=i*Math.PI*2/n,r=1+Math.sin(i*7.1)*.07;points.push([Math.cos(a)*10.3*r,Math.sin(a)*5.8*r+49]);}for(let i=0;i<n;i++){const [x,z]=points[i],[nx,nz]=points[(i+1)%n],out=[x*1.12,1.02,49+(z-49)*1.12],outN=[nx*1.12,1.02,49+(nz-49)*1.12],inside=[x*.9,1.055,49+(z-49)*.9],insideN=[nx*.9,1.055,49+(nz-49)*.9];b.quad(out,outN,insideN,inside,i%3?zone.sand:0xb6a47f);b.tri([0,1.08,49],inside,insideN,i%2?0x3b9da5:0x347e93);}return b.mesh('reedhaven-lake-and-cut-stone-shore');}
-function reedhavenPier(zone){const b=coloredMeshBuilder(),d=zone.layout.dockX,s=zone.layout.berthSide;for(let i=0;i<16;i++){const z=13-i,x=d,w=4.9,h=.28,y=.87;const c=i%2?0xb48b5d:0x9d754f;b.quad([x-w/2,y+h,z-.44],[x+w/2,y+h,z-.44],[x+w/2,y+h,z+.44],[x-w/2,y+h,z+.44],c);b.quad([x-w/2,y,z-.44],[x-w/2,y+h,z-.44],[x-w/2,y+h,z+.44],[x-w/2,y,z+.44],0x71583e);b.quad([x+w/2,y,z+.44],[x+w/2,y+h,z+.44],[x+w/2,y+h,z-.44],[x+w/2,y,z-.44],0x846547);}
-  for(let i=0;i<13;i++){const x=d+s*9,z=13-i,w=3.4,c=i%2?0xb48b5d:0x9d754f;b.quad([x-w/2,1.15,z-.44],[x+w/2,1.15,z-.44],[x+w/2,1.15,z+.44],[x-w/2,1.15,z+.44],c);}
-  b.quad([d-2.45,1.15,11.2],[d+s*6.2,1.15,11.2],[d+s*6.2,1.15,12],[d-2.45,1.15,12],0x9d754f);
-  return b.mesh('reedhaven-timber-pier');}
 function islandFoundation(zone){
   // Faceted, rounded shoreline strata replace the giant square base blocks.
   const outline=[[-23,-23],[23,-23],[27,-21],[29,-17],[29,17],[27,21],[23,23],[-23,23],[-27,21],[-29,17],[-29,-17],[-27,-21]],rings=[
@@ -201,15 +164,14 @@ export function createWorld(scene){
     const stallLayout=layout.stalls.map(st=>({...STORE_DETAILS.find(meta=>meta.kind===st.kind),...st}));
     const localColliders=[];
     const group=new THREE.Group();group.name='island-'+zone.id;group.position.set(zone.x,0,zone.z);group.rotation.y=layout.yaw;root.add(group);
-    const S=[],glows=[],smoothTrees=[],reedVillage=zone.id===0?coloredMeshBuilder():null,reedVendors=[],reedGoods=[];
+    const S=[],glows=[],smoothTrees=[];
     const glow=(w,h,d,x,y,z,c)=>glows.push({w,h,d,x,y,z,c});
     const add=(w,h,d,x,y,z,c,more={})=>S.push({w,h,d,x,y,z,c,...more});
     const block=(x,z,r,top)=>localColliders.push({zone:zone.id,x,z,r,top});
     const blockRect=(x,z,w,d,top)=>localColliders.push({zone:zone.id,x,z,top,rect:{minX:x-w/2,maxX:x+w/2,minZ:z-d/2,maxZ:z+d/2}});
     // Rounded stratified foundations give every island a natural silhouette;
     // the original walkable footprint and collision height remain unchanged.
-    if(zone.id===0)group.add(reedhavenRidges(zone,zone.landforms));
-    else for(const f of zone.landforms){
+    for(const f of zone.landforms){
       // Build landforms as stacked, shrinking strata instead of a single
       // giant cuboid. Offset alternate tiers for a fractured voxel silhouette.
       const tiers=Math.max(2,Math.ceil(f.h/2.6)),th=f.h/tiers;
@@ -227,13 +189,12 @@ export function createWorld(scene){
     add(11,2.9,18,layout.landmarkX,-1.05,8,zone.rock);
     add(11,.5,18,layout.landmarkX,.25,8,zone.sand);
     add(10,.45,16,layout.landmarkX,.725,9,zone.land);
-    // Reedhaven gets individually cut, beveled pier planks; other islands keep their established dock layout.
-    if(zone.id===0)group.add(reedhavenPier(zone));
-    else for(let i=0;i<16;i++){
+    // Pier, crosswalk and a separate boat berth.
+    for(let i=0;i<16;i++){
       add(4.9,.3,.94,d,1,13-i, i%2 ? 0xba9465 : 0xa68357);
       if(i<13) add(3.4,.3,.94,d+side*9,1,13-i,i%2 ? 0xba9465 : 0xa68357);
     }
-    if(zone.id!==0)add(12,.3,2.6,d+side*4.5,1,11.6,0xb38e60);
+    add(12,.3,2.6,d+side*4.5,1,11.6,0xb38e60);
     for(const x of [-2.2,2.2,7.6,10.4].map(x=>d+side*x)) for(let z=0;z<14;z+=3){
       add(.23,2.2,.23,x,.25,z,0x68573e); add(.31,.22,.31,x,1.4,z,0xe7d6af);
     }
@@ -246,10 +207,10 @@ export function createWorld(scene){
     // One paving stone per grid cell. Paths meet at shared EDGES, not
     // coplanar overlapping blocks (the old radial paths flickered at the plaza).
     const paving=villagePathTiles(layout);
-    if(zone.id===0)group.add(reedhavenPath(paving,zone));else for(const {x,z}of paving)add(1.72,.08,1.72,x,1.005,z,zone.sand);
+    for(const {x,z}of paving)add(1.72,.08,1.72,x,1.005,z,zone.sand);
     // Signature plants, using only cuboids. Keep the central village clear.
     function tree(x,z,s=1){
-      if(['harbor','forest','river'].includes(zone.theme)){smoothTrees.push({x,z,s});block(x,z,.65*s,(zone.id===0?reedhavenHeight(x,z):.95)+5.2*s);return;}
+      if(['harbor','forest','river'].includes(zone.theme)){smoothTrees.push({x,z,s});block(x,z,.65*s,.95+5.2*s);return;}
       add(.55*s,3.7*s,.55*s,x,.95+1.85*s,z,0x715a43);
       if(['tropical','jungle','coral'].includes(zone.theme)){
         for(const dir of [-1,1]){
@@ -299,11 +260,9 @@ export function createWorld(scene){
     const landmarkStart=S.length,colliderStart=localColliders.length,glowStart=glows.length,childStart=group.children.length;
     if(zone.theme==='harbor'){
       block(-22,6,2.8,15.8);
-      if(zone.id===0)group.add(reedhavenLighthouse(zone));else{
-        for(let j=0;j<5;j++) add(3.6-j*.35,2.2,3.6-j*.35,-22,2+j*2.1,6,j%2?0xc47765:0xf1e5ce);
-        add(3.7,.3,3.7,-22,11.8,6,0x3e6874); glow(2.5,1.5,2.5,-22,12.7,6,0xffdb84); add(3.8,.5,3.8,-22,13.6,6,0x3e6874);
-        add(.4,2,.4,-22,14.7,6,0x536875); add(2,.8,.12,-21,15.3,6,zone.accent);
-      }
+      for(let j=0;j<5;j++) add(3.6-j*.35,2.2,3.6-j*.35,-22,2+j*2.1,6,j%2?0xc47765:0xf1e5ce);
+      add(3.7,.3,3.7,-22,11.8,6,0x3e6874); glow(2.5,1.5,2.5,-22,12.7,6,0xffdb84); add(3.8,.5,3.8,-22,13.6,6,0x3e6874);
+      add(.4,2,.4,-22,14.7,6,0x536875); add(2,.8,.12,-21,15.3,6,zone.accent);
       for(let i=0;i<12;i++){add(.15,1.4,.15,-7-i*.65,.65,1+i%3,0x659c64);add(.3,.5,.3,-7-i*.65,1.4,1+i%3,0x9b7955);}
     }else if(zone.theme==='forest'){
       block(-22,7,3.3,7.1);
@@ -521,7 +480,6 @@ export function createWorld(scene){
     for(const st of stallLayout){
       const x=st.x,z=st.z,base=1;
       const color=zone.theme==='lunar'?0x9f95c0:zone.theme==='volcanic'?0xa88170:st.color;
-      if(zone.id===0){const detail=angularShop(st,zone,reedVillage);group.add(detail.sign);reedVendors.push(detail.vendor);reedGoods.push(...detail.goods);blockRect(x,z,5.0,4.5,4.5);stalls.push({...st,zone:zone.id,...islandToWorld(zone,x,z),approach:islandToWorld(zone,x,z-3.8),yaw:layout.yaw});continue;}
       add(4.5,1.05,1.5,x,base+.525,z,0x846b50);add(4.8,.2,1.8,x,base+1.12,z,0xd1b58a);
       add(4.6,.13,1.8,x,base+.8,z,color);
       for(const dx of [-2,2]) for(const dz of [-.65,.65]) add(.18,3.3,.18,x+dx,base+1.65,z+dz,0x655a46);
@@ -569,14 +527,6 @@ export function createWorld(scene){
       blockRect(x,z,5.0,4.5,4.5);
       stalls.push({...st,zone:zone.id,...islandToWorld(zone,x,z),approach:islandToWorld(zone,x,z-3.8),yaw:layout.yaw});
     }
-    if(reedVillage){
-      group.add(reedVillage.mesh('reedhaven-angular-village'));
-      const place=(geo,material,items,position,scale)=>{const inst=new THREE.InstancedMesh(geo,material,items.length),o=new THREE.Object3D();items.forEach((item,i)=>{o.position.set(item.x,item.y,item.z);o.scale.setScalar(scale);o.updateMatrix();inst.setMatrixAt(i,o.matrix);if(item.color)inst.setColorAt(i,new THREE.Color(item.color));});inst.instanceMatrix.needsUpdate=true;group.add(inst);};
-      place(new THREE.CylinderGeometry(.26,.4,.9,5),new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true,flatShading:true}),reedVendors,v=>v,1);
-      const torso=group.children.at(-1);reedVendors.forEach((v,i)=>{const matrix=new THREE.Object3D();matrix.position.set(v.x,v.y,v.z);matrix.updateMatrix();torso.setMatrixAt(i,matrix.matrix);torso.setColorAt(i,new THREE.Color(v.color));});torso.instanceMatrix.needsUpdate=true;
-      const heads=reedVendors.map(v=>({...v,y:v.y+.65})),hmat=new THREE.MeshLambertMaterial({color:0xd7a27c});place(new THREE.IcosahedronGeometry(.27,0),hmat,heads,v=>v,.98);
-      const goods=new THREE.InstancedMesh(new THREE.OctahedronGeometry(.18,0),new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true,flatShading:true}),reedGoods.length),o=new THREE.Object3D();reedGoods.forEach((item,i)=>{o.position.set(item.x,item.y,item.z);o.scale.set(.8,1.2,.8);o.updateMatrix();goods.setMatrixAt(i,o.matrix);goods.setColorAt(i,new THREE.Color(item.color));});goods.instanceMatrix.needsUpdate=true;group.add(goods);
-    }
     add(.2,2,.2,d-4.1,2,11,0x62716a);
     group.add(label(zone.name.toUpperCase(),d-4.1,3.1,11,5,.65));
     if(zone.id===0){
@@ -589,11 +539,11 @@ export function createWorld(scene){
       for(let pad=0;pad<7;pad++){const x=(pad%2?1:-1)*(29.5+(pad%3)*1.1),z=22+pad*4.1;add(1.05,.09,.9,x,.13,z,0x588f72,{ry:pad*.61});add(.18,.16,.18,x,.2,z,0xe8cf80);}
       for(let i=0;i<12;i++){const x=-17+(i%6)*6.5,z=20+Math.floor(i/6)*24;add(.28,.1,.28,x,1.12,z,0xe6b2a1);add(.12,.2,.12,x,1.25,z,0xe9d18b);}
     }
-    group.add(islandFoundation(zone));if(zone.id===0){group.add(reedhavenTerrain(zone));group.add(reedhavenPond(zone));}
+    group.add(islandFoundation(zone));
     group.add(mergeBoxes(S));
     if(smoothTrees.length){
       const trunkGeo=new THREE.CylinderGeometry(.2,.34,2.6,5),trunkMat=new THREE.MeshLambertMaterial({color:0x76583c}),trunks=new THREE.InstancedMesh(trunkGeo,trunkMat,smoothTrees.length),leafGeo=zone.theme==='forest'?new THREE.ConeGeometry(1.7,3.3,7,2):new THREE.IcosahedronGeometry(1.65,1),leafMat=new THREE.MeshLambertMaterial({color:zone.theme==='river'?0x47845e:zone.theme==='forest'?0x397255:0x518b58,flatShading:true}),crowns=new THREE.InstancedMesh(leafGeo,leafMat,smoothTrees.length),dummy=new THREE.Object3D();
-      smoothTrees.forEach((t,n)=>{const base=zone.id===0?reedhavenHeight(t.x,t.z):.95;dummy.position.set(t.x,base+1.25*t.s,t.z);dummy.scale.setScalar(t.s);dummy.rotation.set(0,0,0);dummy.updateMatrix();trunks.setMatrixAt(n,dummy.matrix);dummy.position.set(t.x,base+(zone.theme==='forest'?3.1:3.25)*t.s,t.z);dummy.scale.set(zone.theme==='forest'?t.s:t.s*1.22,(zone.theme==='forest'?t.s:t.s*.82),zone.theme==='forest'?t.s:t.s*1.16);dummy.rotation.set(0,n*.73,0);dummy.updateMatrix();crowns.setMatrixAt(n,dummy.matrix);crowns.setColorAt(n,new THREE.Color(zone.theme==='forest'?[0x397255,0x447d56,0x32674f][n%3]:[0x4d8d57,0x65a65e,0x579963][n%3]));});trunks.instanceMatrix.needsUpdate=true;crowns.instanceMatrix.needsUpdate=true;group.add(trunks,crowns);
+      smoothTrees.forEach((t,n)=>{dummy.position.set(t.x,.95+1.25*t.s,t.z);dummy.scale.setScalar(t.s);dummy.rotation.set(0,0,0);dummy.updateMatrix();trunks.setMatrixAt(n,dummy.matrix);const v=1+(n%3-1)*.08;dummy.position.set(t.x,.95+(zone.theme==='forest'?3.1:3.25)*t.s,t.z);dummy.scale.set(zone.theme==='forest'?t.s:t.s*1.22,(zone.theme==='forest'?t.s:t.s*.82),zone.theme==='forest'?t.s:t.s*1.16);dummy.rotation.set(0,n*.73,0);dummy.updateMatrix();crowns.setMatrixAt(n,dummy.matrix);crowns.setColorAt(n,new THREE.Color(zone.theme==='forest'?[0x397255,0x447d56,0x32674f][n%3]:[0x4d8d57,0x65a65e,0x579963][n%3]));});trunks.instanceMatrix.needsUpdate=true;crowns.instanceMatrix.needsUpdate=true;group.add(trunks,crowns);
     }
     if(glows.length)group.add(mergeBoxes(glows,true));
     islands.push(group);
@@ -638,13 +588,13 @@ export function createWorld(scene){
       const p=worldToIsland(i,x,z);
       if(Math.abs(p.x)>110||Math.abs(p.z)>110)continue;
       const matches=surfaces[i.id].filter(r=>p.x>=r.minX&&p.x<=r.maxX&&p.z>=r.minZ&&p.z<=r.maxZ);
-      if(matches.length){const y=Math.max(...matches.map(r=>r.height));if(i.id===0&&y===.95&&p.x>=-27&&p.x<=27&&p.z>=13&&p.z<=56)return Math.max(y,reedhavenHeight(p.x,p.z));return y;}
+      if(matches.length)return Math.max(...matches.map(r=>r.height));
     }
     return null;
   }
   function groundAt(x,z,zone){
     const y=surfaceAt(x,z,zone);
-    if(y===null||y>(zone===0?12:1.2))return null;
+    if(y===null||y>1.2)return null;
     for(const b of colliders)if(b.zone===zone&&(b.rect?(x>=b.rect.minX-.28&&x<=b.rect.maxX+.28&&z>=b.rect.minZ-.28&&z<=b.rect.maxZ+.28):Math.hypot(x-b.x,z-b.z)<b.r))return null;
     return y;
   }

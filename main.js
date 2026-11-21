@@ -243,18 +243,17 @@ camera.add(rodRig);
 scene.add(camera);
 
 const rodMat = mat(0xc98a4b);
-const gripMat = mat(0x27343c),defaultRodSections=[];
+const gripMat = mat(0x27343c);
 {
   rodRig.add(box(0.07, 0.34, 0.07, gripMat, 0, 0.16, 0));          // grip
-  const lower=box(0.055, 0.62, 0.055, rodMat, 0, 0.62, 0);rodRig.add(lower);defaultRodSections.push(lower);
+  rodRig.add(box(0.055, 0.62, 0.055, rodMat, 0, 0.62, 0));         // lower section
   const reel = box(0.07, 0.11, 0.11, mat(0xd7dde2), 0.015, 0.5, 0.07);
   rodRig.add(reel);
   rodRig.add(box(0.05, 0.05, 0.06, gripMat, 0, 0.46, 0.09));
 }
-const starterRodDetails=new THREE.Group();let starterTip=null,defaultTipRod=null;starterRodDetails.name='reedhaven-starter-rod-detail';
+const starterRodDetails=new THREE.Group();starterRodDetails.name='reedhaven-starter-rod-detail';
 {
   const guideMat=new THREE.MeshStandardMaterial({color:0xcbd5d0,metalness:.7,roughness:.26}),guideGeo=new THREE.TorusGeometry(.07,.012,4,7),guides=new THREE.InstancedMesh(guideGeo,guideMat,3),obj=new THREE.Object3D();
-  const lowerShaft=new THREE.Mesh(new THREE.CylinderGeometry(.022,.052,.62,6),rodMat);lowerShaft.position.y=.62;starterRodDetails.add(lowerShaft);
   [.94,1.25,1.53].forEach((y,i)=>{obj.position.set(0,y,0);obj.rotation.set(Math.PI/2,0,0);const s=1-i*.24;obj.scale.setScalar(s);obj.updateMatrix();guides.setMatrixAt(i,obj.matrix);});guides.instanceMatrix.needsUpdate=true;starterRodDetails.add(guides);
   const wrapGeo=new THREE.BoxGeometry(.065,.025,.065),wrapMat=new THREE.MeshStandardMaterial({color:0xe2b969,metalness:.4,roughness:.36}),wraps=new THREE.InstancedMesh(wrapGeo,wrapMat,3);
   [.22,.29,.36].forEach((y,i)=>{obj.position.set(0,y,0);obj.rotation.set(0,0,0);obj.scale.set(1,1,1);obj.updateMatrix();wraps.setMatrixAt(i,obj.matrix);});wraps.instanceMatrix.needsUpdate=true;starterRodDetails.add(wraps);
@@ -265,9 +264,8 @@ const tipJoint = new THREE.Group();
 tipJoint.name = 'rod-bend';
 tipJoint.position.y = 0.9;
 rodRig.add(tipJoint);
-defaultTipRod=box(0.04, 0.62, 0.04, rodMat, 0, 0.31, 0);tipJoint.add(defaultTipRod);
+tipJoint.add(box(0.04, 0.62, 0.04, rodMat, 0, 0.31, 0));
 tipJoint.add(box(0.08, 0.08, 0.08, mat(0xef4056), 0, 0.66, 0));
-starterTip=new THREE.Group();const taperedTip=new THREE.Mesh(new THREE.CylinderGeometry(.008,.022,.62,6),rodMat);taperedTip.position.y=.31;starterTip.add(taperedTip);tipJoint.add(starterTip);
 const rodTipObj = new THREE.Object3D();
 rodTipObj.name = 'rod-tip';
 rodTipObj.position.y = 0.66;
@@ -1178,7 +1176,7 @@ function buyGear(kind, i){
 }
 function applyGear(){
   const r = RODS[G.gear.rod] || RODS[0];
-  rodMat.color.setHex(r.color);const starter=G.gear.rod===0;if(starterRodDetails)starterRodDetails.visible=starter;if(starterTip)starterTip.visible=starter;defaultRodSections.forEach(m=>m.visible=!starter);if(defaultTipRod)defaultTipRod.visible=!starter;
+  rodMat.color.setHex(r.color);if(starterRodDetails)starterRodDetails.visible=G.gear.rod===0;
   const l = LINES[G.gear.line] || LINES[0];
   lineMat.color.setHex(l.id === 'twine' ? 0xe8dcc0 : l.color);
   updateStats();
