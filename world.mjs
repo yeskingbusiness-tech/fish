@@ -554,6 +554,10 @@ export function createWorld(scene){
   let boat=boatMesh(0),boatId=0;root.add(boat);
   const motes=new THREE.InstancedMesh(UNIT,new THREE.MeshBasicMaterial({color:0xe4f3ff}),44);
   motes.frustumCulled=false;root.add(motes);
+  // Rain is made of short world-space drops near the player, never a screen-wide
+  // diagonal CSS texture. Keeping it instanced adds one draw call only in rain.
+  const rain=new THREE.InstancedMesh(new THREE.BoxGeometry(.026,.34,.026),new THREE.MeshBasicMaterial({color:0xc7efff,transparent:true,opacity:.38,depthWrite:false}),180);
+  rain.frustumCulled=false;root.add(rain);
   function setBoat(id){
     if(id===boatId)return;
     root.remove(boat);
@@ -587,8 +591,8 @@ export function createWorld(scene){
     sky.position.copy(camera.position);
     clouds.position.set(camera.position.x,0,camera.position.z+250);
     sun.position.set(camera.position.x+120,120,camera.position.z-250);
-    const weatherWater={storm:0x456779,rain:0x4b8d99,fog:0x7d9a9d,wind:0x547f8a,heat:0x45aaa1};
-    const weatherSky={storm:0x59677b,rain:0x6e8790,fog:0xb2c1bd,wind:0x819697,heat:0xd6b78e};
+    const weatherWater={storm:0x64899a,rain:0x5d9eae,fog:0x86a9ad,wind:0x5e8a96,heat:0x45aaa1};
+    const weatherSky={storm:0x83a7b4,rain:0x9bbdc7,fog:0xbccdc9,wind:0x9ab4bc,heat:0xd9c09e};
     tempColor.setHex(weatherWater[weather]??i.water);waterUniforms.uLight.value.lerp(tempColor,Math.min(1,dt*1.2));
     tempColor.multiplyScalar(.65);waterUniforms.uDeep.value.lerp(tempColor,Math.min(1,dt*1.2));
     tempColor.setHex(weatherSky[weather]??i.sky);waterUniforms.uFog.value.lerp(tempColor,Math.min(1,dt*1.2));
@@ -613,6 +617,8 @@ export function createWorld(scene){
       }
       motes.instanceMatrix.needsUpdate=true;
     }
+    rain.visible=weather==='rain'||weather==='storm';
+    if(rain.visible){rain.material.opacity=weather==='storm'?.48:.34;for(let n=0;n<rain.count;n++){const a=n*12.9898,b=n*78.233,drop=30-((time*17+n*1.618)%30),drift=weather==='storm'?time*2.6:time*.55;scratch.position.set(camera.position.x+Math.sin(a)*22+drift,camera.position.y-1+drop,camera.position.z+Math.cos(b)*20+drift*.35);scratch.rotation.set(.015,0,weather==='storm'?.09:.035);scratch.scale.set(1,1,1);scratch.updateMatrix();rain.setMatrixAt(n,scratch.matrix);}rain.instanceMatrix.needsUpdate=true;}
     tempColor.setHex(i.theme==='lunar'?0xe6deff:0xffefd0);sun.material.color.lerp(tempColor,Math.min(1,dt*1.2));
   }
   return { root,water,waterUniforms,stalls,islands,groundAt,surfaceAt,inWater,dockPoint,update,setBoat,setAuroraPaint,

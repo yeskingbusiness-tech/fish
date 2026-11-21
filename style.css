@@ -554,10 +554,10 @@ button:disabled{cursor:not-allowed}.primary-btn:disabled{background:#c8d1ca;colo
 .weather-badge>span:first-child{font-size:20px}.weather-badge b,.weather-badge small{display:block}.weather-badge small{opacity:.72;margin-top:2px;font-size:10px}
 .activity-nav{border-color:#e5bd7088!important}.activity-nav small{margin-left:auto;color:#f3d28c;font-size:9px;letter-spacing:.08em}
 .weather-fx{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;transition:opacity .8s;background:transparent}
-.weather-fx.storm{opacity:.28;background:linear-gradient(#13202d22,#10182744),repeating-linear-gradient(108deg,transparent 0 25px,#d9f5ff44 26px 27px,transparent 28px 52px)}
-.weather-fx.rain{opacity:.12;background:repeating-linear-gradient(105deg,transparent 0 30px,#d9f5ff55 31px 32px,transparent 33px 60px)}
-.weather-fx.fog{opacity:.24;background:linear-gradient(90deg,#d9edf055,#e3f2ef22,#d9edf055)}
-.weather-fx.wind{opacity:.1;background:repeating-linear-gradient(170deg,transparent 0 34px,#f3f7e744 35px 36px,transparent 37px 72px)}
+.weather-fx.storm{opacity:.08;background:linear-gradient(180deg,#31465c12,#20334b28)}
+.weather-fx.rain{opacity:0;background:transparent}
+.weather-fx.fog{opacity:.16;background:linear-gradient(90deg,#d9edf033,#e3f2ef12,#d9edf033)}
+.weather-fx.wind{opacity:.06;background:radial-gradient(ellipse at 50% 42%,transparent 28%,#eaf3df20 100%)}
 .weather-fx.heat{opacity:.12;background:linear-gradient(0deg,#f1b87144,transparent 65%)}
 .activities-card{width:min(780px,94vw);max-height:min(88vh,900px);overflow:auto;padding:clamp(18px,3vw,30px);border:1px solid #e4c27d66;border-radius:22px;background:linear-gradient(145deg,#18363ceF,#101f27f5 70%);box-shadow:0 28px 100px #000a;color:#f3f0e6}
 .activities-card h2{margin:4px 0;font-size:clamp(22px,4vw,34px)}.activity-weather-line{color:#c8d8d5;margin:0 0 16px;font-size:13px}
