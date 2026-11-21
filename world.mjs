@@ -4,7 +4,6 @@ import { ISLANDS, BOATS } from './archipelago.mjs?v=44';
 import { dockLocation, SEA_BOUNDS, territoryCenter } from './navigation.mjs?v=44';
 import { islandToWorld, worldToIsland, islandSurfaces } from './island-layout.mjs?v=44';
 import { villagePathTiles } from './village-paths.mjs?v=44';
-import { remodelIsland } from './island-remodel.mjs?v=1';
 
 const UNIT = new THREE.BoxGeometry(1, 1, 1);
 const scratch = new THREE.Object3D();
@@ -614,13 +613,8 @@ export function createWorld(scene){
       if(b.rect){const a=islandToWorld(zone,b.rect.minX,b.rect.minZ),c=islandToWorld(zone,b.rect.maxX,b.rect.maxZ);out.rect={minX:Math.min(a.x,c.x),maxX:Math.max(a.x,c.x),minZ:Math.min(a.z,c.z),maxZ:Math.max(a.z,c.z)};out.r=Math.hypot(out.rect.maxX-out.rect.minX,out.rect.maxZ-out.rect.minZ)/2;}
       return out;
     }));
-    // Discard the previous island art entirely; rebuild a coherent cube-built
-    // world from authored terrain, storefront, vegetation and landmark forms.
-    for(const old of [...group.children])old.traverse?.(o=>{if(o.isMesh&&o.geometry&&o.geometry!==UNIT)o.geometry.dispose();});
-    group.clear();group.userData.wheel=null;
-    const rebuilt=remodelIsland(zone,layout,stallLayout,group,label);
-    // Distant LOD uses the same new silhouettes, not a stale copy of old art.
-    const distant=rebuilt.distant;
+    // Distant islands retain their skyline without drawing every item in a stall.
+    const distant=mergeBoxes(S.filter(b=>b.w>=7||(b.h>=2.5&&b.w>=1.2)));
     distant.position.copy(group.position);distant.rotation.copy(group.rotation);root.add(distant);distantIslands.push(distant);
   }
 
