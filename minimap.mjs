@@ -1,5 +1,5 @@
-import { ISLANDS } from './island-data.mjs?v=44';
-import { territoryCenter, TERRITORY_RADIUS, SEA_BOUNDS, LAND_RECTS } from './navigation.mjs?v=44';
+import { ISLANDS } from './island-data.mjs?v=45';
+import { territoryCenter, TERRITORY_RADIUS, SEA_BOUNDS, LAND_RECTS } from './navigation.mjs?v=45';
 // One small 2D canvas, redrawn at 5 Hz only while visible. Fixed land footprints
 // share the exact orthogonal transforms used by rendering and boat collision.
 const footprints=ISLANDS.map(i=>LAND_RECTS.filter(r=>r.island===i.id));

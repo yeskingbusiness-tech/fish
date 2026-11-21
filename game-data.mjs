@@ -1,6 +1,6 @@
 // Pure collection, equipment and fishing rules. No size is derived from rarity.
 import { COLLECTION_ROSTER } from './collection-roster.mjs?v=44';
-import { ISLANDS, GEAR_PER_ISLAND } from './island-data.mjs?v=44';
+import { ISLANDS, GEAR_PER_ISLAND } from './island-data.mjs?v=45';
 import { fishAppearance } from './fish-appearance.mjs?v=44';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export const SALE_MULTIPLIER=.85;
