@@ -53,14 +53,7 @@ function cube(w,h,d,color,x=0,y=0,z=0){
   m.scale.set(w,h,d); m.position.set(x,y,z); return m;
 }
 function coloredMeshBuilder(){const positions=[],colors=[];const tri=(a,b,c,color)=>{const col=new THREE.Color(color);for(const p of [a,b,c]){positions.push(...p);colors.push(col.r,col.g,col.b);}};return {tri,quad:(a,b,c,d,color)=>{tri(a,b,c,color);tri(a,c,d,color);},mesh:(name,material=new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true,side:THREE.DoubleSide}))=>{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));g.computeVertexNormals();const m=new THREE.Mesh(g,material);m.name=name;return m;}};}
-function reedhavenHeight(x,z){
-  // A deliberately built-up headland: broad, squared-off cliff benches rather
-  // than Gaussian mounds. Narrow bevels keep the silhouette crisp, not rounded.
-  const bevel=(d,edge)=>{const t=Math.max(0,Math.min(1,(d-edge)/1.35));return t*t*(3-2*t);};
-  const headland=Math.max(bevel(1-Math.max(Math.abs((x+17)/12),Math.abs((z-48)/15)),.03)*5.8,bevel(1-Math.max(Math.abs((x-16)/11),Math.abs((z-50)/14)),.02)*6.6,bevel(1-Math.max(Math.abs(x/19),Math.abs((z-61)/6)),.02)*3.4);
-  const lake=Math.exp(-(((x/10)**4)+(((z-49)/6)**4))),village=Math.max(0,Math.min(1,(Math.hypot(x,z-31)-14)/9));
-  return .95+headland*(1-.98*lake)+village*(1-lake)*(.10*Math.sin(x*.28+z*.14)+.08*Math.cos(z*.23-x*.17));
-}
+function reedhavenHeight(x,z){const g=(cx,cz,rx,rz,a)=>a*Math.exp(-(((x-cx)/rx)**2+((z-cz)/rz)**2)),village=Math.max(0,Math.min(1,(Math.hypot(x,z-31)-14)/9)),lake=Math.exp(-(((x/10)**4)+(((z-49)/6)**4)));const ridges=g(-18,51,9,13,8)+g(18,52,10,13,9)+g(0,61,15,6,4);return .95+ridges*(1-.96*lake)+village*(1-lake)*(.22*Math.sin(x*.34+z*.17)+.16*Math.cos(z*.28-x*.2));}
 function reedhavenTerrain(zone){const b=coloredMeshBuilder(),nx=36,nz=28,verts=[];for(let j=0;j<=nz;j++){verts[j]=[];const z=13+j*43/nz;for(let i=0;i<=nx;i++){const x=-27+i*54/nx,y=reedhavenHeight(x,z),c=new THREE.Color(zone.land);if(y>1.08)c.lerp(new THREE.Color(zone.accent),Math.min(.7,(y-1.08)*.6));if(y>1.3)c.lerp(new THREE.Color(zone.rock),Math.min(.7,(y-1.3)*.35));verts[j][i]=[x,y,z,c.getHex()];}}
   for(let j=0;j<nz;j++)for(let i=0;i<nx;i++){const a=verts[j][i],bb=verts[j][i+1],c=verts[j+1][i],d=verts[j+1][i+1];if((i+j)%2){b.tri(a.slice(0,3),bb.slice(0,3),c.slice(0,3),a[3]);b.tri(bb.slice(0,3),d.slice(0,3),c.slice(0,3),bb[3]);}else{b.tri(a.slice(0,3),d.slice(0,3),c.slice(0,3),a[3]);b.tri(a.slice(0,3),bb.slice(0,3),d.slice(0,3),bb[3]);}}
   return b.mesh('reedhaven-triangulated-highland');}
@@ -81,10 +74,7 @@ function angularShop(st,zone,b){const x=st.x,z=st.z,y=1,front=z-2.05,back=z+2.05
   b.quad([x-1.35,y+2.12,front-.15],[x+1.35,y+2.12,front-.15],[x+1.15,y+2.48,front-.45],[x-1.15,y+2.48,front-.45],accent);
   b.quad([x-2.3,y+2.25,front-.12],[x+2.3,y+2.25,front-.12],[x+2.3,y+2.39,front-.12],[x-2.3,y+2.39,front-.12],0xe9d6ad);
   const z0=front-.72;b.quad([x-1.5,y+.18,z0],[x+1.5,y+.18,z0],[x+1.5,y+.65,z0],[x-1.5,y+.65,z0],0x86694a);b.quad([x-1.5,y+.65,z0],[x+1.5,y+.65,z0],[x+1.35,y+.82,z0+.14],[x-1.35,y+.82,z0+.14],0xd1b684);
-  b.quad([x-.9,y+2.45,front-.09],[x+.9,y+2.45,front-.09],[x+.9,y+3.12,front-.09],[x-.9,y+3.12,front-.09],0x604a39);
-  b.quad([x-.76,y+2.55,front-.12],[x+.76,y+2.55,front-.12],[x+.76,y+3.02,front-.12],[x-.76,y+3.02,front-.12],0xe1cfaa);
-  b.quad([x-.58,y+2.63,front-.15],[x+.58,y+2.63,front-.15],[x+.58,y+2.94,front-.15],[x-.58,y+2.94,front-.15],accent);
-  return {sign:null,vendor:{x:x+.72,y:y+1.55,z:front-.75,color:accent},goods:[-1,0,1].map((n)=>({x:x+n*.35,y:y+.95,z:z0-.25,color:[0xd3a467,0x76a9ac,0xc77d68][n+1]}))};}
+  return {sign:label(st.banner,x,y+3.1,front-.18,3.8,.55,'#f7e8c7'),vendor:{x:x+.72,y:y+1.55,z:front-.75,color:accent},goods:[-1,0,1].map((n)=>({x:x+n*.35,y:y+.95,z:z0-.25,color:[0xd3a467,0x76a9ac,0xc77d68][n+1]}))};}
 function reedhavenLighthouse(){const b=coloredMeshBuilder(),cx=-22,cz=6,n=8,ring=(y,r)=>Array.from({length:n},(_,i)=>[cx+Math.cos(i*Math.PI*2/n+Math.PI/8)*r,y,cz+Math.sin(i*Math.PI*2/n+Math.PI/8)*r]),frustum=(y0,r0,y1,r1,color)=>{const lo=ring(y0,r0),hi=ring(y1,r1);for(let i=0;i<n;i++)b.quad(lo[i],lo[(i+1)%n],hi[(i+1)%n],hi[i],color);};
   frustum(.9,2.15,12.7,1.05,0xe7dcc4);for(const[y,r,h]of[[2.4,1.82,.42],[8.4,1.17,.45],[12.65,1.4,.32]])frustum(y-h/2,r*.88,y+h/2,r,0xc36d59);
   // Recessed narrow windows follow the eight sharp lighthouse facets.
@@ -531,7 +521,7 @@ export function createWorld(scene){
     for(const st of stallLayout){
       const x=st.x,z=st.z,base=1;
       const color=zone.theme==='lunar'?0x9f95c0:zone.theme==='volcanic'?0xa88170:st.color;
-      if(zone.id===0){const detail=angularShop(st,zone,reedVillage);reedVendors.push(detail.vendor);reedGoods.push(...detail.goods);blockRect(x,z,5.0,4.5,4.5);stalls.push({...st,zone:zone.id,...islandToWorld(zone,x,z),approach:islandToWorld(zone,x,z-3.8),yaw:layout.yaw});continue;}
+      if(zone.id===0){const detail=angularShop(st,zone,reedVillage);group.add(detail.sign);reedVendors.push(detail.vendor);reedGoods.push(...detail.goods);blockRect(x,z,5.0,4.5,4.5);stalls.push({...st,zone:zone.id,...islandToWorld(zone,x,z),approach:islandToWorld(zone,x,z-3.8),yaw:layout.yaw});continue;}
       add(4.5,1.05,1.5,x,base+.525,z,0x846b50);add(4.8,.2,1.8,x,base+1.12,z,0xd1b58a);
       add(4.6,.13,1.8,x,base+.8,z,color);
       for(const dx of [-2,2]) for(const dz of [-.65,.65]) add(.18,3.3,.18,x+dx,base+1.65,z+dz,0x655a46);
