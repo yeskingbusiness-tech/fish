@@ -587,8 +587,9 @@ export function createWorld(scene){
       const heads=reedVendors.map(v=>({...v,y:v.y+.65})),hmat=new THREE.MeshLambertMaterial({color:0xd7a27c});place(new THREE.IcosahedronGeometry(.27,0),hmat,heads,v=>v,.98);
       const goods=new THREE.InstancedMesh(new THREE.OctahedronGeometry(.18,0),new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true,flatShading:true}),reedGoods.length),o=new THREE.Object3D();reedGoods.forEach((item,i)=>{o.position.set(item.x,item.y,item.z);o.scale.set(.8,1.2,.8);o.updateMatrix();goods.setMatrixAt(i,o.matrix);goods.setColorAt(i,new THREE.Color(item.color));});goods.instanceMatrix.needsUpdate=true;group.add(goods);
     }
-    add(.2,2,.2,d-4.1,2,11,0x62716a);
-    group.add(label(zone.name.toUpperCase(),d-4.1,3.1,11,5,.65));
+    // Keep the harbor marker subordinate to the actual storefronts; a large
+    // floating nameplate in the landing sightline overwhelmed the village.
+    if(zone.id!==0){add(.16,1.35,.16,d-4.1,1.7,11,0x62716a);group.add(label(zone.name.toUpperCase(),d-4.1,2.55,11,3.1,.42));}
     if(zone.id===0){
       // Reedhaven-only shoreline polish: warm reeds, small flowers and flat lily pads.
       for(const side of [-1,1])for(let patch=0;patch<6;patch++){
@@ -602,7 +603,7 @@ export function createWorld(scene){
     group.add(islandFoundation(zone));if(zone.id===0){group.add(reedhavenTerrain(zone));group.add(reedhavenPond(zone));}
     group.add(mergeBoxes(S));
     if(smoothTrees.length){
-      const trunkGeo=new THREE.CylinderGeometry(.2,.34,2.6,5),trunkMat=new THREE.MeshLambertMaterial({color:0x76583c}),trunks=new THREE.InstancedMesh(trunkGeo,trunkMat,smoothTrees.length),leafGeo=zone.theme==='forest'?new THREE.ConeGeometry(1.7,3.3,7,2):new THREE.IcosahedronGeometry(1.65,1),leafMat=new THREE.MeshLambertMaterial({color:zone.theme==='river'?0x47845e:zone.theme==='forest'?0x397255:0x518b58,flatShading:true}),crowns=new THREE.InstancedMesh(leafGeo,leafMat,smoothTrees.length),dummy=new THREE.Object3D();
+      const trunkGeo=new THREE.BoxGeometry(.58,2.5,.58),trunkMat=new THREE.MeshLambertMaterial({color:0x76583c}),trunks=new THREE.InstancedMesh(trunkGeo,trunkMat,smoothTrees.length),leafGeo=new THREE.BoxGeometry(2.8,2.5,2.8),leafMat=new THREE.MeshLambertMaterial({color:zone.theme==='river'?0x47845e:zone.theme==='forest'?0x397255:0x518b58,flatShading:true}),crowns=new THREE.InstancedMesh(leafGeo,leafMat,smoothTrees.length),dummy=new THREE.Object3D();
       smoothTrees.forEach((t,n)=>{const base=zone.id===0?reedhavenHeight(t.x,t.z):.95;dummy.position.set(t.x,base+1.25*t.s,t.z);dummy.scale.setScalar(t.s);dummy.rotation.set(0,0,0);dummy.updateMatrix();trunks.setMatrixAt(n,dummy.matrix);dummy.position.set(t.x,base+(zone.theme==='forest'?3.1:3.25)*t.s,t.z);dummy.scale.set(zone.theme==='forest'?t.s:t.s*1.22,(zone.theme==='forest'?t.s:t.s*.82),zone.theme==='forest'?t.s:t.s*1.16);dummy.rotation.set(0,n*.73,0);dummy.updateMatrix();crowns.setMatrixAt(n,dummy.matrix);crowns.setColorAt(n,new THREE.Color(zone.theme==='forest'?[0x397255,0x447d56,0x32674f][n%3]:[0x4d8d57,0x65a65e,0x579963][n%3]));});trunks.instanceMatrix.needsUpdate=true;crowns.instanceMatrix.needsUpdate=true;group.add(trunks,crowns);
     }
     if(glows.length)group.add(mergeBoxes(glows,true));
@@ -668,8 +669,8 @@ export function createWorld(scene){
     sun.position.set(camera.position.x+120,120,camera.position.z-250);
     const weatherWater={storm:0x456779,rain:0x4b8d99,fog:0x7d9a9d,wind:0x547f8a,heat:0x45aaa1};
     const weatherSky={storm:0x59677b,rain:0x6e8790,fog:0xb2c1bd,wind:0x819697,heat:0xd6b78e};
-    tempColor.setHex(weatherWater[weather]??i.water);waterUniforms.uLight.value.lerp(tempColor,Math.min(1,dt*1.2));
-    tempColor.multiplyScalar(.65);waterUniforms.uDeep.value.lerp(tempColor,Math.min(1,dt*1.2));
+    tempColor.setHex(weatherWater[weather]??i.water);if(weather==='clear'){const vibrant=new THREE.Color(0x48b8e8);tempColor.lerp(vibrant,.24);}waterUniforms.uLight.value.lerp(tempColor,Math.min(1,dt*1.2));
+    tempColor.lerp(new THREE.Color(0x17628e),.42);waterUniforms.uDeep.value.lerp(tempColor,Math.min(1,dt*1.2));
     tempColor.setHex(weatherSky[weather]??i.sky);waterUniforms.uFog.value.lerp(tempColor,Math.min(1,dt*1.2));
     scene.fog.color.lerp(tempColor,Math.min(1,dt*1.2));scene.background.copy(scene.fog.color);
     sky.material.uniforms.uBottom.value.lerp(tempColor,Math.min(1,dt*1.2));
