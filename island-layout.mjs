@@ -64,10 +64,6 @@ export function islandSurfaces(island){
     {minX:-27,maxX:27,minZ:13,maxZ:56,height:.95,kind:'land'},
     // 58 × 46 instead of 60 × 48: a slightly narrower physical sand shelf.
     {minX:-29,maxX:29,minZ:11,maxZ:57,height:.5,kind:'shore'},
-    // Newly explorable backlands and side shelves; the original village,
-    // spawn, stalls and shoreline remain at their established coordinates.
-    {minX:-45,maxX:45,minZ:13,maxZ:88,height:.95,kind:'exploration'},
-    {minX:-48,maxX:48,minZ:10,maxZ:91,height:.5,kind:'exploration-shore'},
     ...[...island.landforms,...island.waterObstacles].map(f=>({minX:f.x-f.w/2,maxX:f.x+f.w/2,minZ:f.z-f.d/2,maxZ:f.z+f.d/2,height:f.h-.8,kind:'rock'})),
   ];
 }

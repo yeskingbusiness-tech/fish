@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { exposedCuboidFaces } from './voxel-geometry.mjs?v=44';
-import { ISLANDS, BOATS } from './archipelago.mjs?v=45';
-import { dockLocation, SEA_BOUNDS, territoryCenter } from './navigation.mjs?v=45';
-import { islandToWorld, worldToIsland, islandSurfaces } from './island-layout.mjs?v=45';
+import { ISLANDS, BOATS } from './archipelago.mjs?v=44';
+import { dockLocation, SEA_BOUNDS, territoryCenter } from './navigation.mjs?v=44';
+import { islandToWorld, worldToIsland, islandSurfaces } from './island-layout.mjs?v=44';
 import { villagePathTiles } from './village-paths.mjs?v=44';
-import { remodelIsland, terrainHeight } from './island-remodel.mjs?v=3';
+import { remodelIsland, terrainHeight } from './island-remodel.mjs?v=2';
 
 const UNIT = new THREE.BoxGeometry(1, 1, 1);
 const scratch = new THREE.Object3D();
@@ -655,7 +655,7 @@ export function createWorld(scene){
       const p=worldToIsland(i,x,z);
       if(Math.abs(p.x)>110||Math.abs(p.z)>110)continue;
       const matches=surfaces[i.id].filter(r=>p.x>=r.minX&&p.x<=r.maxX&&p.z>=r.minZ&&p.z<=r.maxZ);
-      if(matches.length){const y=Math.max(...matches.map(r=>r.height));if(y===.95&&p.x>=-45&&p.x<=45&&p.z>=13&&p.z<=88)return Math.max(y,terrainHeight(i,p.x,p.z));return y;}
+      if(matches.length){const y=Math.max(...matches.map(r=>r.height));if(y===.95&&p.x>=-27&&p.x<=27&&p.z>=13&&p.z<=56)return Math.max(y,terrainHeight(i,p.x,p.z));return y;}
     }
     return null;
   }
