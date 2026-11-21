@@ -130,7 +130,8 @@ const adaptiveQuality = createAdaptiveQuality(devicePixelRatio);
 renderer.setPixelRatio(adaptiveQuality.pixelRatio);
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.shadowMap.enabled = false; // flat blocky lighting — and much faster
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
+renderer.shadowMap.enabled = false; // Keep the frame budget stable; depth and shape come from art-directed light.
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x8fd8f2);

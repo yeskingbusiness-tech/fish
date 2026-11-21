@@ -52,6 +52,18 @@ function cube(w,h,d,color,x=0,y=0,z=0){
   const m=new THREE.Mesh(UNIT,new THREE.MeshLambertMaterial({color}));
   m.scale.set(w,h,d); m.position.set(x,y,z); return m;
 }
+function islandFoundation(zone){
+  // Faceted, rounded shoreline strata replace the giant square base blocks.
+  const outline=[[-23,-23],[23,-23],[27,-21],[29,-17],[29,17],[27,21],[23,23],[-23,23],[-27,21],[-29,17],[-29,-17],[-27,-21]],rings=[
+    {scale:.78,y:-2.8,color:zone.rock},{scale:.88,y:-1.9,color:zone.rock},{scale:.99,y:-.55,color:zone.sand},{scale:1,y:.35,color:zone.sand},{scale:.94,y:.95,color:zone.land}
+  ],positions=[],colors=[],indices=[],color=new THREE.Color();
+  for(const ring of rings)for(const [x,z]of outline){positions.push(x*ring.scale,ring.y,z*ring.scale+34);color.setHex(ring.color);colors.push(color.r,color.g,color.b);}
+  const n=outline.length;
+  for(let r=0;r<rings.length-1;r++)for(let i=0;i<n;i++){const a=r*n+i,b=r*n+(i+1)%n,c=(r+1)*n+i,d=(r+1)*n+(i+1)%n;indices.push(a,c,b,b,c,d);}
+  const center=positions.length/3;positions.push(0,.95,34);color.setHex(zone.land);colors.push(color.r,color.g,color.b);const top=(rings.length-1)*n;for(let i=0;i<n;i++)indices.push(center,top+(i+1)%n,top+i);
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geo.setIndex(indices);geo.computeVertexNormals();
+  const mesh=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true}));mesh.name=`island-${zone.id}-rounded-shore`;return mesh;
+}
 const signMaterials=new Map();
 function label(text, x,y,z,w=4.4,h=.65, color='#f4e5c5'){
   let front=signMaterials.get(text);
@@ -70,13 +82,15 @@ function label(text, x,y,z,w=4.4,h=.65, color='#f4e5c5'){
   const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,.12),front);
   m.position.set(x,y,z); return m;
 }
+function boatHull(b){
+  const sections=[[-3.85,.12,.1],[-3.2,.72,-.28],[-2.25,1.18,-.48],[.1,1.42,-.56],[1.9,1.28,-.47],[2.8,.78,-.18]],pos=[],colors=[],indices=[],main=new THREE.Color(b.color),dark=main.clone().multiplyScalar(.58),trim=new THREE.Color(b.stripe),ring=[[0,1],[.82,.56],[1,0],[.82,.56],[0,1],[-.82,.56],[-1,0],[-.82,.56]];
+  for(const[z,half,bottom]of sections)for(let j=0;j<ring.length;j++){const[xr,yr]=ring[j],top=.78;pos.push(xr*half,bottom+(top-bottom)*yr,z);const col=yr>.95?trim:yr>.5?main:dark;colors.push(col.r,col.g,col.b);}
+  for(let i=0;i<sections.length-1;i++)for(let j=0;j<ring.length;j++){const a=i*8+j,bv=i*8+(j+1)%8,c=(i+1)*8+j,d=(i+1)*8+(j+1)%8;indices.push(a,bv,c,bv,d,c);}
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geo.setIndex(indices);geo.computeVertexNormals();const hull=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true,side:THREE.DoubleSide}));hull.name='faceted-low-poly-hull';return hull;
+}
 function boatMesh(id){
   const b=BOATS[id], S=[];
   const add=(w,h,d,x,y,z,c)=>S.push({w,h,d,x,y,z,c});
-  add(2.5,.55,5.7,0,.15,0,b.color);
-  add(2.9,.45,4.6,0,.55,.25,b.color);
-  add(2,.4,1.2,0,.5,-2.5,b.color);
-  add(1.25,.35,.8,0,.5,-3.35,b.color);
   add(2.4,.18,4.8,0,.79,.2,0xdbc394);
   for(const x of [-1.35,1.35]) add(.16,.48,4.8,x,.9,.25,b.stripe);
   add(2.6,.5,.18,0,.9,2.6,b.stripe);
@@ -106,7 +120,7 @@ function boatMesh(id){
   }
   if(id>=4){ add(.35,1,.35,-.7,3.1,1.45,0x535a6d); add(.8,.18,.65,0,2.9,-.6,b.color); }
   if(id===5){ for(const x of [-1.48,1.48]) add(.16,.17,4.6,x,.65,.25,0xc6e8ff); add(.3,.9,.3,0,3.2,-.5,0xd0c3ff); }
-  const g=new THREE.Group();g.name='player-boat';g.add(mergeBoxes(S));g.scale.setScalar(b.size);return g;
+  const g=new THREE.Group();g.name='player-boat';g.add(boatHull(b),mergeBoxes(S));g.scale.setScalar(b.size);return g;
 }
 
 export function createWorld(scene){
@@ -117,17 +131,18 @@ export function createWorld(scene){
   const waterMat=new THREE.ShaderMaterial({
     uniforms:waterUniforms, transparent:true,
     vertexShader:`uniform float uTime; varying vec2 vGrid; varying float vWave; varying float vDepth;
-      void main(){ vec3 p=position; float w=sin(p.x*.13+uTime*.9)*.10+cos(p.z*.16+uTime*.7)*.10;
-      p.y+=floor(w*16.)/16.; vWave=w; vGrid=p.xz/7.;
+      void main(){ vec3 p=position; float w=sin(p.x*.075+uTime*.42)*.16+cos(p.z*.092+uTime*.34)*.13+sin((p.x+p.z)*.035-uTime*.22)*.07;
+      p.y+=w; vWave=w; vGrid=p.xz/7.;
       vec4 mv=modelViewMatrix*vec4(p,1.); vDepth=-mv.z; gl_Position=projectionMatrix*mv; }`,
     fragmentShader:`uniform float uTime; uniform vec3 uDeep; uniform vec3 uLight; uniform vec3 uFog;
       varying vec2 vGrid; varying float vWave; varying float vDepth;
-      void main(){ vec2 cell=floor(vGrid); float noise=fract(sin(dot(cell,vec2(12.9898,78.233)))*43758.5453);
-      float q=floor(clamp(vWave*2.+.5,0.,1.)*4.)/4.; vec3 c=mix(uDeep,uLight,q)*(.94+noise*.12);
-      vec2 edge=abs(fract(vGrid)-.5); c*=1.-step(.485,max(edge.x,edge.y))*.12*(1.-smoothstep(35.,140.,vDepth));
-      float glint=step(.994,fract(sin(dot(cell,vec2(6.45,8.92))+floor(uTime*1.5))*41758.5));
-      c+=glint*.19*(1.-smoothstep(35.,110.,vDepth));
-      c=mix(c,uFog,smoothstep(100.,850.,vDepth)); gl_FragColor=vec4(c,.97); }`
+      void main(){ float flow=sin(vGrid.x*.72+uTime*.16)*cos(vGrid.y*.61-uTime*.13);
+      float q=smoothstep(-.22,.32,vWave+flow*.08); vec3 c=mix(uDeep,uLight,q);
+      float caustic=pow(max(0.,sin(vGrid.x*.47+uTime*.22)*cos(vGrid.y*.39-uTime*.18)),12.);
+      c+=vec3(.27,.38,.34)*caustic*.23*(1.-smoothstep(45.,180.,vDepth));
+      float sheen=pow(max(0.,sin(vGrid.x*.22+vGrid.y*.19+uTime*.12)),18.);
+      c=mix(c,uLight,sheen*.16*(1.-smoothstep(30.,150.,vDepth)));
+      c=mix(c,uFog,smoothstep(100.,850.,vDepth)); gl_FragColor=vec4(c,.985); }`
   });
   const width=SEA_BOUNDS.maxX-SEA_BOUNDS.minX+800,depth=SEA_BOUNDS.maxZ-SEA_BOUNDS.minZ+800;
   const centerX=(SEA_BOUNDS.minX+SEA_BOUNDS.maxX)/2,centerZ=(SEA_BOUNDS.minZ+SEA_BOUNDS.maxZ)/2;
@@ -142,22 +157,20 @@ export function createWorld(scene){
     fragmentShader:'uniform vec3 uTop;uniform vec3 uBottom;varying vec3 vP;void main(){float h=clamp(vP.y/800.,0.,1.);h=floor(h*8.)/8.;gl_FragColor=vec4(mix(uBottom,uTop,h),1.);}'
   }));
   sky.frustumCulled=false; scene.add(sky);
-  const sun=cube(22,22,2,0xffefd0,120,120,-250); sun.material=new THREE.MeshBasicMaterial({color:0xffefd0,fog:false}); root.add(sun);
+  const sun=new THREE.Mesh(new THREE.SphereGeometry(11,16,10),new THREE.MeshBasicMaterial({color:0xfff0c8,fog:false}));sun.position.set(120,120,-250);sun.name='soft-sun-disc';root.add(sun);
 
   for(const zone of ISLANDS){
     const layout=zone.layout,d=layout.dockX,side=layout.berthSide;
     const stallLayout=layout.stalls.map(st=>({...STORE_DETAILS.find(meta=>meta.kind===st.kind),...st}));
     const localColliders=[];
     const group=new THREE.Group();group.name='island-'+zone.id;group.position.set(zone.x,0,zone.z);group.rotation.y=layout.yaw;root.add(group);
-    const S=[],glows=[];
+    const S=[],glows=[],smoothTrees=[];
     const glow=(w,h,d,x,y,z,c)=>glows.push({w,h,d,x,y,z,c});
     const add=(w,h,d,x,y,z,c,more={})=>S.push({w,h,d,x,y,z,c,...more});
     const block=(x,z,r,top)=>localColliders.push({zone:zone.id,x,z,r,top});
     const blockRect=(x,z,w,d,top)=>localColliders.push({zone:zone.id,x,z,top,rect:{minX:x-w/2,maxX:x+w/2,minZ:z-d/2,maxZ:z+d/2}});
-    // Stepped, genuinely walkable island footprint. No invisible terrain walls.
-    add(58,3.2,46,0,-1.2,34,zone.rock);
-    add(58,.5,46,0,.25,34,zone.sand);
-    add(54,.45,43,0,.725,34.5,zone.land);
+    // Rounded stratified foundations give every island a natural silhouette;
+    // the original walkable footprint and collision height remain unchanged.
     for(const f of zone.landforms){
       // Build landforms as stacked, shrinking strata instead of a single
       // giant cuboid. Offset alternate tiers for a fractured voxel silhouette.
@@ -197,6 +210,7 @@ export function createWorld(scene){
     for(const {x,z}of paving)add(1.72,.08,1.72,x,1.005,z,zone.sand);
     // Signature plants, using only cuboids. Keep the central village clear.
     function tree(x,z,s=1){
+      if(['harbor','forest','river'].includes(zone.theme)){smoothTrees.push({x,z,s});block(x,z,.65*s,.95+5.2*s);return;}
       add(.55*s,3.7*s,.55*s,x,.95+1.85*s,z,0x715a43);
       if(['tropical','jungle','coral'].includes(zone.theme)){
         for(const dir of [-1,1]){
@@ -525,7 +539,12 @@ export function createWorld(scene){
       for(let pad=0;pad<7;pad++){const x=(pad%2?1:-1)*(29.5+(pad%3)*1.1),z=22+pad*4.1;add(1.05,.09,.9,x,.13,z,0x588f72,{ry:pad*.61});add(.18,.16,.18,x,.2,z,0xe8cf80);}
       for(let i=0;i<12;i++){const x=-17+(i%6)*6.5,z=20+Math.floor(i/6)*24;add(.28,.1,.28,x,1.12,z,0xe6b2a1);add(.12,.2,.12,x,1.25,z,0xe9d18b);}
     }
+    group.add(islandFoundation(zone));
     group.add(mergeBoxes(S));
+    if(smoothTrees.length){
+      const trunkGeo=new THREE.CylinderGeometry(.2,.34,2.6,5),trunkMat=new THREE.MeshLambertMaterial({color:0x76583c}),trunks=new THREE.InstancedMesh(trunkGeo,trunkMat,smoothTrees.length),leafGeo=zone.theme==='forest'?new THREE.ConeGeometry(1.7,3.3,7,2):new THREE.IcosahedronGeometry(1.65,1),leafMat=new THREE.MeshLambertMaterial({color:zone.theme==='river'?0x47845e:zone.theme==='forest'?0x397255:0x518b58,flatShading:true}),crowns=new THREE.InstancedMesh(leafGeo,leafMat,smoothTrees.length),dummy=new THREE.Object3D();
+      smoothTrees.forEach((t,n)=>{dummy.position.set(t.x,.95+1.25*t.s,t.z);dummy.scale.setScalar(t.s);dummy.rotation.set(0,0,0);dummy.updateMatrix();trunks.setMatrixAt(n,dummy.matrix);const v=1+(n%3-1)*.08;dummy.position.set(t.x,.95+(zone.theme==='forest'?3.1:3.25)*t.s,t.z);dummy.scale.set(zone.theme==='forest'?t.s:t.s*1.22,(zone.theme==='forest'?t.s:t.s*.82),zone.theme==='forest'?t.s:t.s*1.16);dummy.rotation.set(0,n*.73,0);dummy.updateMatrix();crowns.setMatrixAt(n,dummy.matrix);crowns.setColorAt(n,new THREE.Color(zone.theme==='forest'?[0x397255,0x447d56,0x32674f][n%3]:[0x4d8d57,0x65a65e,0x579963][n%3]));});trunks.instanceMatrix.needsUpdate=true;crowns.instanceMatrix.needsUpdate=true;group.add(trunks,crowns);
+    }
     if(glows.length)group.add(mergeBoxes(glows,true));
     islands.push(group);
     colliders.push(...localColliders.map(b=>{
