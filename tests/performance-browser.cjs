@@ -95,7 +95,7 @@ module.exports=async function testPerformance(browser,url,shots){
     const catchResult=await page.evaluate(async()=>{
       const a=__reelDeal;let mutations=0;const observer=new MutationObserver(r=>mutations+=r.length);
       observer.observe(document.getElementById('logList'),{childList:true,subtree:true,attributes:true});
-      a.spawnAtIsland(0);a.triggerBite();a.hookFish();const start=performance.now();a.catchFish();const ms=performance.now()-start;
+      a.bag.length=0;a.spawnAtIsland(0);a.triggerBite();a.hookFish();const start=performance.now();a.catchFish();const ms=performance.now()-start;
       await new Promise(r=>requestAnimationFrame(r));observer.disconnect();
       return {ms,mutations,name:a.bag.at(-1).sp.name,sameRow:window.firstLogRow===document.querySelector('#logList .log-item')};
     });

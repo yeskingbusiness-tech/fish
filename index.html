@@ -13,6 +13,7 @@
 <body>
 <div id="app">
   <canvas id="scene" tabindex="-1" aria-label="Cube fishing world"></canvas>
+  <div id="weatherFx" class="weather-fx" aria-hidden="true"></div>
   <div id="hud">
     <div class="hud-top">
       <div class="hud-tools">
@@ -29,12 +30,17 @@
       <span class="eyebrow" id="zoneNumber">TERRITORY 01 / 20</span>
       <h2 id="zoneName">Reedhaven</h2>
       <p id="zoneWaters">Panfish, bass &amp; carp</p>
+      <div id="weatherBadge" class="weather-badge"><span id="weatherIcon">☀</span><span><b id="weatherName">Clear Skies</b><small id="weatherForecast">Local conditions</small></span></div>
       <div class="level-line"><b id="levelNum">LV. 1</b><span id="xpText">0 / 112 XP</span></div>
       <div class="xp-track"><div id="xpFill"></div></div>
       <p class="journey-objective" id="journeyObjective">Next stop · Pinewater at level 10</p>
     </div>
     <div class="hud-actions">
       <button id="boardBoatBtn" class="nav-btn board-boat hidden" title="Return to your parked boat from anywhere. Finish your cast first." aria-label="Board or return to your boat (R)"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 14h18l-3 6H6zM7 14V9h10v5M12 9V3m0 0 4 3m-4-3L8 6"/></svg></span><span id="boardBoatLabel">Board boat</span><kbd>R</kbd></button>
+      <button id="activitiesBtn" class="nav-btn activity-nav"><span class="nav-icon" aria-hidden="true">✦</span> Expeditions &amp; challenges <small id="activityAlert">NEW</small></button>
+      <button id="aquariumBtn" class="nav-btn"><span class="nav-icon">◉</span> Aquarium <small id="aquariumCount">0/12</small></button>
+      <button id="achievementsBtn" class="nav-btn"><span class="nav-icon">★</span> Achievements</button>
+      <button id="merchantBtn" class="nav-btn hidden"><span class="nav-icon">⚓</span> Traveling merchant <small>IN RANGE</small></button>
       <button id="mapBtn" class="nav-btn"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5l6-2 6 2 6-2v16l-6 2-6-2-6 2zM9 3v16m6-14v16"/></svg></span> Sea chart <kbd>M</kbd></button>
       <button id="indexBtn" class="nav-btn"><span class="nav-icon">▤</span> Fish index <small id="indexCount">0/400</small><kbd>F</kbd></button>
       <button id="bagBtn" class="nav-btn" aria-haspopup="dialog"><span class="nav-icon" aria-hidden="true">▱</span> Bag <small id="bagCount">0</small><kbd>B</kbd></button>
@@ -95,6 +101,11 @@
       </div>
     </div>
   </div>
+  <div id="activitiesOverlay" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="activitiesTitle">
+    <section class="activities-card"><header class="shop-head"><div><span class="eyebrow">FIELD OPERATIONS</span><h2 id="activitiesTitle">Expeditions &amp; Challenges</h2></div><button id="activitiesClose" class="shop-close" aria-label="Close activities">✕</button></header>
+      <div class="activity-weather-line" id="activityWeather"></div><div id="activityContent" class="activity-content"></div>
+    </section>
+  </div>
   <div id="tutorialOverlay" class="modal tutorial-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialCopy">
     <section class="tutorial-card" aria-live="polite">
       <header class="tutorial-header"><span class="eyebrow">REEL DEAL FIELD GUIDE</span><span id="tutorialStep" class="tutorial-step">01 / 05</span></header>
@@ -129,6 +140,9 @@
       <div class="index-foot"><span>Land a fish to reveal its name, colors and story.</span><span id="indexIslandCount"></span></div>
     </div>
   </div>
+  <div id="aquariumOverlay" class="modal hidden" role="dialog" aria-modal="true" aria-label="Personal aquarium"><div class="shop-card"><div class="shop-head"><div><span class="eyebrow">YOUR COLLECTION</span><h2>Personal Aquarium</h2></div><button id="aquariumClose" class="shop-close">✕</button></div><div id="aquariumTank" class="aquarium-tank"><canvas id="aquariumCanvas" aria-label="Fish swimming in your aquarium"></canvas></div><p id="aquariumInfo" class="panel-note">Display up to 12 catches. Displayed fish are safe from sale.</p><div id="aquariumList" class="shop-body"></div></div></div>
+  <div id="achievementsOverlay" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="achievementsTitle"><div class="shop-card"><div class="shop-head"><div><span class="eyebrow">ANGLER MILESTONES</span><h2 id="achievementsTitle">Achievements</h2></div><span id="achievementCount" class="bag-fish-count">0 complete</span><button id="achievementsClose" class="shop-close">✕</button></div><div id="achievementList" class="shop-body"></div></div></div>
+  <div id="merchantOverlay" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="merchantTitle"><div class="shop-card"><div class="shop-head"><div><span class="eyebrow">LIMITED-TIME VISITOR</span><h2 id="merchantTitle">Traveling Merchant</h2></div><span id="merchantTimer" class="bag-fish-count"></span><button id="merchantClose" class="shop-close">✕</button></div><p id="merchantLocation" class="panel-note"></p><div id="merchantStock" class="shop-body"></div></div></div>
   <div id="catchModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="catchName"><div class="modal-card"><div class="discovery-banner hidden" id="newDiscovery">NEW INDEX ENTRY</div><div class="modal-eyebrow" id="catchRarity">COMMON CATCH</div><div id="catchIcon" class="catch-icon"></div><h2 id="catchName">Bluegill</h2><p id="catchWeight" class="catch-weight">1.2 lbs</p><p id="catchPoints" class="catch-points"></p><p id="catchDesc" class="catch-desc"></p><p id="catchLevel" class="catch-level hidden"></p><div id="collectionReward" class="collection-reward hidden" role="status"></div><button id="continueBtn" class="primary-btn">Keep Fishing →</button></div></div>
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
   <aside id="logDrawer" class="drawer hidden" role="dialog" aria-modal="true" aria-label="Catch log"><div class="drawer-head"><h3>Catch Log</h3><div class="drawer-actions"><button id="resetBtn" class="ghost-btn">Reset</button><button id="closeLog" aria-label="Close catch log">✕</button></div></div><dl class="log-records"><div><dt>TOTAL CATCHES</dt><dd id="caughtCount">0</dd></div><div><dt>BEST FISH</dt><dd id="bestNum">—</dd><dd id="bestFishName" class="best-fish-name">No catches yet</dd></div></dl><div id="logList"><p class="empty">No fish yet. Cast your line!</p></div><div class="drawer-foot" id="logSummary"></div></aside>

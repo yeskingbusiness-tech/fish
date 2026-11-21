@@ -14,7 +14,7 @@ const fmt   = n => n.toLocaleString('en-US');
 
 import { advanceReelPhase, REEL_PHASES, phasePull, fishTugImpulse, alternateTugDirection } from './reel-phases.mjs?v=44';
 import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow, sortFishIndex, castLuckModifier, effectiveLuck,
-  eligibleSpecies, roundWeight, formatWeight, formatCatchMass, GEAR_PER_ISLAND, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=44';
+  eligibleSpecies, speciesChance, roundWeight, formatWeight, formatCatchMass, GEAR_PER_ISLAND, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=44';
 import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, capCatchXP, gearIsland, hasIslandLicense, travelRequirement,
   MAX_LEVEL, ISLAND_COLLECTION_BONUS, islandCollectionProgress, completedCollections, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=44';
 import { createWorld } from './world.mjs?v=44';
@@ -23,8 +23,10 @@ import { createFishIcons } from './fish-icons.mjs?v=44';
 import { createAdaptiveQuality, memoLast, createBaitPoolLookup } from './render-performance.mjs?v=44';
 import { createFishModel, animateFishModel, disposeFishModel } from './fish-model.mjs?v=44';
 import { boatViewPose, createPlayerModel, heldFishSpan, heldFishLayout, firstPersonFishPose, frontViewPose } from './player-view.mjs?v=44';
-import { normalizeSave, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=44';
+import { normalizeSave, decodeFish, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=44';
 import { BAG_TABS, bagGearKind, nextBagTab, contextualHint, HELP_CONTROLS } from './ui-state.mjs?v=44';
+import { WEATHER, islandWeather, expeditionOffers, BOSSES, createActivityState, progressChallenges } from './gameplay-systems.mjs?v=1';
+import { PERSONAL_CAPACITY, BOAT_CAPACITY, STORAGE_UPGRADE_COST, MUTATIONS, rollMutation, capacities, merchantVisit, SECRET_SITES, ACHIEVEMENTS, createCollectionState, achievementProgress } from './collection-systems.mjs?v=1';
 
 import { ALL_CATCH_SPECIES, LEGACY_SPECIES } from './legacy-catalog.mjs?v=44';
 import { territoryAt, territoryCenter, TERRITORY_RADIUS, shoreLuckPenalty, distanceToShore, stepBoat, nearbyDock, dockPose, returnBoatPose, clampBoatDeckPosition, mapPoint, SEA_BOUNDS } from './navigation.mjs?v=44';
@@ -40,10 +42,19 @@ function fishingTerritory(){return G.onBoat?territoryAt(G.px,G.pz):G.zone;}
 const localFishPool = createBaitPoolLookup(eligibleSpecies);
 const frameWork = {vendorChecks:0,hintChecks:0,particleUploads:0};
 
-const pickSpecies = () => drawSpecies(G.castTerritory??fishingTerritory(), G.gear.bait, Math.random, G.castPower,G.castShorePenalty);
+const pickSpecies = () => {
+  const island=G.castTerritory??fishingTerritory(),pool=eligibleSpecies(island,G.gear.bait);if(!pool.length)return null;
+  const wx=islandWeather(island,Date.now());
+  const hour=new Date().getUTCHours(),dusk=hour>=17&&hour<23,dawn=hour>=5&&hour<9;const weights=pool.map(sp=>{const tier=RARITY[sp.rarity].tier;let bias=wx.rare;if(wx.id==='rain'&&tier<2)bias*=1.22;if(wx.id==='heat'&&tier>=6)bias*=.68;if(wx.id==='wind'&&tier>=8)bias*=.72;if(tier>=7&&dusk)bias*=1.35;else if(tier>=3&&(dawn||dusk))bias*=1.14;return speciesChance(sp,G.gear.bait,G.castPower,G.castShorePenalty)*Math.pow(bias,tier);});
+  let r=Math.random()*weights.reduce((a,b)=>a+b,0);for(let i=0;i<pool.length;i++){r-=weights[i];if(r<=0)return pool[i];}return pool.at(-1);
+};
 const rollWeight = sp => drawWeight(sp, G.gear.bait, Math.random, G.castPower,G.castShorePenalty);
 const coinBonus = () => collectionCoinBonus(G.discoveries,G.completedIslands);
-const saleValue = (sp,weight) => fishSaleValue(sp,Number(weight),G.discoveries,G.completedIslands);
+const saleValue = (sp,weight,mutation=null) => Math.round(fishSaleValue(sp,Number(weight),G.discoveries,G.completedIslands)*(mutation?MUTATIONS[mutation]?.multiplier||1:1));
+const boatStore=()=>G.collections.storage[G.boat]||(G.collections.storage[G.boat]=[]);
+const storageCaps=()=>({...capacities(G.boat,G.collections.boatStorageUpgrade[G.boat]||0),personal:PERSONAL_CAPACITY+(G.collections.storageUpgrade||0)*5});
+const canCarryCatch=()=>bag.length<storageCaps().personal||(G.onBoat&&boatStore().length<storageCaps().boat);
+const fishBadge=e=>e.mutation?`<span class="mutation-badge ${e.mutation}">${e.mutation.toUpperCase()}</span>`:'';
 
 // UI illustrations and 3D catches use the same species-authored anatomy.
 const ICON = {
@@ -239,6 +250,15 @@ const gripMat = mat(0x27343c);
   rodRig.add(reel);
   rodRig.add(box(0.05, 0.05, 0.06, gripMat, 0, 0.46, 0.09));
 }
+const starterRodDetails=new THREE.Group();starterRodDetails.name='reedhaven-starter-rod-detail';
+{
+  const guideMat=new THREE.MeshStandardMaterial({color:0xcbd5d0,metalness:.7,roughness:.26}),guideGeo=new THREE.TorusGeometry(.07,.012,4,7),guides=new THREE.InstancedMesh(guideGeo,guideMat,3),obj=new THREE.Object3D();
+  [.94,1.25,1.53].forEach((y,i)=>{obj.position.set(0,y,0);obj.rotation.set(Math.PI/2,0,0);const s=1-i*.24;obj.scale.setScalar(s);obj.updateMatrix();guides.setMatrixAt(i,obj.matrix);});guides.instanceMatrix.needsUpdate=true;starterRodDetails.add(guides);
+  const wrapGeo=new THREE.BoxGeometry(.065,.025,.065),wrapMat=new THREE.MeshStandardMaterial({color:0xe2b969,metalness:.4,roughness:.36}),wraps=new THREE.InstancedMesh(wrapGeo,wrapMat,3);
+  [.22,.29,.36].forEach((y,i)=>{obj.position.set(0,y,0);obj.rotation.set(0,0,0);obj.scale.set(1,1,1);obj.updateMatrix();wraps.setMatrixAt(i,obj.matrix);});wraps.instanceMatrix.needsUpdate=true;starterRodDetails.add(wraps);
+  const spool=new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,.12,8),new THREE.MeshStandardMaterial({color:0x91a5a3,metalness:.7,roughness:.25}));spool.rotation.z=Math.PI/2;spool.position.set(.07,.5,.075);starterRodDetails.add(spool);
+  rodRig.add(starterRodDetails);
+}
 const tipJoint = new THREE.Group();
 tipJoint.name = 'rod-bend';
 tipJoint.position.y = 0.9;
@@ -297,19 +317,19 @@ const G = {
   // player + economy
   px:0, pz:5.0, camY:2.77, bob:0, walked:0, nearShop:false, nearMarket:false,
   coins:0, bag:[], xp:0, licenses:[0], zone:0, visited:[0], discoveries:{},
-  boat:0, ownedBoats:[0], nearPort:false, onBoat:false,boatMode:'drive',sailing:null,boatPosition:null,worldLayout:WORLD_LAYOUT_VERSION,waypoint:1,completedIslands:[],equipmentArchive:{},castShorePenalty:0,castTerritory:0,
-  owned:{ rod:[0], line:[0], bait:[0] },
-  gear:{ rod:0, line:0, bait:0 },
+  boat:0, ownedBoats:[0], boatUpgrades:{}, nearPort:false, onBoat:false,boatMode:'drive',sailing:null,boatPosition:null,worldLayout:WORLD_LAYOUT_VERSION,waypoint:1,completedIslands:[],equipmentArchive:{},castShorePenalty:0,castTerritory:0,
+  owned:{ rod:[0], line:[0], bait:[0] }, activities:createActivityState(),
+  gear:{ rod:0, line:0, bait:0 }, collections:createCollectionState(),
   // current fight tuning (set on hook)
   bandLo:22, bandHi:70, demand:0.4, supply:1, over:0, fishWeight:1, castDist:10, rateMul:1
 };
 const EYE = 1.62;
 let shopOpen = false, marketOpen = false, shopKind = 'rod';
-let chartOpen = false, indexOpen = false, bagOpen = false, helpOpen = false, tutorialOpen=false, hudHidden = false;
-let tutorialIndex=0, bagTab = 'fish', lastGearTab = 'rods';
+let chartOpen = false, indexOpen = false, bagOpen = false, helpOpen = false, tutorialOpen=false, activitiesOpen=false, achievementsOpen=false, merchantOpen=false, hudHidden = false;
+let tutorialIndex=0, bagTab = 'fish', lastGearTab = 'rods',bagActionMode='transfer';
 let selectedIsland = 0, indexIsland = -1, fleetTab = false;
 let nearbyStall = null;
-const uiBusy = () => shopOpen || marketOpen || chartOpen || indexOpen || bagOpen || helpOpen || tutorialOpen || hudHidden || drawerOpen;
+const uiBusy = () => shopOpen || marketOpen || chartOpen || indexOpen || bagOpen || helpOpen || tutorialOpen || activitiesOpen || aquariumOpen || achievementsOpen || merchantOpen || hudHidden || drawerOpen;
 const level = () => levelForXp(G.xp);
 const hasLicense = target => hasIslandLicense(target,G.xp,G.licenses);
 
@@ -375,6 +395,91 @@ function showToast(msg, bad=false){
   clearTimeout(showToast._t);
   showToast._t = setTimeout(()=>toastEl.className = 'toast hidden', 2000);
 }
+let currentWeather=islandWeather(0),lastActivityRefresh=0,lastWeatherRefresh=0,lastWeatherSignature='';
+function persistActivities(){saveGame();}
+function collectionAchievements(){const done=[];const game={caught:G.caught,visited:G.visited,ownedBoats:G.ownedBoats,level:level(),mutated:Object.values(G.collections.mutations).reduce((s,n)=>s+n,0),bosses:G.activities.bosses,expeditions:G.collections.expeditions||0,completedIslands:G.completedIslands.length,heavy:Object.values(G.discoveries).some(r=>r.best>=100)};for(const a of ACHIEVEMENTS){if(!G.collections.achievements[a.id]&&achievementProgress(a.id,{game,secrets:G.collections.secrets})>=a.goal){G.collections.achievements[a.id]=Date.now();G.coins+=a.reward;done.push(a);}}if(done.length){showToast(`Achievement · ${done[0].title} · +${fmt(done[0].reward)} coins`);saveGame();}return done;}
+function renderAchievements(){const root=$('achievementList');if(!root)return;const completed=Object.keys(G.collections.achievements).length;setText($('achievementCount'),`${completed}/${ACHIEVEMENTS.length} complete`);root.innerHTML=ACHIEVEMENTS.map(a=>{const yes=!!G.collections.achievements[a.id],game={caught:G.caught,visited:G.visited,ownedBoats:G.ownedBoats,level:level(),mutated:Object.values(G.collections.mutations).reduce((s,n)=>s+n,0),bosses:G.activities.bosses,expeditions:G.collections.expeditions||0,completedIslands:G.completedIslands.length,heavy:Object.values(G.discoveries).some(r=>r.best>=100)},p=achievementProgress(a.id,{game,secrets:G.collections.secrets});return `<article class="achievement-row ${yes?'earned':''}"><span class="achievement-medal">${yes?'★':'☆'}</span><div><b>${a.title}</b><p>${a.desc}</p><small>${yes?'COMPLETE':`${p}/${a.goal} · ${a.tier}`} · Reward ${fmt(a.reward)} coins</small></div></article>`;}).join('');}
+function activeMerchant(){return merchantVisit(Date.now());}
+const MERCHANT_ITEMS=[{id:'tank-expansion',title:'Pocket Aquarium Permit',price:2600,stock:1,desc:'Expand your display by four spaces.'},{id:'relic',title:'Recovered Relic',price:1800,stock:2,desc:'A relic dredged from forgotten waters.'},{id:'aurora-trim',title:'Aurora Hull Paint',price:3200,stock:1,desc:'Exclusive cosmetic boat finish.'}];
+let merchantVessel=null,merchantSlot=-1;
+function updateMerchantVessel(){const m=activeMerchant();if(m.slot===merchantSlot)return;merchantSlot=m.slot;if(!merchantVessel){merchantVessel=new THREE.Group();const hull=new THREE.MeshStandardMaterial({color:0x244b52,roughness:.62}),trim=new THREE.MeshStandardMaterial({color:0xd4a65e,roughness:.7}),sail=new THREE.MeshStandardMaterial({color:0xe7dfc7,roughness:.9});merchantVessel.add(box(4,.65,1.3,hull,0,.25,0),box(2.5,.18,1.5,trim,0,.68,0),box(.12,3.5,.12,trim,0,2,0),box(1.55,1.8,.08,sail,.8,2,0),box(.45,.55,.1,new THREE.MeshStandardMaterial({color:0xc54d38}),1.15,3.05,0));scene.add(merchantVessel);}const c=territoryCenter(ISLANDS[m.island]);merchantVessel.position.set(c.x+14,.15,c.z+10);merchantVessel.rotation.y=m.stockSeed%6*.8;}
+function merchantNear(){updateMerchantVessel();const c=merchantVessel?.position||territoryCenter(ISLANDS[activeMerchant().island]),px=G.onBoat&&G.sailing?G.sailing.x:G.px,pz=G.onBoat&&G.sailing?G.sailing.z:G.pz;return Math.hypot(px-c.x,pz-c.z)<55;}
+function renderMerchant(){const m=activeMerchant();setText($('merchantLocation'),`The ${['Wandering Minnow','Lantern Wake','Far Current'][m.stockSeed%3]} is visiting ${ISLANDS[m.island].name}. This limited stock rotates in ${Math.max(1,Math.ceil((m.endsAt-Date.now())/60000))} min.`);setText($('merchantTimer'),`${Math.max(1,Math.ceil((m.endsAt-Date.now())/60000))} MIN`);$('merchantStock').innerHTML=MERCHANT_ITEMS.map(item=>{const key=`${m.slot}:${item.id}`,bought=G.collections.merchantBuys[key]||0,stock=Math.max(0,item.stock-bought);return `<article class="achievement-row"><div><b>${item.title}</b><p>${item.desc}</p><small>${stock} in stock · ${fmt(item.price)} coins</small></div><button class="buy-btn" data-merchant-buy="${item.id}" ${stock<1||G.coins<item.price?'disabled':''}>Buy</button></article>`;}).join('');}
+let aquariumOpen=false,aquariumRenderer=null,aquariumScene=null,aquariumCamera=null,aquariumMeshes=[];
+function drawAquarium(){const list=G.collections.aquarium;$('aquariumCount').textContent=`${list.length}/${12+(G.collections.aquariumUpgrade||0)*4}`;$('aquariumList').innerHTML=list.map((e,i)=>`<article class="achievement-row"><div><b>${fishBadge(e)}${e.mutation?e.mutation.toUpperCase()+' · ':''}${e.sp.name}</b><p>${RARITY[e.sp.rarity].label} · ${formatCatchMass(e.weight)}</p></div><button class="buy-btn" data-release-aquarium="${i}">Return to bag</button></article>`).join('')||'<p class="shop-empty">Your tank is empty. Use Display from the Bag to add a catch.</p>';const cap=12+(G.collections.aquariumUpgrade||0)*4;$('aquariumInfo').textContent=`${list.length}/${cap} displayed · displayed fish are protected from sale.`;aquariumMeshes.forEach(disposeFishModel);aquariumMeshes=[];if(aquariumScene){list.forEach((e,i)=>{const model=createFishModel(THREE,e.sp,Math.max(.12,heldFishSpan(e.sp,e.weight)/(8*e.sp.size))*(e.mutation==='huge'?1.25:1));model.position.set(-3+(i%4)*2,Math.sin(i*2)*.5,Math.floor(i/4)*1.3);model.userData.aquariumBase=model.position.x;if(e.mutation==='shiny')model.traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.material.emissive?.setHex(0x6b9fa0);o.material.emissiveIntensity=.45;}});aquariumScene.add(model);aquariumMeshes.push(model);});}}
+function openAquarium(){if(uiBusy()||G.state!=='aim')return;aquariumOpen=true;$('aquariumOverlay').classList.remove('hidden');if(!aquariumRenderer){aquariumScene=new THREE.Scene();aquariumScene.background=new THREE.Color(0x123c51);aquariumCamera=new THREE.PerspectiveCamera(38,1,.1,100);aquariumCamera.position.set(0,5,14);aquariumCamera.lookAt(0,0,0);aquariumScene.add(new THREE.HemisphereLight(0xd8f4ff,0x174456,2));const light=new THREE.DirectionalLight(0xfff0c8,2.6);light.position.set(3,8,6);aquariumScene.add(light);const tank=new THREE.Mesh(new THREE.BoxGeometry(10,.08,4),new THREE.MeshStandardMaterial({color:0x49a4b1,roughness:.3,metalness:.2}));tank.position.y=-2;aquariumScene.add(tank);aquariumRenderer=new THREE.WebGLRenderer({canvas:$('aquariumCanvas'),alpha:true,antialias:true});aquariumRenderer.setPixelRatio(Math.min(devicePixelRatio,1.5));}drawAquarium();renderAquariumFrame();}
+function renderAquariumFrame(){if(!aquariumOpen||!aquariumRenderer)return;const canvas=$('aquariumCanvas'),w=canvas.clientWidth||600,h=canvas.clientHeight||220;aquariumRenderer.setSize(w,h,false);aquariumCamera.aspect=w/h;aquariumCamera.updateProjectionMatrix();aquariumMeshes.forEach((m,i)=>{m.position.x=m.userData.aquariumBase+Math.sin(G.time*1.2+i)*.18;m.rotation.y=Math.sin(G.time*.8+i)*.2;});aquariumRenderer.render(aquariumScene,aquariumCamera);requestAnimationFrame(renderAquariumFrame);}
+function closeAquarium(){aquariumOpen=false;$('aquariumOverlay').classList.add('hidden');resumeWorld();}
+function checkIslandSecret(){if(G.onBoat||!ISLANDS[G.zone])return;const i=ISLANDS[G.zone],site=islandToWorld(i,i.layout.landmarkX,i.layout.landmarkZ+7),id=`cache-${i.id}`;if(!G.collections.secrets.includes(id)&&Math.hypot(G.px-site.x,G.pz-site.z)<3.2){G.collections.secrets.push(id);G.coins+=500+i.id*120;G.xp+=120;G.activities.relics++;showToast(`${SECRET_SITES[i.id].name} discovered · +${fmt(500+i.id*120)} coins · +1 relic`);collectionAchievements();saveGame();updateStats();}}
+function refreshActivityUI(force=false){
+  const ms=Date.now();
+  if(force||ms-lastActivityRefresh>=15000){
+    lastActivityRefresh=ms;const before=G.activities.daily.key+'/'+G.activities.weekly.key;
+    G.activities=createActivityState(G.activities,new Date(ms));
+    if(before!==G.activities.daily.key+'/'+G.activities.weekly.key){persistActivities();showToast('Fresh daily and weekly challenges are ready.');}
+    if(activitiesOpen)renderActivities();
+  }
+  if(force||ms-lastWeatherRefresh>=1000){
+    lastWeatherRefresh=ms;const island=fishingTerritory()??G.zone;currentWeather=islandWeather(island,ms);
+    const signature=`${island}:${currentWeather.epoch}`;
+    if(signature!==lastWeatherSignature||force){lastWeatherSignature=signature;
+      const icon=$('weatherIcon'),name=$('weatherName'),forecast=$('weatherForecast'),fx=$('weatherFx');
+      if(icon){setText(icon,currentWeather.icon);setText(name,currentWeather.name);setText(forecast,`${Math.ceil(currentWeather.changesIn/60000)} min until conditions shift`);fx.className='weather-fx '+currentWeather.id;}
+      if(activitiesOpen)renderActivities();
+    }
+  }
+}
+function recordActivity(event){
+  if(!G.activities)return;
+  const done=progressChallenges(G.activities,event);for(const task of done){G.coins+=task.reward;if(G.activities.weekly.tasks.includes(task))G.activities.relics++;showToast(`${task.title} complete · +${fmt(task.reward)} coins${G.activities.weekly.tasks.includes(task)?' · +1 relic':''}`);}
+  if(done.length){updateStats();persistActivities();}if(activitiesOpen)renderActivities();
+}
+function expeditionState(){return G.activities?.expedition||null;}
+function completeExpedition(){
+  const e=expeditionState();if(!e||e.complete)return;e.complete=true;G.collections.expeditions=(G.collections.expeditions||0)+1;G.coins+=e.reward;G.activities.relics+=e.relics;showToast(`${e.title} complete · +${fmt(e.reward)} coins · +${e.relics} relics`);updateStats();persistActivities();renderActivities();
+}
+function expeditionCatch(sp,boss=false){
+  const e=expeditionState();if(!e||e.complete||e.island!==sp.island)return;
+  if(e.type==='storm'&&currentWeather.id==='storm')e.progress++;
+  else if(e.type==='legendary'&&RARITY[sp.rarity].tier>=(e.goalRarity??4))e.progress++;
+  else if(e.type==='shoal')e.progress++;
+  else if(e.type==='survey'){e.seen=e.seen||[];if(!e.seen.includes(sp.id)){e.seen.push(sp.id);e.progress=e.seen.length;}}
+  else if(e.type==='boss'&&boss)e.progress=1;
+  if(e.progress>=e.goal)completeExpedition();else{persistActivities();renderActivities();}
+}
+function startExpedition(id){
+  if(!activitiesOpen||G.state!=='aim')return;
+  if(!hasLicense(G.zone)){showToast('Unlock this island before taking its expedition.',true);return;}
+  const offer=expeditionOffers(G.zone,G.activities.daily.key).find(e=>e.id===id);if(!offer)return;
+  if(expeditionState()&&!expeditionState().complete){showToast('Finish or abandon your current expedition first.',true);return;}
+  const localPool=eligibleSpecies(G.zone,G.gear.bait),apexTier=localPool.length?Math.min(4,Math.max(...localPool.map(sp=>RARITY[sp.rarity].tier))):1;
+  G.activities.expedition={...offer,...(offer.type==='legendary'?{goalRarity:apexTier,objective:`Land a ${RARITY[RARITY_ORDER[apexTier]].label}-or-rarer fish from this island.`}:{}),progress:0,complete:false,seen:[]};persistActivities();renderActivities();showToast(`${offer.title} accepted on ${ISLANDS[G.zone].short}.`);
+}
+function searchTreasure(){
+  const e=expeditionState();if(!activitiesOpen||!e||e.type!=='treasure'||e.complete||e.island!==G.zone)return;
+  const p=islandToWorld(ISLANDS[G.zone],ISLANDS[G.zone].layout.landmarkX,ISLANDS[G.zone].layout.landmarkZ+10);
+  if(Math.hypot(G.px-p.x,G.pz-p.z)>10){closeActivities();showToast('Walk to the island landmark, then reopen Expeditions to search the cache.',true);return;}
+  e.progress=1;completeExpedition();
+}
+function abandonExpedition(){const e=expeditionState();if(e&&!e.complete){G.activities.expedition=null;persistActivities();renderActivities();showToast('Expedition abandoned. Your challenge progress remains.');}}
+function renderActivities(){
+  const root=$('activityContent');if(!root)return;
+  setText($('activityAlert'),`${fmt(G.activities.relics)} relics`);
+  const wx=currentWeather||islandWeather(G.zone),day=G.activities.daily,week=G.activities.weekly,e=expeditionState();
+  $('activityWeather').textContent=`${wx.icon} ${ISLANDS[G.zone].name}: ${wx.name} · ${wx.description} · rotates every 3 minutes`;
+  const taskCards=(group,label)=>`<section class="activity-section"><h3>${label} · ${group.key}</h3><div class="activity-grid">${group.tasks.map(t=>`<article class="activity-card"><span class="activity-tag">${t.complete?'COMPLETE':'CHALLENGE'}</span><h4>${t.title}</h4><p>${t.desc}</p><small>${t.progress}/${t.target} · Reward ${fmt(t.reward)} coins${label==='WEEKLY'?' + 1 relic':''}</small><div class="activity-progress"><i style="width:${Math.min(100,t.progress/t.target*100)}%"></i></div></article>`).join('')}</div></section>`;
+  let expHtml='';
+  if(e&&!e.complete){const treasure=e.type==='treasure';expHtml=`<article class="activity-card ${e.type==='boss'?'boss-banner':''}"><span class="activity-tag">ACTIVE · ${ISLANDS[e.island].short}</span><h4>${e.icon} ${e.title}</h4><p>${e.objective}</p><small>${treasure?'Visit the landmark':`${e.progress}/${e.goal}`} · Rewards ${fmt(e.reward)} coins + ${e.relics} relics</small><div class="activity-progress"><i style="width:${treasure?0:Math.min(100,e.progress/e.goal*100)}%"></i></div><button data-exp-action="${treasure?'search':'abandon'}">${treasure?'Search the landmark cache':'Abandon expedition'}</button></article>`;}
+  else if(e?.complete)expHtml=`<article class="activity-card"><span class="activity-tag">COMPLETE</span><h4>${e.title}</h4><p>Rewards claimed. Choose another expedition when you are ready.</p></article>`;
+  const offers=expeditionOffers(G.zone,day.key),offerHtml=offers.map(o=>`<article class="activity-card"><span class="activity-tag">${o.icon} EXPEDITION</span><h4>${o.title}</h4><p>${o.objective}</p><small>Reward ${fmt(o.reward)} coins + ${o.relics} relics</small><button data-exp-start="${o.id}" ${e&&!e.complete?'disabled':''}>${o.type==='treasure'?'Accept & track site':'Accept on this island'}</button></article>`).join('');
+  root.innerHTML=`<div class="activity-section"><h3>Expeditions · ${ISLANDS[G.zone].short}</h3>${expHtml?`<div class="activity-grid">${expHtml}</div>`:''}<div class="activity-grid">${offerHtml}</div><p class="panel-note">Expeditions are tied to this island. Stormwatch needs an actual storm; a treasure cache must be searched at the landmark; legendary and boss hunts resolve through real catches.</p></div>${taskCards(day,'DAILY')}${taskCards(week,'WEEKLY')}<section class="activity-section"><h3>Relic Exchange</h3><div class="activity-grid"><article class="activity-card"><span class="activity-tag">3 RELICS</span><h4>Boss-Signal Lure</h4><p>Spend 3 relics to force your next hooked fish into a boss encounter. The lure is consumed when the boss bites.</p><button data-relic-lure ${G.activities.relics<3?'disabled':''}>${G.activities.relics<3?'Need '+(3-G.activities.relics)+' more relics':'Prepare boss lure'}</button></article></div></section><p class="activity-weather-line">Relics earned: <b>${fmt(G.activities.relics)}</b> · Boss fish defeated: <b>${fmt(G.activities.bosses)}</b></p>`;
+}
+function openActivities(){if(uiBusy()||G.state!=='aim')return false;refreshActivityUI(true);activitiesOpen=true;clearInput();releasePointer();$('activitiesOverlay').classList.remove('hidden');renderActivities();focusPanel('activitiesClose');return true;}
+function closeActivities(){if(!activitiesOpen)return;activitiesOpen=false;$('activitiesOverlay').classList.add('hidden');resumeWorld();}
+function updateWeatherFishing(){
+ const island=G.castTerritory??fishingTerritory()??G.zone,wx=islandWeather(island,Date.now());
+ const wxFactor=wx.wait;G.waitTimer=rand(2.4,5.8)*wxFactor*(effectiveLuck(G.gear.bait,G.castPower,G.castShorePenalty)<0?1-effectiveLuck(G.gear.bait,G.castPower,G.castShorePenalty):1/(1+effectiveLuck(G.gear.bait,G.castPower,G.castShorePenalty)*.35));
+}
 function updateStats(){
   $('caughtCount').textContent = fmt(G.caught);
   $('coinCount').textContent = fmt(G.coins);
@@ -410,7 +515,7 @@ function renderLog(){
     fishIcons.disconnect(logList);
     logSummary.textContent=`${fmt(log.length)} recent catches · ${discoveredCount()}/${SPECIES.length} discovered`;
     logList.innerHTML=log.length?log.map(e =>
-      `<div class="log-item"><span class="e">${fishIcons.markup(e.sp)}</span><div><b>${e.sp.name}</b><small>${formatCatchMass(e.weight)} • ${fishPlace(e.sp)}</small></div><span class="pts">${fmt(saleValue(e.sp,e.weight))}c</span></div>`
+      `<div class="log-item"><span class="e">${fishIcons.markup(e.sp)}</span><div><b>${e.sp.name}</b><small>${formatCatchMass(e.weight)} • ${fishPlace(e.sp)}</small></div><span class="pts">${fmt(entrySale(e))}c</span></div>`
     ).join(''):'<p class="empty">No recent catches. Cast your line!</p>';
     logDirty=false;
   }
@@ -428,12 +533,12 @@ function saveGame(){
       version:SAVE_VERSION, score:G.score, caught:G.caught, best:G.best, coins:G.coins, xp:G.xp,
       licenses:ISLANDS.filter(i=>hasLicense(i.id)).map(i=>i.id),
       zone:G.zone, visited:G.visited, boat:G.boat, ownedBoats:G.ownedBoats,
-      completedIslands:completedCollections(G.discoveries,G.completedIslands),equipmentArchive:G.equipmentArchive,
+      completedIslands:completedCollections(G.discoveries,G.completedIslands),equipmentArchive:G.equipmentArchive,activities:G.activities,boatUpgrades:G.boatUpgrades,collections:{...G.collections,storage:Object.fromEntries(Object.entries(G.collections.storage).map(([id,list])=>[id,list.map(e=>({id:e.sp.id,n:e.sp.name,w:e.weight,mutation:e.mutation||null}))])),aquarium:G.collections.aquarium.map(e=>({id:e.sp.id,n:e.sp.name,w:e.weight,mutation:e.mutation||null}))},storage:G.collections.storage,mutations:G.collections.mutations,secrets:G.collections.secrets,achievements:G.collections.achievements,storageUpgrade:G.collections.storageUpgrade,boatStorageUpgrade:G.collections.boatStorageUpgrade,
       worldLayout:WORLD_LAYOUT_VERSION,boatPosition:G.boatPosition,
       sailing:G.onBoat&&G.sailing?{x:G.sailing.x,z:G.sailing.z,yaw:G.sailing.yaw}:null,
       discoveries:G.discoveries, owned:G.owned, gear:G.gear,
-      bag:bag.map(e=>({ id:e.sp.id, n:e.sp.name, w:e.weight })),
-      log:log.slice(0,200).map(e=>({ id:e.sp.id, n:e.sp.name, w:e.weight }))
+      bag:bag.map(e=>({ id:e.sp.id, n:e.sp.name, w:e.weight,mutation:e.mutation||null })),
+      log:log.slice(0,200).map(e=>({ id:e.sp.id, n:e.sp.name, w:e.weight,mutation:e.mutation||null }))
     }));
     return true;
   }catch(e){
@@ -459,7 +564,7 @@ function loadGame(){
     if(!raw) return;
     const normalized=normalizeSave(JSON.parse(raw),legacyKey?.endsWith('v6')||false);
     const {bag:loadedBag,log:loadedLog,...state}=normalized;
-    Object.assign(G,state); bag.push(...loadedBag); log.push(...loadedLog);
+    Object.assign(G,state);G.activities=createActivityState(JSON.parse(raw).activities);G.boatUpgrades=JSON.parse(raw).boatUpgrades||{};const cs=createCollectionState(JSON.parse(raw).collections||JSON.parse(raw));cs.storage=Object.fromEntries(Object.entries(cs.storage).map(([id,list])=>[id,decodeFish(list)]));cs.aquarium=decodeFish(cs.aquarium);G.collections=cs;bag.push(...loadedBag); log.push(...loadedLog);
     if(legacyKey)saveGame(); // Keep the original legacy save as a recovery copy.
   }catch(e){showToast('Could not read the saved game. The original save has not been deleted.',true);}
 }
@@ -517,6 +622,7 @@ function startCharge(){
   if(G.state !== 'aim' || uiBusy() || isDriving()) return;
   if(fishingTerritory()===null){showToast('Cruise into an unlocked island territory to fish.',true);return;}
   if(heldCatch){showToast('Put away your fish before casting — use X or Put away.');return;}
+  if(!canCarryCatch()){showToast('Personal bag and boat hold are full. Transfer, display or sell fish before casting.',true);openBag('fish');return;}
   if(!localFishPool(fishingTerritory(),G.gear.bait).length){ showToast('No local fish take this bait. Use Bag → Bait (I) to switch.',true); return; }
   ensureAudio();
   setState('charging');
@@ -552,8 +658,8 @@ function landBobber(){
   spawnRipple(bobberPos);
   sfx.splash();
   G.castDist = Math.hypot(bobberPos.x - camera.position.x, bobberPos.z - camera.position.z);
-  const luck = effectiveLuck(G.gear.bait,G.castPower,G.castShorePenalty);
-  G.waitTimer = rand(2.4, 5.8) * (luck<0?1-luck:1/(1+luck*.35));
+  const luck = effectiveLuck(G.gear.bait,G.castPower,G.castShorePenalty),weather=islandWeather(G.castTerritory??G.zone,Date.now());
+  G.waitTimer = rand(2.4, 5.8) * weather.wait * (luck<0?1-luck:1/(1+luck*.35));
   setState('waiting');
 }
 function triggerBite(){
@@ -568,8 +674,8 @@ function disposeHookedFish(){
 function makeFish3D(sp, scale){return createFishModel(THREE,sp,scale);}
 // ---------- Fish bag, carried catches and front-facing third person ----------
 function updateCarryUI(){
-  $('bagCount').textContent=fmt(bag.length);
-  $('bagFishCount').textContent=`${fmt(bag.length)} fish`;
+  $('bagCount').textContent=`${bag.length}/${PERSONAL_CAPACITY}`;
+  $('bagFishCount').textContent=`${fmt(bag.length)}/${PERSONAL_CAPACITY} bag · ${boatStore().length}/${storageCaps().boat} boat`;
   $('heldFishBar').classList.toggle('hidden',!heldCatch||G.state==='menu');
   $('heldFishName').textContent=heldCatch?heldCatch.sp.name:'';
   $('heldFishWeight').textContent=heldCatch?formatCatchMass(heldCatch.weight):'';
@@ -649,7 +755,7 @@ function selectBagTab(tab){
 function renderBag(){
   if(!bagOpen)return;
   const hadBodyFocus=bagBody.contains(document.activeElement);
-  $('bagFishCount').textContent=`${fmt(bag.length)} fish`;
+  $('bagFishCount').textContent=`${fmt(bag.length)}/${PERSONAL_CAPACITY} bag · ${boatStore().length}/${storageCaps().boat} boat`;
   document.querySelectorAll('[data-bag-tab]').forEach(t=>{
     const active=t.dataset.bagTab===bagTab;
     t.classList.toggle('active',active);t.setAttribute('aria-selected',String(active));t.tabIndex=active?0:-1;
@@ -667,17 +773,16 @@ function renderBag(){
 }
 function renderFishBag(){
   if(!bagOpen||bagTab!=='fish')return;
-  fishIcons.disconnect(bagBody);
-  bagBody.innerHTML=bag.length?bag.map((e,i)=>{
-    const held=e===heldCatch;
-    return `<article class="carry-row ${held?'selected':''}">
-      <div class="carry-icon">${fishIcons.markup(e.sp)}</div>
-      <div class="carry-copy"><span class="carry-rarity ${e.sp.rarity}">${RARITY[e.sp.rarity].label}</span><b>${e.sp.name}</b><small>${formatCatchMass(e.weight)} · ${fishPlace(e.sp)}</small></div>
-      <button class="buy-btn" data-hold-fish="${i}" aria-pressed="${held}" aria-label="${held?'Put away':'Hold'} ${e.sp.name}, ${formatCatchMass(e.weight)}">${held?'Put away':'Hold'}</button>
-    </article>`;
-  }).join(''):'<div class="fish-bag-empty"><span aria-hidden="true">▥</span><h3>No fish in your bag yet.</h3><p>Land a catch, then come back to hold it up.<br>Sold fish stay in your index, not in your bag.</p></div>';
+  fishIcons.disconnect(bagBody);const cap=storageCaps(),atStorage=G.onBoat||isNearVendor('port');
+  const rows=(items,source)=>items.map((e,i)=>`<article class="carry-row"><div class="carry-icon">${fishIcons.markup(e.sp)}</div><div class="carry-copy">${fishBadge(e)}<span class="carry-rarity ${e.sp.rarity}">${RARITY[e.sp.rarity].label}</span><b>${e.sp.name}</b><small>${formatCatchMass(e.weight)} · ${fishPlace(e.sp)}${e.mutation?' · '+e.mutation:''}</small></div>${source==='bag'?`<button class="buy-btn" data-hold-fish="${i}">Hold</button>`:''}${bagActionMode==='transfer'?`<button class="buy-btn" data-transfer="${source}:${i}" ${!atStorage?'disabled':''}>${source==='bag'?'→ Boat':'← Bag'}</button>`:`<button class="buy-btn" data-aquarium="${source}:${i}" ${G.collections.aquarium.length>=12+(G.collections.aquariumUpgrade||0)*4?'disabled':''}>Display</button>`}</article>`).join('');
+  const upgrade=G.collections.boatStorageUpgrade[G.boat]||0,cost=STORAGE_UPGRADE_COST[upgrade+1]||0;
+  bagBody.innerHTML=`<div class="storage-meter"><b>PERSONAL ${bag.length}/${cap.personal}</b><b>BOAT ${boatStore().length}/${cap.boat}</b><small>${atStorage?'Transfer fish while aboard or at a boatyard.':'Board your boat or visit a boatyard to transfer.'}</small></div><button class="buy-btn" data-bag-mode>${bagActionMode==='transfer'?'Switch to aquarium display':'Switch to storage transfer'}</button><h3 class="storage-heading">Personal bag · ${bag.length}/${PERSONAL_CAPACITY}</h3>${rows(bag,'bag')||'<p class="shop-empty">Personal bag is empty.</p>'}<h3 class="storage-heading">Boat hold · ${boatStore().length}/${cap.boat}</h3>${rows(boatStore(),'boat')||'<p class="shop-empty">No fish in this boat’s hold.</p>'}<button class="buy-btn storage-upgrade" data-storage-upgrade="boat" ${!atStorage||!cost||G.coins<cost?'disabled':''}>Expand this boat’s hold ${cost?`· ${fmt(cost)}c`:'· MAX'}</button><button class="buy-btn storage-upgrade" data-storage-upgrade="personal" ${G.collections.storageUpgrade>=3||G.coins<(STORAGE_UPGRADE_COST[G.collections.storageUpgrade+1]||0)?'disabled':''}>Expand personal inventory · ${G.collections.storageUpgrade>=3?'MAX':fmt(STORAGE_UPGRADE_COST[G.collections.storageUpgrade+1]||0)+'c'}</button>`;
   fishIcons.observe(bagBody);
 }
+function upgradeStorage(kind){const level=kind==='personal'?G.collections.storageUpgrade:G.collections.boatStorageUpgrade[G.boat]||0,cost=STORAGE_UPGRADE_COST[level+1];if(!cost||G.coins<cost){showToast('Not enough coins or storage is fully upgraded.',true);return;}if(kind==='boat'&&!G.onBoat&&!isNearVendor('port'))return;G.coins-=cost;if(kind==='personal')G.collections.storageUpgrade++;else G.collections.boatStorageUpgrade[G.boat]=level+1;saveGame();updateStats();renderBag();}
+function transferCatch(source,index){if(!G.onBoat&&!isNearVendor('port')){showToast('Transfer at your boat or a boatyard.',true);return;}const from=source==='bag'?bag:boatStore(),to=source==='bag'?boatStore():bag;if(!from[index]||to.length>=(source==='bag'?storageCaps().boat:storageCaps().personal))return;const[e]=from.splice(index,1);to.push(e);saveGame();renderBag();updateCarryUI();}
+function displayCatch(source,index){const from=source==='bag'?bag:boatStore(),limit=12+(G.collections.aquariumUpgrade||0)*4;if(!from[index]||G.collections.aquarium.length>=limit)return;G.collections.aquarium.push(from.splice(index,1)[0]);saveGame();renderBag();updateCarryUI();showToast('Fish placed in your aquarium collection.');}
+
 function stowFish(){
   if(!heldCatch)return false;
   disposeFishModel(carriedModel);carriedModel=null;heldCatch=null;Object.assign(carriedSize,{x:0,y:0,z:0,gripY:0,gripZ:0,centerX:0});heldFishRig.visible=false;
@@ -693,6 +798,7 @@ function holdFish(index){
   if(heldCatch===entry){stowFish();closeFishBag();return true;}
   stowFish();
   const model=makeFish3D(entry.sp,1);
+  if(entry.mutation==='shiny')model.traverse(o=>{if(o.isMesh){o.material=o.material.clone();if(o.material.color)o.material.color.offsetHSL(.08,.24,.18);if(o.material.emissive){o.material.emissive.setHex(0x8ed8d5);o.material.emissiveIntensity=.25;}o.material.metalness=.45;}});
   model.rotation.set(...model.userData.displayRotation); // See ray wings and real 3D heads, not an edge-on silhouette.
   // Precise vertex bounds matter for angled rays and sculpted fins: rotating
   // a coarse mesh AABB would otherwise inflate the reported trophy dimensions.
@@ -742,23 +848,31 @@ function hookFish(){
   if(G.state !== 'bite') return;
   hookedSpecies = pickSpecies();
   if(!hookedSpecies){showToast('This bait has no bites here. Switch bait in Bag → Bait.',true);setState('aim');return;}
+  const wx=islandWeather(G.castTerritory??G.zone,Date.now()),active=expeditionState();
+  let boss=null;
+  if(active&&!active.complete&&active.island===(G.castTerritory??G.zone)&&active.type==='boss')boss=BOSSES[(G.zone+G.activities.bosses)%BOSSES.length];
+  else if(G.activities.bossLure){boss=BOSSES[((G.castTerritory??G.zone)+G.activities.bosses)%BOSSES.length];G.activities.bossLure=false;}
+  else if(wx.id==='storm'&&Math.random()<.004)boss=BOSSES[((G.castTerritory??G.zone)+G.activities.bosses)%BOSSES.length];
+  G.activities.bossEncounter=boss?{...boss,island:G.castTerritory??G.zone}:null;
   const w = rollWeight(hookedSpecies);
-  hookedWeight = roundWeight(w);
+  hookedWeight = roundWeight(boss?Math.min(hookedSpecies.maxW,hookedSpecies.minW+(hookedSpecies.maxW-hookedSpecies.minW)*.88):w);
   disposeHookedFish();
-  hookedFish = makeFish3D(hookedSpecies, Math.max(.08,heldFishSpan(hookedSpecies,hookedWeight)/(1.8*hookedSpecies.size)));
+  hookedFish = makeFish3D(hookedSpecies, Math.max(.08,heldFishSpan(hookedSpecies,hookedWeight)/(1.8*hookedSpecies.size))*(G.activities.bossEncounter?2.2:1));
   hookedFish.position.copy(bobberPos); hookedFish.position.y = -0.7;
   scene.add(hookedFish);
   G.caughtAnim=0;
   G.tension = 26; G.progress = 6;
-  G.fishStrength = hookedSpecies.strength;
+  G.fishStrength = hookedSpecies.strength*(G.activities.bossEncounter?1.85:1);
   G.fishWeight = hookedWeight;
   fightSetup(hookedSpecies, hookedWeight);
+  if(wx.wind){const stabilizer=G.boatUpgrades[G.boat]?.type==='stability'?G.boatUpgrades[G.boat].level:0;wx.wind=Math.max(0,wx.wind*(1-stabilizer*.24));const center=(G.bandLo+G.bandHi)/2,width=(G.bandHi-G.bandLo)*(1-wx.wind*.12);G.bandLo=center-width/2;G.bandHi=center+width/2;G.rateMul=Math.min(2.2,G.rateMul*(1+wx.wind*.1));G.fishStrength*=1+wx.wind*.18;}
+  if(G.activities.bossEncounter){const center=(G.bandLo+G.bandHi)/2,width=(G.bandHi-G.bandLo)*.68;G.bandLo=center-width/2;G.bandHi=center+width/2;G.rateMul=Math.min(2.2,G.rateMul*1.18);}
   G.reelPhase='calm'; G.reelPhaseTime=REEL_PHASES.calm.duration;
-  G.fishTugTimer=rand(2.4,3.8);G.fishTugWarn=0;G.fishTugDur=0;G.fishTug=0;G.nextFishTugDirection=Math.random()<.5?1:-1;
+  G.fishTugTimer=G.activities.bossEncounter?rand(1.6,2.5):rand(2.4,3.8);G.fishTugWarn=0;G.fishTugDur=0;G.fishTug=0;G.nextFishTugDirection=G.activities.bossEncounter?.behavior==='dive'?-1:1;
   G.surgeTimer=0; G.surgeDur=0;
   G.yankTimer=0; G.yank=0; G.yankDur=0;
   G.reelHeld = false;
-  reelFishName.innerHTML = G.discoveries[hookedSpecies.id] ? `<span class="reel-fish">${fishIcons.markup(hookedSpecies,{eager:true})}</span>${hookedSpecies.name}` : `<span class="reel-fish">${unknownFishSVG()}</span>Unidentified fish`;
+  reelFishName.innerHTML = G.activities.bossEncounter?`<span class="boss-title">BOSS · ${G.activities.bossEncounter.name}</span><span class="reel-fish">${fishIcons.markup(hookedSpecies,{eager:true})}</span>${G.activities.bossEncounter.title}`:G.discoveries[hookedSpecies.id] ? `<span class="reel-fish">${fishIcons.markup(hookedSpecies,{eager:true})}</span>${hookedSpecies.name}` : `<span class="reel-fish">${unknownFishSVG()}</span>Unidentified fish`;
   paintTensionBand();
   setState('reeling');
   sfx.hook();
@@ -767,14 +881,17 @@ function hookFish(){
 function catchFish(){
   if(G.state !== 'reeling' || !hookedSpecies) return;
   const sp = hookedSpecies;
-  const weight = roundWeight(hookedWeight || rollWeight(sp));
+  let weight = roundWeight(hookedWeight || rollWeight(sp));
+  const mutation=rollMutation(Math.random,weight/Math.max(.001,sp.maxW));if(mutation==='huge')weight=roundWeight(Math.min(sp.maxW*1.45,weight*1.3));
+  if(!canCarryCatch()){showToast('No free space in your bag or boat hold. Fish released safely.',true);G.activities.bossEncounter=null;setState('aim');return;}
   const bonusBefore = coinBonus();
   const oldLevel=level(), lockedBefore=ISLANDS.filter(i=>!hasLicense(i.id)), isNew=!G.discoveries[sp.id];
   const earnedXP=catchXP(sp,Number(weight),isNew);
   const awardedXP=capCatchXP(G.xp,earnedXP);
   G.xp+=awardedXP; // one catch can never skip multiple levels
-  const record=G.discoveries[sp.id]||(G.discoveries[sp.id]={count:0,best:0,first:new Date().toISOString().slice(0,10)});
-  record.count++; record.best=Math.max(record.best,Number(weight));
+  const priorRecord=G.discoveries[sp.id],speciesRecord=!priorRecord||Number(weight)>Number(priorRecord.best);const islandRecord=SPECIES.filter(x=>x.island===sp.island).every(x=>x.id===sp.id||Number(G.discoveries[x.id]?.best||0)<=Number(weight));
+  const record=priorRecord||(G.discoveries[sp.id]={count:0,best:0,first:new Date().toISOString().slice(0,10)});
+  record.count++; record.best=Math.max(record.best,Number(weight));if(mutation){G.collections.mutations[mutation]=(G.collections.mutations[mutation]||0)+1;G.collections.mutationBySpecies=G.collections.mutationBySpecies||{};const mr=G.collections.mutationBySpecies[sp.id]||(G.collections.mutationBySpecies[sp.id]={});mr[mutation]=(mr[mutation]||0)+1;}
   G.completedIslands=completedCollections(G.discoveries,G.completedIslands);
   const bonus = coinBonus(), value = saleValue(sp,weight);
   $('collectionReward').classList.toggle('hidden',bonus<=bonusBefore);
@@ -788,15 +905,24 @@ function catchFish(){
   $('catchLevel').textContent=level()>oldLevel ? `LEVEL ${level()}!${unlocked.length?' · '+unlocked.map(i=>i.short).join(', ')+' license unlocked':level()===MAX_LEVEL?' · maximum level reached':lockedBefore.length?' · one step closer to the next island':' · all island licenses unlocked'}`:'';
   const isBest = !G.best || parseFloat(weight) > parseFloat(G.best.weight);
   if(!G.best || parseFloat(weight) > parseFloat(G.best.weight)) G.best = { id:sp.id,name:sp.name, weight };
-  log.unshift({ sp, weight });
+  log.unshift({ sp, weight,mutation });
   if(log.length>200) log.length=200;
-  bag.push({ sp, weight });
+  const caughtEntry={sp,weight,mutation};if(bag.length<storageCaps().personal)bag.push(caughtEntry);else if(G.onBoat&&boatStore().length<storageCaps().boat)boatStore().push(caughtEntry);
+  const boss=G.activities.bossEncounter;
+  if(boss){const bounty=1200+sp.island*350;G.coins+=bounty;G.activities.relics+=2;G.activities.bosses++;G.activities.lastBoss=boss.name;showToast(`${boss.name} defeated · +${fmt(bounty)} coins · +2 relics`);}
+  expeditionCatch(sp,!!boss);
+  recordActivity({kind:'catch',amount:1,island:sp.island,rarity:RARITY[sp.rarity].tier,weather:islandWeather(sp.island,Date.now()).id,bait:G.gear.bait});
+  if(RARITY[sp.rarity].tier>=2)recordActivity({kind:'rare',amount:1,island:sp.island,rarity:RARITY[sp.rarity].tier});
+  recordActivity({kind:'island',island:sp.island});recordActivity({kind:'weather',weather:islandWeather(sp.island,Date.now()).id});recordActivity({kind:'gear',bait:G.gear.bait});
+  if(boss)recordActivity({kind:'boss',amount:1,island:sp.island,rarity:RARITY[sp.rarity].tier});
+  collectionAchievements();G.activities.bossEncounter=null;
   invalidateLog(); updateStats(); saveGame();
 
   $('catchRarity').textContent = sp.rarity.toUpperCase() + ' CATCH';
   $('catchRarity').className = 'modal-eyebrow' + (sp.rarity !== 'common' ? ' ' + sp.rarity : '');
   $('catchIcon').innerHTML = fishIcons.markup(sp,{eager:true});
-  $('catchName').textContent = sp.name;
+  $('catchName').textContent = `${mutation?mutation.toUpperCase()+' · ':''}${boss?`${boss.name} · ${boss.title}`:sp.name}`;
+  $('catchModal').classList.toggle('mutation-shiny',mutation==='shiny');$('catchModal').classList.toggle('mutation-huge',mutation==='huge');
   $('catchWeight').textContent = formatCatchMass(weight);
   $('catchPoints').innerHTML = '+' + fmt(awardedXP) + ' XP' + (isNew?' · 50% discovery bonus':'') + '<span class="catch-value">WORTH ' + fmt(value) + 'c AT THE MARKET</span>';
   $('catchDesc').textContent = sp.desc;
@@ -808,7 +934,7 @@ function catchFish(){
   $('continueBtn').focus({preventScroll:true});
   if(RARITY[sp.rarity].tier >= 4) sfx.legendary(); else sfx.caught();
   spawnSplash(bobberPos, 18, 1.1);
-  if(isBest && G.caught > 1) showToast('New best — ' + formatCatchMass(weight) + ' ' + sp.name + '!');
+  if(speciesRecord&&G.caught>1)showToast(`NEW SPECIES RECORD · ${sp.name} · ${formatCatchMass(weight)}!`);else if(islandRecord&&G.caught>1)showToast(`NEW ${ISLANDS[sp.island].short.toUpperCase()} ISLAND RECORD · ${formatCatchMass(weight)} ${sp.name}!`);else if(isBest&&G.caught>1)showToast('New personal best — '+formatCatchMass(weight)+' '+sp.name+'!');
 }
 function escapeFish(reason){
   disposeHookedFish();
@@ -984,7 +1110,8 @@ function gearRow(kind, g, i){
   </div>`;
 }
 
-const bagTotal = () => bag.reduce((a,e) => a + saleValue(e.sp,e.weight),0);
+const entrySale=e=>saleValue(e.sp,e.weight,e.mutation);
+const bagTotal = () => bag.reduce((a,e) => a + entrySale(e),0);
 
 function gearRows(kind,indexes){
   return indexes.map(index=>{
@@ -1048,7 +1175,7 @@ function buyGear(kind, i){
 }
 function applyGear(){
   const r = RODS[G.gear.rod] || RODS[0];
-  rodMat.color.setHex(r.color);
+  rodMat.color.setHex(r.color);if(starterRodDetails)starterRodDetails.visible=G.gear.rod===0;
   const l = LINES[G.gear.line] || LINES[0];
   lineMat.color.setHex(l.id === 'twine' ? 0xe8dcc0 : l.color);
   updateStats();
@@ -1064,19 +1191,9 @@ function renderMarket(){
     : `Complete an island’s fish index to earn +${ISLAND_COLLECTION_BONUS}% sale coins forever. Selling never erases discoveries.`;
   const body = marketBody;
   fishIcons.disconnect(body);
-  if(!bag.length){
-    body.innerHTML = '<p class="shop-empty">Your catch bag is empty.<br>Catch something, then bring it here.</p>';
-    return;
-  }
-  body.innerHTML =
-    `<div class="bag-total"><span>${bag.length} fish in the bag</span><span>${fmt(bagTotal())}c</span></div>` +
-    bag.map((e, i) => `<div class="sell-row">
-      <div class="e">${fishIcons.markup(e.sp)}</div>
-      <div><b>${e.sp.name}</b><small>${formatCatchMass(e.weight)} · ${RARITY[e.sp.rarity].label}</small></div>
-      <div class="val">${fmt(saleValue(e.sp,e.weight))}c</div>
-      <button class="buy-btn" data-sell="${i}">Sell</button>
-    </div>`).join('') +
-    `<button class="sell-all" id="sellAll">SELL ALL · ${fmt(bagTotal())}c</button>`;
+  const hold=boatStore(),all=[...bag.map((e,i)=>({e,i,source:'bag'})),...hold.map((e,i)=>({e,i,source:'boat'}))],total=all.reduce((sum,x)=>sum+entrySale(x.e),0);
+  if(!all.length){body.innerHTML='<p class="shop-empty">Your personal bag and boat hold are empty.<br>Catch fish and bring them here.</p>';return;}
+  body.innerHTML=`<div class="bag-total"><span>${bag.length} personal · ${hold.length} boat hold</span><span>${fmt(total)}c</span></div>`+all.map(({e,i,source})=>`<div class="sell-row"><div class="e">${fishIcons.markup(e.sp)}</div><div><b>${e.mutation?e.mutation.toUpperCase()+' · ':''}${e.sp.name}</b><small>${formatCatchMass(e.weight)} · ${RARITY[e.sp.rarity].label} · ${source}</small></div><div class="val">${fmt(entrySale(e))}c</div><button class="buy-btn" data-sell="${source}:${i}">Sell</button></div>`).join('')+`<button class="sell-all" id="sellAll">SELL PERSONAL BAG · ${fmt(bagTotal())}c</button>`;
   fishIcons.observe(body);
 }
 function openMarket(){
@@ -1098,20 +1215,21 @@ function closeMarket(){
   $('marketOverlay').classList.add('hidden');
   fishIcons.disconnect(marketBody);resumeWorld();
 }
+function sellStored(source,i){const list=source==='boat'?boatStore():bag,e=list[i];if(!e)return;G.coins+=entrySale(e);list.splice(i,1);recordActivity({kind:'sell',amount:1});sfx.coin();updateStats();saveGame();renderMarket();showToast('Fish sold for '+fmt(entrySale(e))+' coins.');}
 function sellFish(i){
   if(!marketOpen || !isNearVendor('market') || !Number.isInteger(i))return;
   const e = bag[i];
   if(!e) return;
-  const v = saleValue(e.sp,e.weight);
+  const v = entrySale(e);
   bag.splice(i, 1);
-  G.coins += v;
+  G.coins += v;recordActivity({kind:'sell',amount:1});
   sfx.coin(); updateStats(); saveGame(); renderMarket();
   showToast('+' + fmt(v) + ' coins');
 }
 function sellAll(){
   if(!marketOpen || !isNearVendor('market') || !bag.length) return;
-  const total = bagTotal();
-  G.coins += total;
+  const total = bagTotal(),soldCount=bag.length;
+  G.coins += total;recordActivity({kind:'sell',amount:soldCount});
   bag.length = 0;
   sfx.coin(); updateStats(); saveGame(); renderMarket();
   showToast('Sold the lot for ' + fmt(total) + ' coins!');
@@ -1247,7 +1365,9 @@ function renderIndex(){
     // Unknown entries contain no species name, color, rarity, description,
     // title or accessible label. There is nothing for CSS/hover to reveal.
     if(!r)return `<article class="fish-entry undiscovered"><div class="entry-top"><span>#${sp.legacy?'LEGACY':String(sp.number).padStart(3,'0')}</span><span>UNDISCOVERED</span></div><div class="entry-fish">${unknownFishSVG()}</div><h3>???</h3><p>${ISLANDS[sp.island].short}</p><div class="entry-record">NOT YET CAUGHT</div></article>`;
-    return `<details class="fish-entry discovered ${sp.rarity}"><summary><div class="entry-top"><span>#${sp.legacy?'LEGACY':String(sp.number).padStart(3,'0')}</span><span class="rarity-label ${sp.rarity}">${RARITY[sp.rarity].label}</span></div><div class="entry-fish">${fishIcons.markup(sp)}</div><h3>${sp.name}</h3><p>${ISLANDS[sp.island].short}</p><div class="entry-record">BEST ${formatCatchMass(r.best)} <span>×${fmt(r.count)}</span></div></summary><p class="entry-lore">${sp.desc}<br><b>${formatCatchMass(sp.minW)}–${formatCatchMass(sp.maxW)}</b> · ${r.first?'First caught '+r.first:'From your earlier adventures'}</p></details>`;
+    const tier=RARITY[sp.rarity].tier,preferredWeather=tier>=6?'fog':tier>=3?'rain':'clear',weatherName=WEATHER.find(w=>w.id===preferredWeather).name,baitHint=tier>=6?'High-tier specialist bait':tier>=3?'Mid-tier bait or better':'Any bait works',timeHint=tier>=7?'Best near dusk or night':tier>=3?'Dawn and dusk are promising':'Active through the day',depthHint=Number(sp.maxW)>Number(sp.minW)*4?'Deep water · try casting farther':'Shallows or mid-water · cast near the island';
+    const islandBest=SPECIES.filter(x=>x.island===sp.island).reduce((best,x)=>Math.max(best,Number(G.discoveries[x.id]?.best)||0),0);
+    return `<details class="fish-entry discovered ${sp.rarity}"><summary><div class="entry-top"><span>#${sp.legacy?'LEGACY':String(sp.number).padStart(3,'0')}</span><span class="rarity-label ${sp.rarity}">${RARITY[sp.rarity].label}</span></div><div class="entry-fish">${fishIcons.markup(sp)}</div><h3>${sp.name}</h3><p>${ISLANDS[sp.island].short}</p><div class="entry-record">BEST ${formatCatchMass(r.best)} <span>×${fmt(r.count)}</span></div>${G.collections.mutationBySpecies?.[sp.id]?.shiny?`<span class="mutation-badge shiny">SHINY ×${G.collections.mutationBySpecies[sp.id].shiny}</span>`:''}${G.collections.mutationBySpecies?.[sp.id]?.huge?`<span class="mutation-badge huge">HUGE ×${G.collections.mutationBySpecies[sp.id].huge}</span>`:''}</summary><p class="entry-lore">${sp.desc}<br><b>${formatCatchMass(sp.minW)}–${formatCatchMass(sp.maxW)}</b> · ${r.first?'First caught '+r.first:'From your earlier adventures'}</p><button class="habitat-clue-toggle" data-habitat-clue="${sp.id}">Reveal field clues ▸</button><div class="entry-record">${ISLANDS[sp.island].short} ISLAND RECORD · ${islandBest?formatCatchMass(islandBest):'—'}</div></details>`;
   }).join(''):'<p class="empty">No entries in this filter yet. There is a whole sea to explore.</p>';
   fishIcons.observe($('fishGrid'));
 }
@@ -1301,8 +1421,8 @@ function renderFleet(){
   const atDock=isNearVendor('port');
   $('fleetView').innerHTML=BOATS.map(b=>{
     const owned=G.ownedBoats.includes(b.id),equipped=G.boat===b.id;
-    const reason=equipped?'IN USE':!atDock?'VISIT A BOAT SHOP':!owned&&G.coins<b.cost?`NEED ${fmt(b.cost-G.coins)}c MORE`:'';
-    return `<article class="boat-card ${equipped?'equipped':''}"><div class="boat-art">${boatSVG(b)}<span>CLASS ${String(b.id+1).padStart(2,'0')}</span></div><div class="boat-copy"><span class="eyebrow">EVERY UNLOCKED TERRITORY</span><h3>${b.name}</h3><p>${b.description}</p><div class="boat-specs"><span>${b.size.toFixed(2)}× HULL</span><span>${b.cost?fmt(b.cost)+'c':'FREE'}</span><span>${b.speed} m/s</span></div><button class="buy-btn ${owned?'equip':''}" data-boat="${b.id}" ${reason?'disabled':''}>${reason|| (owned?'Launch this boat':fmt(b.cost)+'c · BUY BOAT')}</button></div></article>`;
+    const tune=G.boatUpgrades[b.id]||{type:'standard',level:0},upgradeCost=1200*(tune.level+1),reason=equipped?'IN USE':!atDock?'VISIT A BOAT SHOP':!owned&&G.coins<b.cost?`NEED ${fmt(b.cost-G.coins)}c MORE`:'';
+    return `<article class="boat-card ${equipped?'equipped':''}"><div class="boat-art">${boatSVG(b)}<span>CLASS ${String(b.id+1).padStart(2,'0')}</span></div><div class="boat-copy"><span class="eyebrow">EVERY UNLOCKED TERRITORY</span><h3>${b.name}</h3><p>${b.description}</p><div class="boat-specs"><span>${b.size.toFixed(2)}× HULL</span><span>${b.cost?fmt(b.cost)+'c':'FREE'}</span><span>${b.speed} m/s</span><span>${capacities(b.id,G.collections.boatStorageUpgrade[b.id]||0).boat} fish hold</span></div><button class="buy-btn ${owned?'equip':''}" data-boat="${b.id}" ${reason?'disabled':''}>${reason|| (owned?'Launch this boat':fmt(b.cost)+'c · BUY BOAT')}</button>${owned?`<div class="boat-tune"><small>${tune.level?`${tune.type==='speed'?'Speed rig':'Storm stabilizer'} · tier ${tune.level}`:'Stock configuration · choose a specialization'}</small><button class="buy-btn" data-tune="${b.id}:speed" ${!atDock||!equipped||tune.level>=3||G.coins<upgradeCost?'disabled':''}>Speed rig · ${tune.level>=3?'MAX':fmt(upgradeCost)+'c'}<small>+12% speed/tier · less storm control</small></button><button class="buy-btn" data-tune="${b.id}:stability" ${!atDock||!equipped||tune.level>=3||G.coins<upgradeCost?'disabled':''}>Storm stabilizer · ${tune.level>=3?'MAX':fmt(upgradeCost)+'c'}<small>Better control in weather · −8% speed/tier</small></button></div>`:''}</div></article>`;
   }).join('');
 }
 function buyBoat(id){
@@ -1312,10 +1432,10 @@ function buyBoat(id){
     if(G.coins<b.cost){showToast(`You need ${fmt(b.cost-G.coins)} more coins.`,true);return;}
     G.coins-=b.cost;G.ownedBoats.push(id);
   }
-  G.boat=id;G.boatPosition=dockPose(G.zone,b.size);world.setBoat(id);sfx.buy();saveGame();updateStats();renderChart();showToast(b.name+' ready at the dock.');
+  G.boat=id;G.boatPosition=dockPose(G.zone,b.size);world.setBoat(id);world.setAuroraPaint(G.collections.cosmetics?.includes('aurora-trim'));collectionAchievements();sfx.buy();saveGame();updateStats();renderChart();showToast(b.name+' ready at the dock.');
 }
 function spawnAtIsland(id){
-  const p=islandSpawn(ISLANDS[id]);G.zone=id;G.px=p.x;G.pz=p.z;
+  const p=islandSpawn(ISLANDS[id]),previous=G.zone;G.zone=id;if(previous!==id)recordActivity({kind:'island',island:id});G.px=p.x;G.pz=p.z;
   G.onBoat=false;G.sailing=null;G.boatMode='drive';G.yaw=p.yaw;G.pitch=-.1;G.camY=1.15+EYE;
   if(!G.boatPosition)G.boatPosition=dockPose(id,BOATS[G.boat].size);
   camera.position.set(G.px,G.camY,G.pz);camera.rotation.set(G.pitch,G.yaw,0,'YXZ');
@@ -1383,7 +1503,8 @@ function updateBoatUI(){
 }
 function tickBoat(dt){
   if(!G.onBoat||!G.sailing)return;
-  const b=BOATS[G.boat];
+  const base=BOATS[G.boat],upgrade=G.boatUpgrades[G.boat]||{type:'standard',level:0},factor=upgrade.level||0;
+  const b=upgrade.type==='speed'?{...base,speed:base.speed*(1+.12*factor)}:upgrade.type==='stability'?{...base,speed:base.speed*(1-.08*factor)}:base;
   if(isDriving()&&!uiBusy()&&G.state==='aim'){
     const throttle=(keys.f?1:0)-(keys.b?1:0)+(stick.active?stick.y:0),steer=(keys.r?1:0)-(keys.l?1:0)+(stick.active?stick.x:0);
     G.sailing=stepBoat(G.sailing,{throttle,steer},b,dt,{xp:G.xp,licenses:G.licenses});
@@ -1395,7 +1516,7 @@ function tickBoat(dt){
   G.boatPosition={x:G.sailing.x,z:G.sailing.z,yaw:G.sailing.yaw};
   world.boat.position.set(G.sailing.x,.15+Math.sin(G.time*2)*.04,G.sailing.z);world.boat.rotation.set(0,G.sailing.yaw,Math.sin(G.time*1.6)*.008);
   const id=territoryAt(G.sailing.x,G.sailing.z);
-  if(id!==lastTerritory){lastTerritory=id;if(id!==null){G.zone=id;if(!G.visited.includes(id))G.visited.push(id);announceTerritory(id);}updateStats();saveGame();}
+  if(id!==lastTerritory){lastTerritory=id;if(id!==null){G.zone=id;recordActivity({kind:'island',island:id});if(!G.visited.includes(id))G.visited.push(id);collectionAchievements();announceTerritory(id);}updateStats();saveGame();}
   if(G.time-lastBoatSave>10){lastBoatSave=G.time;saveGame();}
 }
 
@@ -1494,9 +1615,13 @@ addEventListener('keydown', e => {
     if(chartOpen){closeChart();return;}
     if(indexOpen){closeIndex();return;}
     if(drawerOpen){closeLog();return;}
+    if(activitiesOpen){closeActivities();return;}
+    if(aquariumOpen){closeAquarium();return;}
+    if(achievementsOpen){$('achievementsClose').click();return;}
+    if(merchantOpen){$('merchantClose').click();return;}
   }
   if(e.code==='Tab'&&(uiBusy()||G.state==='caught')){
-    const panel=tutorialOpen?tutorialOverlay:bagOpen?bagOverlay:helpOpen?helpOverlay:shopOpen?shopOverlay:marketOpen?marketOverlayEl:chartOpen?$('chartOverlay'):indexOpen?$('indexOverlay'):drawerOpen?logDrawer:catchModal;
+    const panel=tutorialOpen?tutorialOverlay:activitiesOpen?$('activitiesOverlay'):aquariumOpen?$('aquariumOverlay'):achievementsOpen?$('achievementsOverlay'):merchantOpen?$('merchantOverlay'):bagOpen?bagOverlay:helpOpen?helpOverlay:shopOpen?shopOverlay:marketOpen?marketOverlayEl:chartOpen?$('chartOverlay'):indexOpen?$('indexOverlay'):drawerOpen?logDrawer:catchModal;
     const focusable=Array.from(panel.querySelectorAll('button:not(:disabled),select,summary,[tabindex="0"]')).filter(n=>n.tabIndex>=0&&n.getClientRects().length);
     const first=focusable[0],last=focusable[focusable.length-1];
     if(!panel.contains(document.activeElement)){(e.shiftKey?last:first)?.focus();e.preventDefault();}
@@ -1510,6 +1635,7 @@ addEventListener('keydown', e => {
   if(e.code==='KeyQ'&&!e.repeat){e.preventDefault();toggleBoatMode();return;}
   if(e.code==='KeyM'&&!e.repeat){if(chartOpen)closeChart();else openChart();return;}
   if(e.code==='KeyF'&&!e.repeat){if(indexOpen)closeIndex();else openIndex();return;}
+  if(e.code==='KeyJ'&&!e.repeat){if(activitiesOpen)closeActivities();else openActivities();return;}
   if(e.code==='KeyI'&&!e.repeat){
     e.preventDefault();
     if(bagOpen){if(bagTab==='fish'){selectBagTab(lastGearTab);$('bagTab-'+bagTab).focus();}else closeBag();}
@@ -1561,7 +1687,7 @@ $('startBtn').addEventListener('click', () => {
   setState('aim');
   $('startBtn').blur();
   let tutorialSeen=false;try{tutorialSeen=localStorage.getItem(TUTORIAL_SEEN_KEY)==='done';}catch{}
-  if(tutorialSeen)requestLock();else openTutorial();
+  refreshActivityUI(true);if(tutorialSeen)requestLock();else openTutorial();
   showToast('Welcome to '+ISLANDS[G.zone].name+'! '+(isTouch?'Tap Board boat for the helm.':'Board boat / R takes you straight to the helm.'));
 });
 $('continueBtn').addEventListener('click', () => {
@@ -1579,6 +1705,9 @@ $('logBtn').addEventListener('click', () => {
   if(!open){renderLog();focusPanel('closeLog');}else closeLog();
 });
 $('closeLog').addEventListener('click',closeLog);
+$('activitiesBtn').addEventListener('click',openActivities);$('activitiesClose').addEventListener('click',closeActivities);
+$('activitiesOverlay').addEventListener('click',e=>{if(e.target===$('activitiesOverlay'))closeActivities();});
+$('activityContent').addEventListener('click',e=>{const start=e.target.closest('[data-exp-start]');if(start){startExpedition(start.dataset.expStart);return;}const action=e.target.closest('[data-exp-action]')?.dataset.expAction;if(action==='search')searchTreasure();else if(action==='abandon')abandonExpedition();else if(e.target.closest('[data-relic-lure]')){if(G.activities.relics<3){showToast('You need 3 relics for a boss-signal lure.',true);return;}G.activities.relics-=3;G.activities.bossLure=true;persistActivities();renderActivities();showToast('Boss-signal lure prepared. Your next hook will call a boss.');}});
 
 // ---- shop wiring ----
 shopBtnEl.addEventListener('click', openShop);
@@ -1593,7 +1722,7 @@ $('marketClose').addEventListener('click', closeMarket);
 marketOverlayEl.addEventListener('click', e => { if(e.target === marketOverlayEl) closeMarket(); });
 marketBody.addEventListener('click', e => {
   const one = e.target.closest('[data-sell]');
-  if(one){ sellFish(+one.dataset.sell); return; }
+  if(one){const [source,index]=one.dataset.sell.split(':');sellStored(source,Number(index));return;}
   if(e.target.closest('#sellAll')) sellAll();
 });
 
@@ -1613,15 +1742,19 @@ $('destinationDetail').addEventListener('click',e=>{
   if(e.target.closest('#waypointBtn')){G.waypoint=selectedIsland;renderChart();$('waypointBtn').focus({preventScroll:true});showToast('Waypoint marked. Steer toward it on the minimap.');}
   if(e.target.closest('#viewBoats')){fleetTab=true;renderChart();}
 });
-$('fleetView').addEventListener('click',e=>{const b=e.target.closest('[data-boat]');if(b)buyBoat(Number(b.dataset.boat));});
+$('fleetView').addEventListener('click',e=>{const tune=e.target.closest('[data-tune]');if(tune){const [idText,type]=tune.dataset.tune.split(':'),id=Number(idText),old=G.boatUpgrades[id]||{type:'standard',level:0},cost=1200*(old.level+1);if(!chartOpen||G.state!=='aim'||!isNearVendor('port')||G.boat!==id||G.coins<cost||old.level>=3)return;if(old.type!=='standard'&&old.type!==type){showToast('This hull is specialized. Choose that rig or upgrade another boat.',true);return;}G.coins-=cost;G.boatUpgrades[id]={type,level:old.level+1};saveGame();updateStats();renderChart();showToast(`${type==='speed'?'Speed rig':'Storm stabilizer'} upgraded · tier ${old.level+1}`);return;}const b=e.target.closest('[data-boat]');if(b)buyBoat(Number(b.dataset.boat));});
 $('indexBtn').addEventListener('click',openIndex);
 $('indexClose').addEventListener('click',closeIndex);
 $('indexOverlay').addEventListener('click',e=>{if(e.target===$('indexOverlay'))closeIndex();});
 $('indexIslands').addEventListener('click',e=>{const b=e.target.closest('[data-index-island]');if(b){indexIsland=Number(b.dataset.indexIsland);renderIndex();$('fishGrid').scrollTop=0;}});
 $('indexFilter').addEventListener('change',renderIndex);
+$('fishGrid').addEventListener('click',e=>{const b=e.target.closest('[data-habitat-clue]');if(!b)return;const sp=SPECIES.find(x=>x.id===b.dataset.habitatClue);if(!sp)return;const tier=RARITY[sp.rarity].tier,weatherId=tier>=6?'fog':tier>=3?'rain':'clear',weatherName=WEATHER.find(w=>w.id===weatherId).name,time=tier>=7?'Dusk or night':tier>=3?'Dawn or dusk':'Daytime',bait=tier>=6?'Specialist bait tier':tier>=3?'Mid-tier bait or better':'Any bait tier',cast=tier>=6?'Use a strong, longer cast':'Moderate casts can reach this habitat';b.outerHTML=`<div class="habitat-clues"><b>FIELD CLUES</b><span>Weather · ${weatherName}</span><span>Bait · ${bait}</span><span>Time · ${time}</span><span>Cast · ${cast}</span><small>Hints improve odds; try conditions and learn the local pattern.</small></div>`;});
 $('bagBtn').addEventListener('click',openFishBag);
 $('bagClose').addEventListener('click',closeBag);
 bagOverlay.addEventListener('click',e=>{if(e.target===bagOverlay)closeBag();});
+$('aquariumBtn').addEventListener('click',openAquarium);$('aquariumClose').addEventListener('click',closeAquarium);$('aquariumOverlay').addEventListener('click',e=>{if(e.target===$('aquariumOverlay'))closeAquarium();});$('aquariumList').addEventListener('click',e=>{const b=e.target.closest('[data-release-aquarium]');if(b){const i=Number(b.dataset.releaseAquarium),cap=storageCaps().personal;if(bag.length>=cap){showToast('Personal storage is full; make room first.',true);return;}bag.push(G.collections.aquarium.splice(i,1)[0]);saveGame();drawAquarium();updateCarryUI();}});
+$('achievementsBtn').addEventListener('click',()=>{if(uiBusy()||G.state!=='aim')return;achievementsOpen=true;renderAchievements();$('achievementsOverlay').classList.remove('hidden');});$('achievementsClose').addEventListener('click',()=>{achievementsOpen=false;$('achievementsOverlay').classList.add('hidden');resumeWorld();});$('achievementsOverlay').addEventListener('click',e=>{if(e.target===$('achievementsOverlay'))$('achievementsClose').click();});
+$('merchantBtn').addEventListener('click',()=>{if(!merchantNear()){showToast('The merchant has moved on.',true);return;}merchantOpen=true;renderMerchant();$('merchantOverlay').classList.remove('hidden');});$('merchantClose').addEventListener('click',()=>{merchantOpen=false;$('merchantOverlay').classList.add('hidden');resumeWorld();});$('merchantOverlay').addEventListener('click',e=>{if(e.target===$('merchantOverlay'))$('merchantClose').click();});$('merchantStock').addEventListener('click',e=>{const b=e.target.closest('[data-merchant-buy]');if(!b)return;const item=MERCHANT_ITEMS.find(x=>x.id===b.dataset.merchantBuy),m=activeMerchant(),key=`${m.slot}:${item?.id}`;if(!item||!merchantNear()||G.coins<item.price||(G.collections.merchantBuys[key]||0)>=item.stock)return;G.coins-=item.price;G.collections.merchantBuys[key]=(G.collections.merchantBuys[key]||0)+1;if(item.id==='relic')G.activities.relics++;if(item.id==='tank-expansion')G.collections.aquariumUpgrade=Math.min(3,(G.collections.aquariumUpgrade||0)+1);G.collections.cosmetics=G.collections.cosmetics||[];if(item.id==='aurora-trim'){G.collections.cosmetics.push('aurora-trim');world.setAuroraPaint(true);}saveGame();updateStats();renderMerchant();showToast(`${item.title} purchased.`);});
 $('bagTabs').addEventListener('click',e=>{const t=e.target.closest('[data-bag-tab]');if(t)selectBagTab(t.dataset.bagTab);});
 $('bagTabs').addEventListener('keydown',e=>{
   const tab=e.target.closest('[data-bag-tab]'),next=tab&&nextBagTab(tab.dataset.bagTab,e.key);
@@ -1629,8 +1762,8 @@ $('bagTabs').addEventListener('keydown',e=>{
   e.preventDefault();e.stopPropagation();selectBagTab(next);$('bagTab-'+next).focus();
 });
 bagBody.addEventListener('click',e=>{
-  const fish=e.target.closest('[data-hold-fish]'),gear=e.target.closest('[data-buy]');
-  if(fish)holdFish(Number(fish.dataset.holdFish));
+  const mode=e.target.closest('[data-bag-mode]');if(mode){bagActionMode=bagActionMode==='transfer'?'display':'transfer';renderBag();return;}const fish=e.target.closest('[data-hold-fish]'),gear=e.target.closest('[data-buy]'),transfer=e.target.closest('[data-transfer]'),display=e.target.closest('[data-aquarium]'),upgrade=e.target.closest('[data-storage-upgrade]');
+  if(fish)holdFish(Number(fish.dataset.holdFish));if(transfer){const [source,index]=transfer.dataset.transfer.split(':');transferCatch(source,Number(index));}if(display){const [source,index]=display.dataset.aquarium.split(':');displayCatch(source,Number(index));}if(upgrade)upgradeStorage(upgrade.dataset.storageUpgrade);
   if(gear)buyGear(bagGearKind(bagTab),Number(gear.dataset.buy));
 });
 $('helpPlatform').textContent=isTouch?'TOUCH CONTROLS':'DESKTOP CONTROLS';
@@ -1680,7 +1813,7 @@ stickEl.addEventListener('pointerup', endStick);
 stickEl.addEventListener('pointercancel', endStick);
 $('resetBtn').addEventListener('click',()=>{
   if(!confirm('Start over? This erases all coins, levels, boats, gear and fish discoveries on this device.'))return;
-  stowFish();G.thirdPerson=false;G.onBoat=false;G.sailing=null;G.boatPosition=null;
+  stowFish();G.thirdPerson=false;G.onBoat=false;G.sailing=null;G.boatPosition=null;G.activities=createActivityState();
   const fresh=normalizeSave({version:SAVE_VERSION});const {bag:emptyBag,log:emptyLog,...state}=fresh;
   Object.assign(G,state);bag.length=0;log.length=0;G.castPower=0.5;G.power=0;
   logDrawer.classList.add('hidden');drawerOpen=false;fishIcons.disconnect(logList);logList.replaceChildren();
@@ -1733,6 +1866,7 @@ function tick(){
   const dt = Math.min(rawDt, 0.05);
   if(document.hidden)return;
   G.time += dt;
+  refreshActivityUI(false);
   checkPerformance(rawDt);
 
   // camera look
@@ -1767,7 +1901,7 @@ function tick(){
     G.walked += spd;
     if(G.walked > 2.6){ G.walked = 0; sfx.step(); }
   }
-  tickBoat(dt);
+  tickBoat(dt);checkIslandSecret();
   const gY = G.onBoat?BOATS[G.boat].size*.9:groundAt(G.px, G.pz);
   const eyeTarget = (gY === null ? 1.15 : gY) + EYE;
   G.camY += (eyeTarget - G.camY) * Math.min(1, dt * 9);
@@ -1784,7 +1918,7 @@ function tick(){
   const idle=G.state==='aim'&&!uiBusy();
   setHidden(shopBtnEl,!idle||!G.nearShop);
   setHidden(marketBtnEl,!idle||!G.nearMarket);
-  setHidden(portBtnEl,!idle||nearbyStall?.kind!=='port');
+  setHidden(portBtnEl,!idle||nearbyStall?.kind!=='port');setHidden($('merchantBtn'),!idle||!merchantNear());
   if(idle&&G.nearShop&&shopBtnEl.firstChild.nodeValue!==nearbyStall.name+' ')shopBtnEl.firstChild.nodeValue=nearbyStall.name+' ';
   setHidden(stickEl,!(isTouch&&idle));
   if(G.time-lastMapDraw>.2){
@@ -1862,7 +1996,7 @@ function tick(){
     G.fishTugTimer-=dt;
     if(G.fishTugTimer<=0&&G.fishTugWarn<=0&&G.fishTugDur<=0){
       G.fishTug=fishTugImpulse(G.fishStrength,G.nextFishTugDirection);G.nextFishTugDirection=alternateTugDirection(G.nextFishTugDirection);
-      G.fishTugWarn=.7;G.fishTugTimer=rand(3.8,5.8);
+      G.fishTugWarn=G.activities.bossEncounter?.behavior==='feint'?.42:.7;G.fishTugTimer=G.activities.bossEncounter?rand(1.7,2.7):rand(3.8,5.8);
     }
     const wasTugWarning=G.fishTugWarn>0;
     if(wasTugWarning){
@@ -1981,7 +2115,7 @@ function tick(){
     bobber.rotation.y = Math.sin(G.time * 1.6) * 0.2;
   }
 
-  world.update(G.time, dt, G.zone, activeCamera(), G.onBoat,G.boatPosition);
+  world.update(G.time, dt, G.zone, activeCamera(), G.onBoat,G.boatPosition,islandWeather(G.zone,Date.now()).id);
   updateParticles(dt);
   renderer.render(scene, activeCamera());
   if(heldFishRig.visible&&activeCamera()===camera){
@@ -2000,7 +2134,7 @@ function tick(){
 // ---------- boot ----------
 loadGame();
 const savedSailing=G.sailing;spawnAtIsland(G.zone);
-world.setBoat(G.boat);
+world.setBoat(G.boat);world.setAuroraPaint(G.collections.cosmetics?.includes('aurora-trim'));
 if(savedSailing){G.sailing={...savedSailing,speed:0};G.onBoat=true;G.px=savedSailing.x;G.pz=savedSailing.z;lastTerritory=territoryAt(G.px,G.pz);}
 G.waypoint=ISLANDS.find(i=>!hasLicense(i.id))?.id??19;
 applyGear();
@@ -2016,19 +2150,19 @@ window.__reelDeal = window.__reelLife = {
   G, SPECIES, RODS, LINES, BAITS, ISLANDS, BOATS, RARITY, RARITY_ORDER, ALL_CATCH_SPECIES, LEGACY_SPECIES, formatWeight, formatCatchMass,roundWeight,shoreLuckPenalty,territoryAt,territoryCenter,TERRITORY_RADIUS,stepBoat,nearbyDock,drawMinimap,islandToWorld,islandSpawn,dockPose,returnBoatPose,
   renderer, scene, camera, world, bobber, bobberPos, water, rodRig, aimMarker, bag,
   get shopOpen(){return shopOpen;},get chartOpen(){return chartOpen;},get indexOpen(){return indexOpen;},
-  get bagOpen(){return bagOpen;},get bagTab(){return bagTab;},get helpOpen(){return helpOpen;},get tutorialOpen(){return tutorialOpen;},get hudHidden(){return hudHidden;},get tutorialIndex(){return tutorialIndex;},
+  get bagOpen(){return bagOpen;},get bagTab(){return bagTab;},get helpOpen(){return helpOpen;},get tutorialOpen(){return tutorialOpen;},get activitiesOpen(){return activitiesOpen;},get hudHidden(){return hudHidden;},get tutorialIndex(){return tutorialIndex;},
   get fishBagOpen(){return bagOpen&&bagTab==='fish';},get heldCatch(){return heldCatch;},get carriedModel(){return carriedModel;},
   openBag,closeBag,selectBagTab,renderBag,openHelp,closeHelp,openTutorial,closeTutorial,stepTutorial,setHudHidden,updateContextHint,
   playerModel,boatViewPose,frontCamera,heldFishRig,carriedSize,heldFishSpan,heldFishLayout,firstPersonFishPose,frontViewPose,activeCamera,activeRodTip,toggleView,openFishBag,closeFishBag,holdFish,stowFish,renderFishBag,updatePlayerView,
   openShop,closeShop,openKit,openMarket,closeMarket,buyGear,sellAll,sellFish,
   openChart,closeChart,renderChart,buyBoat,boardBoat,dockBoat,toggleBoatMode,tickBoat,updateBoatUI,openIndex,closeIndex,renderIndex,
   renderShop,renderMarket,fightSetup,pickSpecies,paintTensionBand,eligibleSpecies,
-  updateStats,fishValue,rollWeight,catchXP,xpForLevel,level,hasLicense,saveGame,levelProgress,
+  updateStats,fishValue,rollWeight,catchXP,xpForLevel,level,hasLicense,saveGame,levelProgress,openActivities,closeActivities,startExpedition,searchTreasure,renderActivities,recordActivity,expeditionOffers,islandWeather,
   castLuckModifier,effectiveLuck,updateCastMeter,
   makeFish3D,disposeFishModel,animateFishModel,fishSVG,
   get performanceStats(){return {quality:adaptiveQuality.stats,art:fishGeometryCacheStats(),icons:fishIcons.stats,...frameWork,baitPools:localFishPool.size,activeParticles,activeRipples};},
   get hookedFish(){return hookedFish;},
-  saleValue,bagTotal,collectionCoinBonus,islandCollectionProgress,fishSaleValue,sortFishIndex,
+  saleValue,bagTotal,collectionCoinBonus,islandCollectionProgress,fishSaleValue,sortFishIndex,openActivities,closeActivities,startExpedition,searchTreasure,renderActivities,recordActivity,islandWeather,expeditionOffers,
   walkable,groundAt,landBobber,triggerBite,hookFish,catchFish,SHOP_POS,MARKET_POS,
   startCharge,releaseCast,landingPoint,inWater,spawnAtIsland,nearestVendor
 };

@@ -16,9 +16,9 @@ const byId=new Map(ALL_CATCH_SPECIES.map(s=>[s.id,s]));
 const uniqueName=new Map(ALL_CATCH_SPECIES.map(s=>[s.name,ALL_CATCH_SPECIES.filter(f=>!f.legacy&&f.name===s.name).length===1?SPECIES.find(f=>f.name===s.name):null]));
 export function decodeFish(items){
   if(!Array.isArray(items))return [];
-  return items.flatMap(e=>{const sp=e&&(e.id?byId.get(e.id):uniqueName.get(e.n)),w=Number(e?.w);return sp&&Number.isFinite(w)&&w>0?[{sp,weight:sp.legacy?w:roundWeight(Math.max(sp.minW,Math.min(sp.maxW,w)))}]:[];});
+  return items.flatMap(e=>{const sp=e&&(e.id?byId.get(e.id):uniqueName.get(e.n)),w=Number(e?.w);return sp&&Number.isFinite(w)&&w>0?[{sp,weight:sp.legacy?w:roundWeight(Math.max(sp.minW,Math.min(e.mutation==='huge'?sp.maxW*1.5:sp.maxW,w))),mutation:['shiny','huge'].includes(e.mutation)?e.mutation:null}]:[];});
 }
-const encode=list=>list.map(e=>({id:e.sp.id,n:e.sp.name,w:e.weight}));
+const encode=list=>list.map(e=>({id:e.sp.id,n:e.sp.name,w:e.weight,mutation:e.mutation||null}));
 export function migrateV8(d,legacyV6=false){
   const oldByName=new Map(LEGACY_V8_SPECIES.map((s,i)=>[s.name,{old:s,sp:LEGACY_SPECIES[i]}]));
   const convert=items=>Array.isArray(items)?items.flatMap(e=>{const match=oldByName.get(e?.n),w=Number(e?.w);return match&&Number.isFinite(w)&&w>0?[{id:match.sp.id,n:match.sp.name,w}]:[];}):[];
@@ -86,6 +86,7 @@ export function normalizeSave(raw={},legacyV6=false){
   const boatPosition=returnBoatPose(sailing||restoreWorldPose(d.boatPosition,d.worldLayout,zone,BOATS[boat],licenses),zone,BOATS[boat],access);
   const visited=ids(d.visited,ISLANDS.length).filter(i=>licenses.includes(i));if(!visited.includes(zone))visited.push(zone);
   const equipmentArchive={};for(const kind of ['rod','line','bait'])equipmentArchive[kind]=Array.isArray(d.equipmentArchive?.[kind])?[...new Set(d.equipmentArchive[kind].filter(n=>Number.isInteger(n)&&n>=0&&n<24))].sort((a,b)=>a-b):[];
-  return {version:9,score:integer(d.score),caught:Math.max(integer(d.caught),log.length,bag.length),coins:integer(d.coins),xp,licenses,zone,visited,owned,gear,boat,ownedBoats,discoveries,completedIslands:completedCollections(discoveries,d.completedIslands),equipmentArchive,best,bag,log:log.slice(0,200),worldLayout:WORLD_LAYOUT_VERSION,boatPosition,sailing};
+  const boatUpgrades={};for(const id of ownedBoats){const u=d.boatUpgrades?.[id];if(u&&['speed','stability'].includes(u.type)&&Number.isInteger(u.level)&&u.level>=1&&u.level<=3)boatUpgrades[id]={type:u.type,level:u.level};}
+  return {version:9,score:integer(d.score),caught:Math.max(integer(d.caught),log.length,bag.length),coins:integer(d.coins),xp,licenses,zone,visited,owned,gear,boat,ownedBoats,boatUpgrades,discoveries,completedIslands:completedCollections(discoveries,d.completedIslands),equipmentArchive,best,bag,log:log.slice(0,200),worldLayout:WORLD_LAYOUT_VERSION,boatPosition,sailing};
 }
 export { encode as encodeFish };

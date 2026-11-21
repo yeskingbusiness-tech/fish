@@ -83,6 +83,16 @@ function boatMesh(id){
   add(2.45,.3,.46,0,.98,1.5,0x7f674e);
   add(.65,.7,.65,0,.95,-1.15,0x485563);
   add(.95,.15,.18,0,1.35,-1.15,b.stripe);
+  if(id===0){
+    // Refined starter Harbor Skiff: one merged mesh keeps its low draw-call cost.
+    add(1.45,.18,2.7,0,1.02,-.3,0x936b45); // inset floor
+    add(2.05,.16,.32,0,1.18,.75,0xc29a66); // rowing seat
+    add(.18,.12,.32,-.8,1.15,-1.15,0xd5b982);add(.18,.12,.32,.8,1.15,-1.15,0xd5b982);
+    add(.28,.45,.28,0,1.35,-1.35,0x52656a);add(.36,.1,.36,0,1.6,-1.35,0xf0c76d); // lantern
+    add(.11,.15,.58,-1.18,1.12,.2,0x71543a);add(.11,.15,.58,1.18,1.12,.2,0x71543a); // gunwale trim
+    add(.12,.12,2.6,-1.05,1.22,.05,0xdeb77b);add(.12,.12,2.6,1.05,1.22,.05,0xdeb77b);
+    add(.18,.12,.42,-.55,1.12,1.2,0xd0b27d);add(.18,.12,.42,.55,1.12,1.2,0xd0b27d); // cleats
+  }
   if(id>=2){
     for(const x of [-1.2,1.2]) for(const z of [-.9,2]) add(.13,1.8,.13,x,1.7,z,0x45576a);
     add(2.9,.18,3.5,0,2.65,.55,b.stripe);
@@ -505,6 +515,16 @@ export function createWorld(scene){
     }
     add(.2,2,.2,d-4.1,2,11,0x62716a);
     group.add(label(zone.name.toUpperCase(),d-4.1,3.1,11,5,.65));
+    if(zone.id===0){
+      // Reedhaven-only shoreline polish: warm reeds, small flowers and flat lily pads.
+      for(const side of [-1,1])for(let patch=0;patch<6;patch++){
+        const x=side*(23.7+(patch%2)*1.5),z=18+patch*5.7;
+        for(let blade=0;blade<4;blade++){const dx=(blade-1.5)*.25,h=1.25+(blade%3)*.34;add(.12,h,.12,x+dx,.96+h/2,z+(blade%2)*.2,blade%2?0x6f9a58:0x88ad62,{rz:(blade-1.5)*.08});if(blade===1||blade===3)add(.42,.09,.12,x+dx+.18,.96+h*.72,z+(blade%2)*.2,0xa5bd69,{rz:.28});}
+        if(patch%2===0){add(.16,.16,.16,x+.45,2.15,z,0xf2d37a);add(.15,.15,.15,x-.4,1.9,z+.4,0xe7a8a0);}
+      }
+      for(let pad=0;pad<7;pad++){const x=(pad%2?1:-1)*(29.5+(pad%3)*1.1),z=22+pad*4.1;add(1.05,.09,.9,x,.13,z,0x588f72,{ry:pad*.61});add(.18,.16,.18,x,.2,z,0xe8cf80);}
+      for(let i=0;i<12;i++){const x=-17+(i%6)*6.5,z=20+Math.floor(i/6)*24;add(.28,.1,.28,x,1.12,z,0xe6b2a1);add(.12,.2,.12,x,1.25,z,0xe9d18b);}
+    }
     group.add(mergeBoxes(S));
     if(glows.length)group.add(mergeBoxes(glows,true));
     islands.push(group);
@@ -538,8 +558,10 @@ export function createWorld(scene){
     if(id===boatId)return;
     root.remove(boat);
     boat.traverse(o=>{if(o.isMesh){o.geometry.dispose();o.material.dispose();}});
-    boat=boatMesh(id);boatId=id;root.add(boat);
+    boat=boatMesh(id);boatId=id;root.add(boat);if(auroraEnabled)setAuroraPaint(true);
   }
+  let auroraEnabled=false,auroraPaint=null;
+  function setAuroraPaint(enabled){auroraEnabled=!!enabled;if(auroraPaint){boat.remove(auroraPaint);auroraPaint.traverse(o=>{if(o.isMesh){o.geometry.dispose();o.material.dispose();}});auroraPaint=null;}if(!auroraEnabled)return;auroraPaint=new THREE.Group();const glow=new THREE.MeshStandardMaterial({color:0x8be8e1,emissive:0x49c9d1,emissiveIntensity:.8,roughness:.28}),plate=(w,h,d,x,y,z)=>{const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),glow);mesh.position.set(x,y,z);return mesh;};auroraPaint.add(plate(2.65,.1,3.7,0,1.12,-.1),plate(.08,.5,3.9,-1.38,.91,.1),plate(.08,.5,3.9,1.38,.91,.1));auroraPaint.scale.setScalar(BOATS[boatId].size);boat.add(auroraPaint);}
   function dockPoint(zone){const p=dockLocation(zone,BOATS[boatId].size);return new THREE.Vector3(p.x,.1,p.z);}
   function surfaceAt(x,z,onlyZone=null){
     for(const i of ISLANDS){
@@ -559,15 +581,17 @@ export function createWorld(scene){
   }
   function inWater(p){ return p.x>SEA_BOUNDS.minX&&p.x<SEA_BOUNDS.maxX&&p.z>SEA_BOUNDS.minZ&&p.z<SEA_BOUNDS.maxZ&&surfaceAt(p.x,p.z)===null; }
   const tempColor=new THREE.Color();
-  function update(time,dt,zone,camera,aboard,boatPosition=null){
+  function update(time,dt,zone,camera,aboard,boatPosition=null,weather='clear'){
     const i=ISLANDS[zone];
     waterUniforms.uTime.value=time;
     sky.position.copy(camera.position);
     clouds.position.set(camera.position.x,0,camera.position.z+250);
     sun.position.set(camera.position.x+120,120,camera.position.z-250);
-    tempColor.setHex(i.water);waterUniforms.uLight.value.lerp(tempColor,Math.min(1,dt*1.2));
+    const weatherWater={storm:0x456779,rain:0x4b8d99,fog:0x7d9a9d,wind:0x547f8a,heat:0x45aaa1};
+    const weatherSky={storm:0x59677b,rain:0x6e8790,fog:0xb2c1bd,wind:0x819697,heat:0xd6b78e};
+    tempColor.setHex(weatherWater[weather]??i.water);waterUniforms.uLight.value.lerp(tempColor,Math.min(1,dt*1.2));
     tempColor.multiplyScalar(.65);waterUniforms.uDeep.value.lerp(tempColor,Math.min(1,dt*1.2));
-    tempColor.setHex(i.sky);waterUniforms.uFog.value.lerp(tempColor,Math.min(1,dt*1.2));
+    tempColor.setHex(weatherSky[weather]??i.sky);waterUniforms.uFog.value.lerp(tempColor,Math.min(1,dt*1.2));
     scene.fog.color.lerp(tempColor,Math.min(1,dt*1.2));scene.background.copy(scene.fog.color);
     sky.material.uniforms.uBottom.value.lerp(tempColor,Math.min(1,dt*1.2));
     tempColor.multiplyScalar(.73);sky.material.uniforms.uTop.value.lerp(tempColor,Math.min(1,dt*1.2));
@@ -591,6 +615,6 @@ export function createWorld(scene){
     }
     tempColor.setHex(i.theme==='lunar'?0xe6deff:0xffefd0);sun.material.color.lerp(tempColor,Math.min(1,dt*1.2));
   }
-  return { root,water,waterUniforms,stalls,islands,groundAt,surfaceAt,inWater,dockPoint,update,setBoat,
+  return { root,water,waterUniforms,stalls,islands,groundAt,surfaceAt,inWater,dockPoint,update,setBoat,setAuroraPaint,
     cameraBlockers:ISLANDS.map(i=>colliders.filter(b=>b.zone===i.id)),get boat(){return boat;} };
 }

@@ -104,6 +104,34 @@ Hold click / Space and release to cast; click / Space on a bite to hook. During 
 - The original cumulative XP curve is extended to **level 400**. Existing coins and XP are never reduced. Audits budget actual repeat-catch pools and weight quantiles, not guaranteed discoveries or destination-only bait.
 - Offshore audits exclude sailing time, missed catches and collection bonuses. Returning to the market and choosing an offshore spot add play time; the scripts do not claim fixed minutes per level.
 
+## Storage, aquariums, merchants, mutations, secrets and achievements
+
+Fish storage is limited: the angler starts with **20 personal slots**, and every boat has its own hold (from 8 slots on the starter hull up to 60 on the largest boat). The Bag shows both capacities. Transfer catches while aboard or at a boatyard; expand personal or current-boat storage with coins. If both available spaces are full, casting is blocked until you make room. Markets can buy directly from your personal bag and current boat hold. Rare catches have a small chance to be **Shiny**; unusually heavy rolls can become **Huge**. Mutations are labeled in caught-fish displays and the guide, Shiny fish gleam in hand and in the aquarium, Huge fish display at larger scale, and both sell for a bonus.
+
+Use **Display** on a catch in the Bag to put it into your **Personal Aquarium** (12 spaces to start). The Aquarium presents the actual fish models swimming in a 3D tank; its visiting-merchant permit expands display capacity. Fish can be returned to your personal bag if there is room, and displayed catches are protected from selling.
+
+A **Traveling Merchant** sails between islands and moves on every 15 minutes. Watch for its distinctive dark-hulled boat and the HUD visitor alert when you draw near. Stock rotates with the visit and is limited: look for aquarium permits, recovered relics and exclusive hull cosmetics.
+
+Each island hides a landmark cache. Explore on foot around the local landmark to uncover its secret; each cache pays coins, XP and a relic once. The dedicated **Achievements** menu tracks milestones across catches, island indexes, weight, mutations, bosses, expeditions, secrets, exploration, fleet ownership and levels. Rewards are paid automatically when milestones are earned.
+
+## Field clues, fishing records and boat tuning
+
+Expand any discovered fish in the **F** field guide to see angler clues for conditions, bait tier, time window and where to cast. Higher rarity fish are weighted toward fog or rain and dawn/dusk; stronger bait and casts improve the chance of a rarer eligible catch. These are hints, not guarantees, and the island’s species/bait eligibility rules remain unchanged. The guide also shows each species’ personal best and that island’s heaviest recorded catch. New species, island and overall weight records trigger a catch celebration; catches and records remain saved.
+
+At a boat shop, equip a boat to tune its hull. Pick one specialization per boat: **Speed Rig** adds 12% speed per tier, while **Storm Stabilizer** reduces speed by 8% per tier but softens storm-driven fishing difficulty. Each has three tiers, starts at 1,200 coins and increases by 1,200 coins per tier. Specializations are permanent and hull-specific; different boats can be tuned differently. Unupgraded boats retain their original performance.
+
+## Expeditions, boss fish, weather and challenges
+
+Open **Expeditions & Challenges** from the HUD or press **J**. Activities are additions to the regular fishing loop: shops, boats, islands, collection progress, and ordinary catches remain available as before.
+
+**Every unlocked island offers three expedition cards per day:** a Stormwatch Run, an Abyssal Signal boss hunt, and a rotating local objective. The rotating objective can be an Apex Trail, a Lost Cache, a three-species Field Notes survey, or a four-fish Shoal Patrol. Stormwatch asks for two catches during a real thunderstorm. Apex Trails target the island’s highest available rarity (up to Legendary), so the task is possible even on starter islands. Lost Caches point to that island’s landmark; travel there on foot and search the site. Completing a mission automatically pays its listed coins and relics. Only one expedition can be active; abandon it from the panel if you want to switch.
+
+**Boss fish** are signal-tracked encounters rather than extra entries that overwrite the 400-species index. Accept an Abyssal Signal expedition to make the next hooked fish a boss, or very rarely meet one during a storm. Bosses use a local fish’s real model and roster identity but appear at **2.2× encounter scale**, start near the upper end of its weight range, have **1.85× strength**, a narrower safe reel band and more frequent, stronger tugs. Boss profiles telegraph different surge, dive, or feint patterns. Defeating one pays an island-scaled coin bounty, **2 relics**, and boss/challenge progress; an active boss hunt grants its own additional mission reward. Five rotating identities include Tempest Crown, The Drowned Bell, Glassfin Oracle, Rootbreaker and Star-Eater. Spend **3 relics** in the exchange to prepare a Boss-Signal Lure that forces your next hooked fish into a boss encounter.
+
+Each island’s weather changes on its own deterministic **3-minute** cycle, so neighboring islands can show different conditions. Clear Skies are the baseline; Rain Squalls shorten bite waits and favor common fish, Thunderstorms shorten waits, make stronger rarities more likely and can surface surprise bosses, Sea Fog favors elusive rarities, Crosswinds lengthen waits and make the fight more demanding, and Heat Haze favors warm-water fish while reducing the chance of the highest rarities. Weather biases eligible fish—it never removes a species from its island or overrides bait eligibility. The weather badge names local conditions and shows the time until the next shift. Rain, storm, fog, wind and heat receive distinct screen atmosphere; water, sky tint and fog lighting change with the weather as well.
+
+**Three daily and four weekly challenges** are generated deterministically from the UTC calendar and saved on this device. Their objectives draw from catching, selling, rare catches, using different bait tiers, fishing in multiple islands or weather conditions, and defeating bosses. Progress is shown in the same activities panel with progress bars; completing a challenge grants coins, and weekly completions also grant a relic. Daily tasks refresh at the UTC date change; weekly tasks refresh on Monday UTC. Expedition, challenge, boss-count, and relic progress are saved alongside the existing game save.
+
 ## Bag, camera and controls
 
 **B** opens the unified Bag: Fish / Rods / Lines / Bait. **I** opens the last owned-equipment tab. Owned tackle re-equips freely anywhere; new items are bought only at local stalls.

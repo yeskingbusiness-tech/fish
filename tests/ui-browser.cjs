@@ -21,6 +21,10 @@ module.exports=async function testUI(browser,url,shots){
     const fresh=await page.evaluate(()=>({coins:__reelDeal.G.coins,xp:__reelDeal.G.xp,caught:__reelDeal.G.caught,old:localStorage.getItem('reel-deal-save-v9'),backup:JSON.parse(localStorage.getItem('reel-deal-progress-backup-v2.3.1'))['reel-deal-save-v9']}));
     assert.deepEqual([fresh.coins,fresh.xp,fresh.caught,fresh.old],[0,0,0,null]);assert.equal(JSON.parse(fresh.backup).coins,9876);
     await page.click('#startBtn');assert.equal(await page.locator('#tutorialOverlay').isVisible(),false,'restarting progress does not repeat a completed tutorial');
+    await page.click('#activitiesBtn');assert.equal(await page.locator('#activitiesOverlay').isVisible(),true);assert.equal(await page.locator('[data-exp-start]').count(),3);assert.match(await page.locator('#activityWeather').textContent(),/Reedhaven/);assert.equal(await page.locator('.activity-section h3').count()>=4,true);
+    await page.locator('[data-exp-start*="-boss"]').click();assert.equal(await page.locator('[data-exp-action="abandon"]').count(),1);await page.click('#activitiesClose');
+    await page.evaluate(()=>{const a=__reelDeal;a.G.castTerritory=0;a.triggerBite();a.hookFish();a.G.progress=100;a.catchFish();});
+    assert.match(await page.locator('#catchName').textContent(),/·/);assert.equal(await page.evaluate(()=>__reelDeal.G.activities.bosses),1);assert.equal(await page.evaluate(()=>__reelDeal.G.activities.expedition.complete),true);assert.ok(await page.evaluate(()=>__reelDeal.G.activities.relics>=6));await page.click('#continueBtn');await page.evaluate(()=>{const a=__reelDeal;a.bag.length=0;a.G.caught=0;a.G.coins=0;a.G.xp=0;a.G.score=0;a.G.discoveries={};a.G.completedIslands=[];a.G.best=null;a.G.activities.expedition=null;a.G.activities.bosses=0;a.G.activities.relics=0;a.saveGame();a.updateStats();});
   }
   async function seed(page){
     await page.evaluate(()=>{
@@ -52,10 +56,10 @@ module.exports=async function testUI(browser,url,shots){
     assert.equal(await page.locator('#coinCount').isVisible(),true);assert.equal(await page.locator('#xpText').isVisible(),true);
     assert.equal(await page.locator('#bagBtn').count(),1);
     // Existing island panel and navigation retain their layout and entry points.
-    assert.deepEqual(await page.locator('.hud-actions button').evaluateAll(es=>es.map(e=>e.id)),['boardBoatBtn','mapBtn','indexBtn','bagBtn','viewBtn']);
+    assert.deepEqual(await page.locator('.hud-actions button').evaluateAll(es=>es.map(e=>e.id)),['boardBoatBtn','activitiesBtn','aquariumBtn','achievementsBtn','merchantBtn','mapBtn','indexBtn','bagBtn','viewBtn']);
     assert.deepEqual(await page.locator('.location-card').evaluate(e=>{const r=e.getBoundingClientRect();return[r.left,r.top,r.width];}),[20,100,236]);
     await page.keyboard.press('b');assert.equal(await page.locator('#bagOverlay').isVisible(),true);
-    assert.match(await page.locator('#bagBody').textContent(),/No fish in your bag yet/);
+    assert.match(await page.locator('#bagBody').textContent(),/Personal bag is empty/);
     assert.deepEqual(await page.locator('#bagTabs [role="tab"]').allTextContents(),['Fish','Rods','Lines','Bait']);
     await page.keyboard.press('Escape');await seed(page);
 
@@ -256,6 +260,9 @@ module.exports=async function testUI(browser,url,shots){
     await mp.tap('#helpClose');await mp.waitForTimeout(120);
     assert.deepEqual(await mp.evaluate(()=>[__reelDeal.G.px,__reelDeal.G.pz]),stopped);
     assert.equal(await mp.evaluate(()=>__reelDeal.G.state),'aim');
+    await mp.tap('#bagBtn');await mp.tap('[data-bag-mode]');assert.equal(await mp.locator('[data-bag-mode]').textContent(),'Switch to storage transfer');await mp.tap('#bagClose');
+    await mp.tap('#aquariumBtn');assert.equal(await mp.locator('#aquariumOverlay').isVisible(),true);await mp.tap('#aquariumClose');
+    await mp.tap('#achievementsBtn');assert.equal(await mp.locator('#achievementsOverlay').isVisible(),true);assert.ok(await mp.locator('#achievementList .achievement-row').count()>=12);await mp.tap('#achievementsClose');
     assert.deepEqual(errors,[],'UI flow must not raise browser errors');
     console.log('PASS: phone and short-landscape Bag/Help scrolling, all 40 owned tiers, touch re-equips, compact non-overlapping strip, clean screenshots, tap-only restoration and joystick/input isolation');
   }finally{await mobile.close();}
