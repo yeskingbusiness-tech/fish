@@ -53,19 +53,15 @@ export function islandRectToWorld(island,rect){
   return {...rect,island:island.id,minX:Math.min(a.x,b.x),maxX:Math.max(a.x,b.x),minZ:Math.min(a.z,b.z),maxZ:Math.max(a.z,b.z)};
 }
 export function islandSpawn(island){return {...islandToWorld(island,island.layout.dockX,4),yaw:island.layout.yaw+.35};}
+const islandRadii=island=>island.id===0?{x:178,z:146}:{x:42+(island.id%4)*5,z:37+(island.id%3)*5};
 export function islandSurfaces(island){
-  const {dockX:d,berthSide:s,landmarkX:l}=island.layout;
-  return [
-    {minX:d-2.45,maxX:d+2.45,minZ:-2.5,maxZ:13.6,height:1.15,kind:'pier'},
-    {minX:d+s*9-1.7,maxX:d+s*9+1.7,minZ:.5,maxZ:13.6,height:1.15,kind:'pier'},
-    {minX:Math.min(d-1.5,d+s*9-1.5),maxX:Math.max(d+1.5,d+s*9+1.5),minZ:10.3,maxZ:12.9,height:1.15,kind:'pier'},
-    {minX:l-5,maxX:l+5,minZ:1,maxZ:17,height:.95,kind:'land'},
-    {minX:l-5.5,maxX:l+5.5,minZ:-1,maxZ:17,height:.5,kind:'shore'},
-    {minX:-27,maxX:27,minZ:13,maxZ:56,height:.95,kind:'land'},
-    ...(island.id===0?[{minX:-50,maxX:50,minZ:13,maxZ:106,height:.95,kind:'home-land'}]:[]),
-    // 58 × 46 instead of 60 × 48: a slightly narrower physical sand shelf.
-    {minX:-29,maxX:29,minZ:11,maxZ:57,height:.5,kind:'shore'},
-    ...(island.id===0?[{minX:-52,maxX:52,minZ:2,maxZ:107,height:.5,kind:'home-shore'}]:[]),
-    ...[...island.landforms,...island.waterObstacles].map(f=>({minX:f.x-f.w/2,maxX:f.x+f.w/2,minZ:f.z-f.d/2,maxZ:f.z+f.d/2,height:f.h-.8,kind:'rock'})),
-  ];
+  const {x:rx,z:rz}=islandRadii(island),out=[];
+  // Overlapping row-bands approximate the new scalloped coast for collision,
+  // shore-luck and swept-boat tests without using the old rectangular islands.
+  for(let z=-rz-6;z<=rz+6;z+=8){const f=Math.sqrt(Math.max(0,1-(z/(rz+6))**2)),half=(rx+6)*f;
+    if(half>.2)out.push({minX:-half,maxX:half,minZ:25+z-4.1,maxZ:25+z+4.1,height:.5,kind:'shore'});
+  }
+  if(island.id===0){for(let z=-rz*.88;z<=rz*.88;z+=8){const half=rx*.91*Math.sqrt(Math.max(0,1-(z/rz)**2));out.push({minX:-half,maxX:half,minZ:25+z-4.1,maxZ:25+z+4.1,height:.95,kind:'central-land'});}}
+  else for(let z=-rz*.86;z<=rz*.86;z+=8){const half=rx*.91*Math.sqrt(Math.max(0,1-(z/rz)**2));out.push({minX:-half,maxX:half,minZ:25+z-4.1,maxZ:25+z+4.1,height:.95,kind:'island-land'});}
+  return out;
 }

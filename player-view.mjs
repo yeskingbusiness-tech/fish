@@ -131,64 +131,39 @@ export function frontViewPose({ x, z, ground, yaw, pitch = 0, aspect = 1.5, fov 
 }
 
 export function createPlayerModel(THREE, sourceRod){
-  const root = new THREE.Group();
-  root.name = 'player-character';
-  root.visible = false; // Never render a body or hands in first person.
-  const geometry = new THREE.BoxGeometry(1, 1, 1);
-  const palette = Object.fromEntries(Object.entries({
-    skin:0xe5ba91, shirt:0xe9e2ce, vest:0x428b82, seam:0x2d665e,
-    trousers:0x344c60, boots:0x303d43, hat:0xd4b578, band:0x6c7661, eyes:0x193d45,
-  }).map(([key, color]) => [key, new THREE.MeshLambertMaterial({ color })]));
-  function box(parent, name, size, position, color){
-    const mesh = new THREE.Mesh(geometry, palette[color]);
-    mesh.name = name; mesh.scale.set(...size); mesh.position.set(...position);
-    parent.add(mesh); return mesh;
-  }
-  // A deliberately simple cuboid angler: shirt/vest, two legs, two arms and a cap.
-  box(root, 'body', [.62,.64,.36], [0,1.17,0], 'shirt');
-  box(root, 'vest', [.64,.47,.08], [0,1.2,-.2], 'vest');
-  box(root, 'vest-seam', [.035,.47,.025], [0,1.2,-.25], 'seam');
-  for(const side of [-1,1])box(root, 'vest-pocket', [.16,.14,.04], [side*.18,1.08,-.25], 'seam');
-  box(root, 'waist', [.55,.15,.33], [0,.82,0], 'trousers');
-  box(root, 'neck', [.2,.13,.2], [0,1.53,0], 'skin');
-  box(root, 'head', [.45,.43,.43], [0,1.73,0], 'skin');
-  box(root, 'cap', [.51,.12,.49], [0,1.98,0], 'hat');
-  box(root, 'cap-band', [.52,.055,.5], [0,1.9,0], 'band');
-  box(root, 'cap-brim', [.59,.06,.3], [0,1.9,-.27], 'hat');
-  for(const side of [-1,1])box(root, 'eye', [.055,.065,.025], [side*.105,1.75,-.223], 'eyes');
-  box(root, 'smile', [.105,.025,.025], [0,1.61,-.223], 'eyes');
-  const arms=[], legs=[];
+  const root=new THREE.Group();root.name='storybook-angler';root.visible=false;
+  const palette={skin:0xe5ba91,shirt:0xf0e5cf,vest:0x388c80,seam:0x28675f,trousers:0x3d5668,boots:0x33444a,hat:0xe5bf77,band:0x6c7661,eyes:0x193d45};
+  const materials=Object.fromEntries(Object.entries(palette).map(([k,c])=>[k,new THREE.MeshStandardMaterial({color:c,roughness:.82})]));
+  const shapes={body:new THREE.CapsuleGeometry(.32,.52,5,10),limb:new THREE.CapsuleGeometry(.105,.28,4,8),head:new THREE.SphereGeometry(.23,16,12),small:new THREE.SphereGeometry(.08,10,8),hat:new THREE.SphereGeometry(.3,12,8,0,Math.PI*2,0,Math.PI/2)};
+  function part(parent,name,geometry,color,position,scale=[1,1,1]){const m=new THREE.Mesh(geometry,materials[color]);m.name=name;m.position.set(...position);m.scale.set(...scale);parent.add(m);return m;}
+  part(root,'body',shapes.body,'shirt',[0,1.15,0],[1,1.08,.72]);
+  part(root,'vest',shapes.body,'vest',[0,1.2,-.145],[1.02,.72,.24]);
+  part(root,'vest-seam',new THREE.CylinderGeometry(.018,.018,.45,8),'seam',[0,1.18,-.25]);
+  part(root,'waist',new THREE.CylinderGeometry(.21,.25,.16,12),'trousers',[0,.77,0]);
+  part(root,'neck',shapes.small,'skin',[0,1.48,0],[1.15,1.1,1.1]);
+  part(root,'head',shapes.head,'skin',[0,1.7,0],[1,1.06,.94]);
+  part(root,'cap',shapes.hat,'hat',[0,1.94,0],[1.2,.6,1.08]);
+  part(root,'cap-band',new THREE.TorusGeometry(.23,.035,6,18),'band',[0,1.88,0],[1,1,.92]);
+  part(root,'cap-brim',new THREE.SphereGeometry(.2,12,8),'hat',[0,1.88,-.16],[1.5,.15,.9]);
+  for(const side of [-1,1])part(root,'eye',shapes.small,'eyes',[side*.085,1.72,-.209],[.28,.38,.14]);
+  const arms=[],legs=[];
   for(const side of [-1,1]){
-    const arm=new THREE.Group();arm.name=side<0?'left-arm':'right-arm';arm.position.set(side*.43,1.43,0);root.add(arm);
-    box(arm, 'sleeve', [.2,.31,.24], [0,-.13,0], 'shirt');
-    box(arm, 'forearm', [.17,.23,.2], [0,-.37,0], 'skin');
-    box(arm, side<0?'left-hand':'right-hand', [.19,.16,.22], [0,-.54,0], 'skin');
-    arms.push(arm);
-    const leg=new THREE.Group();leg.name=side<0?'left-leg':'right-leg';leg.position.set(side*.17,.77,0);root.add(leg);
-    box(leg, 'trouser-leg', [.23,.59,.27], [0,-.28,0], 'trousers');
-    box(leg, 'boot', [.26,.18,.39], [0,-.68,-.045], 'boots');
-    legs.push(leg);
+    const arm=new THREE.Group();arm.name=side<0?'left-arm':'right-arm';arm.position.set(side*.37,1.37,0);root.add(arm);
+    part(arm,'sleeve',shapes.limb,'shirt',[0,-.1,0],[1.35,1,.98]);part(arm,'forearm',shapes.limb,'skin',[0,-.37,-.015]);part(arm,side<0?'left-hand':'right-hand',shapes.small,'skin',[0,-.56,-.03],[1.25,1.1,1.2]);arms.push(arm);
+    const leg=new THREE.Group();leg.name=side<0?'left-leg':'right-leg';leg.position.set(side*.15,.72,0);root.add(leg);
+    part(leg,'trouser-leg',shapes.limb,'trousers',[0,-.25,0],[1.45,1.35,1.15]);part(leg,'boot',shapes.small,'boots',[0,-.59,-.04],[1.45,.7,1.9]);legs.push(leg);
   }
-  const fishMount = new THREE.Group();
-  fishMount.name='carried-fish-mount';fishMount.position.set(0,1.15,-.62);root.add(fishMount);
-  // Share the existing rod's geometry/materials, not a second equipment system.
-  const rod = sourceRod.clone(true);
-  rod.name='third-person-rod';rod.position.set(.43,.97,-.36);root.add(rod);
-  const rodTip=rod.getObjectByName('rod-tip'), rodBend=rod.getObjectByName('rod-bend');
-  const pitchRotation=new THREE.Quaternion(), pitchEuler=new THREE.Euler();
-  function pose({ x, z, ground, yaw, pitch, time, stride, moving, holding, carry, rodRotation, bend }){
-    root.position.set(x,ground,z);root.rotation.y=yaw;
-    const walk=moving?Math.sin(stride)*.38:0;
-    legs[0].rotation.x=walk;legs[1].rotation.x=-walk;
-    const lift=holding&&carry?carry.lift:0,holdAngle=1.04+(Math.PI-1.04)*lift;
-    arms[0].rotation.x=holding?holdAngle:-walk*.65;
-    arms[1].rotation.x=holding?holdAngle:.65;
-    for(const arm of arms)arm.position.y=1.43+lift*.09;
-    fishMount.position.set(0,(holding&&carry?carry.y:1.15)+Math.sin(time*1.8)*.012,holding&&carry?carry.z:-.62);
-    rod.visible=!holding;
-    pitchRotation.setFromEuler(pitchEuler.set(pitch,0,0));
-    rod.quaternion.copy(pitchRotation).multiply(rodRotation);
-    rodBend.rotation.x=bend;
+  const fishMount=new THREE.Group();fishMount.name='carried-fish-mount';fishMount.position.set(0,1.15,-.62);root.add(fishMount);
+  const rod=sourceRod.clone(true);rod.name='third-person-rod';rod.position.set(.4,.96,-.34);root.add(rod);
+  const rodTip=rod.getObjectByName('rod-tip'),rodBend=rod.getObjectByName('rod-bend');
+  const pitchRotation=new THREE.Quaternion(),pitchEuler=new THREE.Euler();
+  function pose({x,z,ground,yaw,pitch,time,stride,moving,holding,carry,rodRotation,bend}){
+    root.position.set(x,ground,z);root.rotation.y=yaw;const walk=moving?Math.sin(stride)*.32:0;
+    legs[0].rotation.x=walk;legs[1].rotation.x=-walk;const lift=holding&&carry?carry.lift:0,holdAngle=1.04+(Math.PI-1.04)*lift;
+    arms[0].rotation.x=holding?holdAngle:-walk*.65;arms[1].rotation.x=holding?holdAngle:.65;
+    for(const arm of arms)arm.position.y=1.37+lift*.09;
+    fishMount.position.set(0,(holding&&carry?carry.y:1.15)+Math.sin(time*1.8)*.012,holding&&carry?carry.z:-.62);rod.visible=!holding;
+    pitchRotation.setFromEuler(pitchEuler.set(pitch,0,0));rod.quaternion.copy(pitchRotation).multiply(rodRotation);rodBend.rotation.x=bend;
   }
-  return { root, arms, legs, fishMount, rod, rodTip, pose };
+  return {root,arms,legs,fishMount,rod,rodTip,pose};
 }

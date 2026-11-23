@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import{SPECIES,RARITY_ORDER,RARITY,RODS,LINES,BAITS,eligibleSpecies}from'../game-data.mjs';
 import{ISLANDS,MAX_LEVEL,BOATS,xpForLevel,levelForXp}from'../archipelago.mjs';
 import{RARITY_AVAILABILITY}from'../island-data.mjs';
-const names=['Reedhaven','Pinewater Isle','Ironwood River','Brackwater Marsh','Sunscar Atoll','Coralreach','Breaker Coast','Stormbreak Isles','Thornwild Delta','Emberforge','Frostfall Isle','Skyglass Fjord','Shattered Shelf',"Leviathan's Grave",'Ashen Trench','Moontide Sanctum','Starfall Basin','The Null Trench',"Eternity's Reach","Origin's End"];
+const names=['Central Isle','Pinewater Isle','Ironwood River','Brackwater Marsh','Sunscar Atoll','Coralreach','Breaker Coast','Stormbreak Isles','Thornwild Delta','Emberforge','Frostfall Isle','Skyglass Fjord','Shattered Shelf',"Leviathan's Grave",'Ashen Trench','Moontide Sanctum','Starfall Basin','The Null Trench',"Eternity's Reach","Origin's End"];
 test('exact twenty destinations, unlock levels, unique themes and landform silhouettes',()=>{
  assert.deepEqual(ISLANDS.map(i=>i.name),names);assert.deepEqual(ISLANDS.map(i=>i.level),[1,10,20,35,50,65,80,100,120,140,160,180,200,225,250,275,300,325,350,400]);
  for(const key of ['theme','landmark','description'])assert.equal(new Set(ISLANDS.map(i=>i[key])).size,20);

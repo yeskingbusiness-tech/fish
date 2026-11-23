@@ -24,7 +24,7 @@ const URL=process.env.TEST_URL||'http://127.0.0.1:3100',shots=process.env.SCREEN
    assert.deepEqual(await page.locator('.entry-top>span:first-child').allTextContents(),Array.from({length:20},(_,n)=>'#'+String(i*20+n+1).padStart(3,'0')));
   }
   await page.click('#indexClose');console.log('PASS 400 hidden entries, exact numbering, all twenty index filters and modal input isolation');
-  // Reedhaven stocks all unlocked curated kits; purchases charge the listed price.
+  // Central Isle stocks all unlocked curated kits; purchases charge the listed price.
   await page.evaluate(()=>{const a=__reelDeal;a.G.xp=a.xpForLevel(400);a.G.licenses=a.ISLANDS.map(i=>i.id);a.G.coins=2e9;});
   for(const kind of ['rod','line','bait']){
    await vendor(kind,0);await page.evaluate(kind=>__reelDeal.openShop(kind),kind);

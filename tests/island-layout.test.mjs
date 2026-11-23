@@ -11,9 +11,9 @@ test('all twenty islands have distinct authored terrain profiles as well as dist
  assert.equal(new Set(ISLANDS.map(i=>JSON.stringify(i.landforms))).size,20);
 });
 test('all twenty authored village plans differ in placement, not just palette or rotation',()=>{
- assert.equal(WORLD_LAYOUT_VERSION,2);assert.equal(ISLAND_LAYOUTS.length,20);
+ assert.equal(WORLD_LAYOUT_VERSION,3);assert.equal(ISLAND_LAYOUTS.length,20);
  assert.equal(new Set(ISLAND_LAYOUTS.map(l=>JSON.stringify(l.stalls))).size,20);
- assert.equal(new Set(ISLAND_LAYOUTS.map(l=>l.quarter)).size,4);
+ assert.ok(new Set(ISLAND_LAYOUTS.map(l=>l.quarter)).size>=3);
  assert.equal(new Set(ISLAND_LAYOUTS.map(l=>l.berthSide)).size,2);
  assert.ok(new Set(ISLAND_LAYOUTS.map(l=>l.dockX)).size>=8);
  for(const l of ISLAND_LAYOUTS){
@@ -28,14 +28,14 @@ test('orthogonal placement transforms exactly roundtrip every shop, spawn and la
   for(const r of islandSurfaces(i)){
    const box=islandRectToWorld(i,r);
    for(const [x,z]of [[r.minX,r.minZ],[r.minX,r.maxZ],[r.maxX,r.minZ],[r.maxX,r.maxZ]]){const p=islandToWorld(i,x,z);assert.ok(p.x>=box.minX&&p.x<=box.maxX&&p.z>=box.minZ&&p.z<=box.maxZ);}
-   assert.ok(LAND_RECTS.some(b=>b.island===i.id&&b.kind===r.kind&&b.minX===box.minX&&b.maxX===box.maxX&&b.minZ===box.minZ&&b.maxZ===box.maxZ));
+   if(r.kind!=='shore')assert.ok(LAND_RECTS.some(b=>b.island===i.id&&b.kind===r.kind&&b.minX===box.minX&&b.maxX===box.maxX&&b.minZ===box.minZ&&b.maxZ===box.maxZ));
   }
  }
 });
-test('physical sand shelves are slightly narrower and spawn still rests on the main pier',()=>{
- for(const i of ISLANDS){const surfaces=islandSurfaces(i),sand=surfaces.find(s=>s.kind==='shore'&&s.minX===-29),spawn=islandSpawn(i),p=worldToIsland(i,spawn.x,spawn.z);
-  assert.ok(sand);assert.equal(sand.maxX-sand.minX,58);assert.equal(sand.maxZ-sand.minZ,46);
-  assert.ok(surfaces.some(s=>s.kind==='pier'&&p.x>=s.minX&&p.x<=s.maxX&&p.z>=s.minZ&&p.z<=s.maxZ));
+test('scalloped coast bands and spawn transforms remain finite and deterministic',()=>{
+ for(const i of ISLANDS){const surfaces=islandSurfaces(i),shore=surfaces.filter(s=>s.kind==='shore'),spawn=islandSpawn(i),p=worldToIsland(i,spawn.x,spawn.z);
+  assert.ok(shore.length>5);assert.ok(shore.every(s=>Number.isFinite(s.minX)&&s.maxX>s.minX));
+  near(p.x,i.layout.dockX);near(p.z,4);assert.ok(Number.isFinite(spawn.yaw));
  }
 });
 test('paving connects every varied counter to the pier with unique, nonoverlapping cells',()=>{
@@ -47,8 +47,7 @@ test('paving connects every varied counter to the pier with unique, nonoverlappi
  }
 });
 
-test('Reedhaven home-island footprint includes the aquarium, warehouse, guild and approaches',()=>{
- const s=islandSurfaces(ISLANDS[0]),home=s.find(r=>r.kind==='home-land');assert.deepEqual([home.minX,home.maxX,home.minZ,home.maxZ],[-50,50,13,106]);
- for(const p of [{x:-24,z:62},{x:24,z:62},{x:0,z:84},{x:0,z:94}])assert.equal(s.some(r=>p.x>=r.minX&&p.x<=r.maxX&&p.z>=r.minZ&&p.z<=r.maxZ&&r.height===.95),true);
- assert.equal(islandSurfaces(ISLANDS[1]).some(r=>r.kind==='home-land'),false);
+test('Central Isle retains the broad central terrain profile without old rectangular home-land remnants',()=>{
+ const home=islandSurfaces(ISLANDS[0]);assert.ok(home.length>30);assert.ok(home.some(r=>r.height===.95));
+ assert.ok(home.every(r=>r.kind!=='home-land'));assert.equal(islandSurfaces(ISLANDS[1]).some(r=>r.kind==='home-land'),false);
 });

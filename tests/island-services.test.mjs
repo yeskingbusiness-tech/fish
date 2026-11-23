@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {ISLANDS,islandServices} from '../island-data.mjs';
 
-test('Reedhaven is the full service hub and only four outposts buy fish',()=>{
+test('Central Isle is the full service hub and only four outposts buy fish',()=>{
  assert.deepEqual(islandServices(0),['rod','line','bait','market','port']);
  const markets=ISLANDS.filter(i=>islandServices(i.id).includes('market')).map(i=>i.id);
  assert.deepEqual(markets,[0,4,9,13,19]);

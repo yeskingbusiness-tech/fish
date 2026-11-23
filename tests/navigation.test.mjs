@@ -52,7 +52,7 @@ test('95% shore suppression has a modestly narrower full/recovery band, in every
    const p=islandToWorld(i,i.layout.dockX,-d),penalty=shoreLuckPenalty(p.x,p.z),distance=distanceToShore(p.x,p.z);
    assert.ok(penalty>=-.95&&penalty<=0);near(penalty,-.95*(1-Math.max(0,Math.min(1,(distance-6)/42))));
   }
-  const offshore=islandToWorld(i,0,-100);assert.equal(shoreLuckPenalty(offshore.x,offshore.z),0);assert.equal(territoryAt(offshore.x,offshore.z),i.id);
+  const offshore=islandToWorld(i,0,-260);assert.equal(shoreLuckPenalty(offshore.x,offshore.z),0);assert.equal(territoryAt(offshore.x,offshore.z),i.id);
  }
 });
 test('manual throttle, steering, braking and reverse are deterministic; turning is 20% quicker',()=>{

@@ -6,9 +6,9 @@ export const TERRITORY_RADIUS=300; // 7.44× the old 110m territory area.
 export const SHORE_FULL_PENALTY_DISTANCE=6;
 export const SHORE_CLEAR_DISTANCE=48;
 export const BOAT_TURN_RATE=1.44; // +20%, for all eight hulls.
-export const SEA_BOUNDS=Object.freeze({minX:-2200,maxX:2240,minZ:-4140,maxZ:525});
+export const SEA_BOUNDS=Object.freeze({minX:-6000,maxX:6000,minZ:-6000,maxZ:6000});
 export const territoryCenter=i=>islandToWorld(i,0,25);
-export const LAND_RECTS=Object.freeze(ISLANDS.flatMap(i=>islandSurfaces(i).map(r=>Object.freeze(islandRectToWorld(i,r)))));
+export const LAND_RECTS=Object.freeze(ISLANDS.flatMap(i=>islandSurfaces(i).filter(r=>r.kind!=='shore').map(r=>Object.freeze(islandRectToWorld(i,r)))));
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export function territoryAt(x,z){return ISLANDS.find(i=>{const c=territoryCenter(i);return Math.hypot(x-c.x,z-c.z)<TERRITORY_RADIUS;})?.id??null;}
 // Player walking coordinates are clamped to the open deck, expressed in the
@@ -44,11 +44,9 @@ export function stepBoat(state,input,boat,dt,access={}){
   const block=boatMoveBlock(state,next,{...access,radius:boat.size*4});
   return block?{...state,yaw,speed:0,block}:{...next,block:null};
 }
-export function dockLocation(island,size=1){const i=ISLANDS[island],l=i.layout;return islandToWorld(i,l.dockX+l.berthSide*(14+size*4),-6-size*2);}
+export function dockLocation(island,size=1){const i=ISLANDS[island],l=i.layout;return island===0?islandToWorld(i,0,-158-size*2):islandToWorld(i,l.dockX+l.berthSide*(14+size*4),-30-size*2);}
 export function dockPose(island,size=1){return {...dockLocation(island,size),yaw:ISLANDS[island].layout.yaw};}
-export function nearbyDock(x,z){
-  return ISLANDS.find(i=>{const p=islandToWorld(i,i.layout.dockX+i.layout.berthSide*22,-10);return Math.hypot(x-p.x,z-p.z)<20;})?.id??null;
-}
+export function nearbyDock(x,z){return ISLANDS.find(i=>{const p=dockLocation(i.id,1);return Math.hypot(x-p.x,z-p.z)<24;})?.id??null;}
 export function mapPoint(x,z){return {x:(x-SEA_BOUNDS.minX)/(SEA_BOUNDS.maxX-SEA_BOUNDS.minX)*100,y:(z-SEA_BOUNDS.minZ)/(SEA_BOUNDS.maxZ-SEA_BOUNDS.minZ)*100};}
 
 export function validBoatPose(pose,boat,access={}){

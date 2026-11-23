@@ -44,7 +44,7 @@ Each island has **20 numbered fish entries**. Equipment uses **12 curated tiers 
 
 | # | Island | Level | Environment / landmark |
 | --- | --- | --- | --- |
-| 01 | Reedhaven | 1 | Freshwater lake · striped lighthouse, reeds |
+| 01 | Central Isle | 1 | Freshwater lake · striped lighthouse, reeds |
 | 02 | Pinewater Isle | 10 | Forest lakes and streams · timber mill and working waterwheel |
 | 03 | Ironwood River | 20 | River cliffs and waterfalls · stone aqueduct |
 | 04 | Brackwater Marsh | 35 | Swamp · root cathedral, cypress, hanging moss |
@@ -65,9 +65,9 @@ Each island has **20 numbered fish entries**. Equipment uses **12 curated tiers 
 | 19 | Eternity's Reach | 350 | Ancient cosmic ocean · enormous hourglass ruin |
 | 20 | Origin's End | 400 | Primordial ocean · first spring and concentric terraces |
 
-Each island now has its own stepped voxel landform profile as well as its landmark: Reedhaven reedbanks; Pinewater split stream-knolls; Ironwood tiered falls; Brackwater mangrove pools; Sunscar a ringed lagoon; Coralreach branching reef towers; Breaker broken sea cliffs; Stormbreak basalt blades; Thornwild braided delta; Emberforge a caldera; Frostfall fractured ice shelves; Skyglass twin fjord walls; Shattered a canyon cleft; Leviathan's fossil ribs; Ashen chimney fields; Moontide temple terraces; Starfall a meteor crater; Null a split rift; Eternity pinched strata; and Origin concentric spring terraces. Big landforms are built from shrinking, offset cuboid layers—not smooth meshes or giant plain boxes. Water channels sit flush with the terrain, and all island scenery is merged into existing batched meshes.
+Each island now has its own stepped voxel landform profile as well as its landmark: Central Isle reedbanks; Pinewater split stream-knolls; Ironwood tiered falls; Brackwater mangrove pools; Sunscar a ringed lagoon; Coralreach branching reef towers; Breaker broken sea cliffs; Stormbreak basalt blades; Thornwild braided delta; Emberforge a caldera; Frostfall fractured ice shelves; Skyglass twin fjord walls; Shattered a canyon cleft; Leviathan's fossil ribs; Ashen chimney fields; Moontide temple terraces; Starfall a meteor crater; Null a split rift; Eternity pinched strata; and Origin concentric spring terraces. Big landforms are built from shrinking, offset cuboid layers—not smooth meshes or giant plain boxes. Water channels sit flush with the terrain, and all island scenery is merged into existing batched meshes.
 
-**Reedhaven is the central service harbor.** Fish can be sold at only five markets: Reedhaven and four outposts. A few islands have specialist supply stalls; many have no shops. Island docking orientation, paths, trees, lamps and landmarks remain individually authored, and service counters use the same world transforms as rendering and navigation.
+**Central Isle is the central service harbor.** Fish can be sold at only five markets: Central Isle and four outposts. A few islands have specialist supply stalls; many have no shops. Island docking orientation, paths, trees, lamps and landmarks remain individually authored, and service counters use the same world transforms as rendering and navigation.
 
 ## Collection and fishing
 
@@ -104,13 +104,13 @@ Hold click / Space and release to cast; click / Space on a bite to hook. During 
 - The original cumulative XP curve is extended to **level 400**. Existing coins and XP are never reduced. Audits budget actual repeat-catch pools and weight quantiles, not guaranteed discoveries or destination-only bait.
 - Offshore audits exclude sailing time, missed catches and collection bonuses. Returning to the market and choosing an offshore spot add play time; the scripts do not claim fixed minutes per level.
 
-## Reedhaven hub and NPC questlines
+## Central Isle hub and NPC questlines
 
-Reedhaven’s expanded home island is the central harbor and service town. The harbor remains the boat spawn and departure point; the walkable village has a physical aquarium, Angler Warehouse, Anglers Guild, stalls, market and named quest givers. Walk up to a building or character and press **E** (or tap the on-screen prompt) to interact. The warehouse opens fish storage, the guild opens quest and challenge tracking, and the aquarium opens your collection. NPC quests are optional and award coins/XP for fishing, exploration, species discovery, and boat progression.\n\n## Storage, aquariums, merchants, mutations, secrets and achievements
+Central Isle’s expanded home island is the central harbor and service town. The harbor remains the boat spawn and departure point; the walkable village has a physical aquarium, Angler Warehouse, Anglers Guild, stalls, market and named quest givers. Walk up to a building or character and press **E** (or tap the on-screen prompt) to interact. The warehouse opens fish storage, the guild opens quest and challenge tracking, and the aquarium opens your collection. NPC quests are optional and award coins/XP for fishing, exploration, species discovery, and boat progression.\n\n## Storage, aquariums, merchants, mutations, secrets and achievements
 
 Fish storage is limited: the angler starts with **20 personal slots**, and every boat has its own hold (from 8 slots on the starter hull up to 60 on the largest boat). The Bag shows both capacities. Transfer catches while aboard or at a boatyard; expand personal or current-boat storage with coins. If both available spaces are full, casting is blocked until you make room. Markets can buy directly from your personal bag and current boat hold. Rare catches have a small chance to be **Shiny**; unusually heavy rolls can become **Huge**. Mutations are labeled in caught-fish displays and the guide, Shiny fish gleam in hand and in the aquarium, Huge fish display at larger scale, and both sell for a bonus.
 
-At the physical Reedhaven Aquarium, interact with its building and use **Display** on a catch in the Bag to place it into one of the walk-in tanks (12 spaces to start). Actual 3D fish models swim in the tanks and are also shown in the aquarium collection panel. The traveling merchant sells capacity permits. Displayed fish can be retrieved to your bag when there is room and are protected from sale.
+At the physical Central Isle Aquarium, interact with its building and use **Display** on a catch in the Bag to place it into one of the walk-in tanks (12 spaces to start). Actual 3D fish models swim in the tanks and are also shown in the aquarium collection panel. The traveling merchant sells capacity permits. Displayed fish can be retrieved to your bag when there is room and are protected from sale.
 
 A **Traveling Merchant** sails between islands and moves on every 15 minutes. Watch for its distinctive dark-hulled boat and the HUD visitor alert when you draw near. Stock rotates with the visit and is limited: look for aquarium capacity permits and exclusive hull cosmetics.
 
@@ -124,7 +124,7 @@ At a boat shop, equip a boat to tune its hull. Pick one specialization per boat:
 
 ## Guild quests, boss fish, weather and challenges
 
-Visit the physical NPCs around Reedhaven and in the archipelago, then press **E** or tap the interaction hint to open the guild request board. Accept objectives tied to catches, unique species, island visits, rarity, mutations, boat purchases and upgrades. Progress is saved and rewards grant coins and XP. The optional challenge panel remains available from the HUD or **J**.
+Visit the physical NPCs around Central Isle and in the archipelago, then press **E** or tap the interaction hint to open the guild request board. Accept objectives tied to catches, unique species, island visits, rarity, mutations, boat purchases and upgrades. Progress is saved and rewards grant coins and XP. The optional challenge panel remains available from the HUD or **J**.
 
 **Boss fish** are rare location-specific encounters rather than extra entries that overwrite the 400-species index. Five authored bosses are tied to particular territories and can appear as an uncommon hooked fish. They use the normal cast, hook, reel and tension mechanics, with stronger pull, a narrower safe reel band and distinct surge, dive or feint behavior. Defeating one pays an island-scaled coin bounty and adds boss/challenge progress.
 

@@ -2,7 +2,7 @@ import { ISLAND_LAYOUTS } from './island-layout.mjs?v=45';
 // Exact destination order/unlock levels from the 400-entry collection brief.
 // Environments and landmark geometry are presentation data, not rarity/size rules.
 const rows=[
-  ['Reedhaven','Reedhaven',1,'Freshwater lake','harbor','The Old Lighthouse','Bamboo','Harbor Skiff',0x70b96b,0xe8cf9b,0x7c9288,0x36a4af,0x9bd9ed,0xf2bd62,'Reed beds and a sunny village around the home lake.'],
+  ['Central Isle','Central',1,'The heart of the archipelago','harbor','The Heart Beacon','Bamboo','Harbor Skiff',0x70b96b,0xe8cf9b,0x7c9288,0x36a4af,0x9bd9ed,0xf2bd62,'A broad green sanctuary at the center of the archipelago, surrounded by a freshwater lagoon.'],
   ['Pinewater Isle','Pinewater',10,'Forest lakes and streams','forest','The Timber Mill','Pinewood','Pinewood Dinghy',0x548f6b,0xb7b194,0x637f79,0x438b8f,0xb1d9d5,0xc6a974,'Tall spruce trees, mossy terraces and a working timber waterwheel.'],
   ['Ironwood River','Ironwood',20,'Rivers and waterfalls','river','The Ironwood Falls','Ironwood','River Runner',0x638c61,0xbab091,0x6f8583,0x448eaa,0xb9dce0,0xb8ce9d,'A cascading river beneath an old stone aqueduct and ironwood groves.'],
   ['Brackwater Marsh','Brackwater',35,'Swamp','swamp','The Root Cathedral','Bogwood','Marsh Skimmer',0x64794c,0x8c8664,0x56645c,0x586c4c,0xa9b6a0,0xc4b277,'Twisted cypress roots, hanging moss and dark, still swamp water.'],
@@ -55,8 +55,8 @@ function waterObstacles(theme){
 }
 // Irregular, fixed positions selected with generous open-water corridors.
 // Stable per world version: reloads never reshuffle the archipelago.
-export const WORLD_LAYOUT_VERSION=2;
-const centers=[[-390,25],[-320,-770],[-1470,-440],[-1370,-1220],[-1700,-2000],[-1640,-2880],[-1250,-3590],[-1000,-2500],[-590,-1620],[110,-1320],[890,-680],[1710,-890],[810,-1380],[1660,-2060],[840,-2260],[-50,-2290],[130,-3070],[820,-2950],[590,-3640],[1740,-3450]];
+export const WORLD_LAYOUT_VERSION=3;
+const centers=Array.from({length:20},(_,id)=>{if(id===0)return [0,0];const r=id<=6?1400:4500,a=-Math.PI/2+(id-1)*2.399963229728653;return [Math.round(Math.cos(a)*r),Math.round(Math.sin(a)*r)];});
 export const ISLANDS=Object.freeze(rows.map((r,id)=>{
   const [name,short,level,environment,theme,landmark,stock,boatName,land,sand,rock,water,sky,accent,description]=r;
   const layout=ISLAND_LAYOUTS[id],[cx,cz]=centers[id];
@@ -71,7 +71,7 @@ export const ISLANDS=Object.freeze(rows.map((r,id)=>{
     }),description,tagline:environment+' · '+landmark,waters:environment});
 }));
 export const ISLAND_COUNT=ISLANDS.length;
-// Physical service distribution: Reedhaven is the full home harbor; only four
+// Physical service distribution: Central Isle is the full home harbor; only four
 // outposts buy fish. Equipment specialists are intentionally sparse.
 export const ISLAND_SERVICE_PLAN=Object.freeze({
   0:Object.freeze(['rod','line','bait','market','port']),
