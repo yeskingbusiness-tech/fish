@@ -111,7 +111,11 @@ export function createWorld(scene){
   const surfaces=ISLANDS.map(islandSurfaces);
   const islandGroups=[];
   const nearest=(zone,x,z)=>{const p=worldToIsland(zone,x,z);return {x:p.x,z:p.z};};
-  for(const zone of ISLANDS){
+  // Keep the original game systems, but replace the archipelago with one small
+  // isolated rock where the player begins.
+  const spawn=islandToWorld(ISLANDS[0],ISLANDS[0].layout.dockX,4),rock=new THREE.Group();rock.name='Solitary spawn rock';rock.position.set(spawn.x,0,spawn.z);
+  const rockMesh=new THREE.Mesh(new THREE.DodecahedronGeometry(1,2),mat(0x777f80,.96));rockMesh.scale.set(18,2.2,14);rockMesh.position.y=.05;rockMesh.castShadow=true;rockMesh.receiveShadow=true;rock.add(rockMesh);root.add(rock);
+  for(const zone of []){
     const palette=palettes[zone.theme]||palettes.coast,r=radii[zone.id],group=new THREE.Group();group.name=`${zone.id===0?'Central Isle':zone.name} · rebuilt`;group.position.set(zone.x,0,zone.z);group.rotation.y=zone.layout.yaw;root.add(group);islandGroups.push(group);
     const outer=roundedIslandShape(r.x+7,r.z+7,zone.id+3,1),rock=roundedIslandShape(r.x,r.z,zone.id+3,1),sand=roundedIslandShape(r.x*.985,r.z*.985,zone.id+3,1),grass=roundedIslandShape(r.x*.91,r.z*.91,zone.id+3,1),inner=roundedIslandShape(r.x*.72,r.z*.72,zone.id+3,1);
     group.add(shapeMesh(outer,mat(0xe8f2d8,.9),-.15));group.add(shapeMesh(rock,mat(palette.cliff,.9),-7,7.4));group.add(shapeMesh(sand,mat(palette.sand,.92),.36));group.add(shapeMesh(grass,mat(palette.grass,.93),.67));group.add(shapeMesh(inner,mat(palette.grass,.93),.72));
@@ -179,8 +183,7 @@ export function createWorld(scene){
   function setBoat(id){if(id===boatId)return;root.remove(boat);boat.traverse(o=>{if(o.isMesh){o.geometry.dispose();if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material.dispose();}});boat=makeBoat(id);boatId=id;root.add(boat);}
   function setAuroraPaint(on){if(boat.userData.trim){boat.remove(boat.userData.trim);boat.userData.trim.traverse(o=>{if(o.isMesh){o.geometry.dispose();o.material.dispose();}});}if(on){const glow=new THREE.Mesh(new THREE.TorusGeometry(1.1,.13,8,32),mat(0x9ffff1,.28,{emissive:0x51e8dc,emissiveIntensity:.85}));glow.rotation.x=Math.PI/2;glow.position.y=.7;boat.add(glow);boat.userData.trim=glow;}}
   function dockPoint(zone){const p=dockLocation(zone,BOATS[boatId].size);return new THREE.Vector3(p.x,.2,p.z);}
-  function insideIsland(zone,x,z){const p=worldToIsland(zone,x,z),r=radii[zone.id],dz=p.z-25;return (p.x/r.x)**2+(dz/r.z)**2<=1;}
-  function surfaceAt(x,z,onlyZone=null){for(const i of ISLANDS){if(onlyZone!==null&&onlyZone!==i.id)continue;if(insideIsland(i,x,z))return .95;}return null;}
+  function surfaceAt(x,z,onlyZone=null){const dx=(x-spawn.x)/16,dz=(z-spawn.z)/12;return dx*dx+dz*dz<=1?1.4:null;}
   function groundAt(x,z,zone){if(surfaceAt(x,z,zone)===null)return null;for(const b of colliders)if(b.zone===zone&&Math.hypot(x-b.x,z-b.z)<b.r)return null;return .95;}
   function inWater(p){return p.x>SEA_BOUNDS.minX&&p.x<SEA_BOUNDS.maxX&&p.z>SEA_BOUNDS.minZ&&p.z<SEA_BOUNDS.maxZ&&surfaceAt(p.x,p.z)===null;}
   const temp=new THREE.Color();
@@ -193,6 +196,6 @@ export function createWorld(scene){
     rain.visible=weather==='rain'||weather==='storm';if(rain.visible)for(let i=0;i<rain.count;i++){scratch.position.set(camera.position.x+Math.sin(i*14)*28+time*wind,camera.position.y+10-(time*8+i*.73)%24,camera.position.z+Math.cos(i*31)*25);scratch.scale.setScalar(1);scratch.updateMatrix();rain.setMatrixAt(i,scratch.matrix);}if(rain.visible)rain.instanceMatrix.needsUpdate=true;
     if(!aboard){const p=boatPosition||dockPoint(zone);boat.position.set(p.x,.2+Math.sin(time*1.3)*.09,p.z);boat.rotation.set(0,p.yaw??ISLANDS[zone].layout.yaw,Math.sin(time)*.025);}
   }
-  for(const i of ISLANDS){const g=new THREE.Mesh(new THREE.SphereGeometry(1,12,8),mat(palettes[i.theme]?.grass||0x74b59f));const r=radii[i.id];g.scale.set(r.x*.86,5,r.z*.86);g.position.set(i.x,.2,i.z+25);root.add(g);distantIslands.push(g);}
+
   return {root,water,waterUniforms,stalls,questGivers,hubBuildings,aquariumTankSlots,islands:islandGroups,groundAt,surfaceAt,inWater,dockPoint,update,setBoat,setAuroraPaint,cameraBlockers:ISLANDS.map(i=>colliders.filter(b=>b.zone===i.id)),get boat(){return boat;}};
 }
