@@ -1,7 +1,7 @@
 // Historical catches retain their original weight, name and identity. They are
 // displayable/sellable/holdable, but never enter the new 400-entry spawn pool.
 import { LEGACY_V8_SPECIES } from './legacy-v8-data.mjs?v=44';
-import { SPECIES } from './game-data.mjs?v=44';
+import { SPECIES } from './game-data.mjs?v=45';
 export const LEGACY_ISLAND_MAP=Object.freeze([0,1,4,10,9,15]);
 const renamed={'great-white':'Great White Shark','megamouth':'Megamouth Shark','goonch':'Goonch Catfish'};
 export function replacementFor(old){

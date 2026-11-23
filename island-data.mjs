@@ -1,4 +1,4 @@
-import { ISLAND_LAYOUTS } from './island-layout.mjs?v=44';
+import { ISLAND_LAYOUTS } from './island-layout.mjs?v=45';
 // Exact destination order/unlock levels from the 400-entry collection brief.
 // Environments and landmark geometry are presentation data, not rarity/size rules.
 const rows=[
@@ -71,6 +71,16 @@ export const ISLANDS=Object.freeze(rows.map((r,id)=>{
     }),description,tagline:environment+' · '+landmark,waters:environment});
 }));
 export const ISLAND_COUNT=ISLANDS.length;
+// Physical service distribution: Reedhaven is the full home harbor; only four
+// outposts buy fish. Equipment specialists are intentionally sparse.
+export const ISLAND_SERVICE_PLAN=Object.freeze({
+  0:Object.freeze(['rod','line','bait','market','port']),
+  3:Object.freeze(['bait']),5:Object.freeze(['bait']),
+  4:Object.freeze(['market']),9:Object.freeze(['market','rod','line']),
+  10:Object.freeze(['rod','line']),13:Object.freeze(['market']),
+  14:Object.freeze(['rod','line','bait']),19:Object.freeze(['market','rod','line','bait'])
+});
+export const islandServices=id=>ISLAND_SERVICE_PLAN[id]||Object.freeze([]);
 export const GEAR_PER_ISLAND=2;
 export const MAX_LEVEL=400;
 export const RARITY_AVAILABILITY=Object.freeze({common:[1,2],uncommon:[1,4],rare:[1,6],epic:[2,8],legendary:[4,9],mythic:[6,11],exotic:[8,13],divine:[10,15],ancient:[12,17],celestial:[14,19],transcendent:[16,19],unfathomable:[20,20]});

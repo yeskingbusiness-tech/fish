@@ -46,3 +46,9 @@ test('paving connects every varied counter to the pier with unique, nonoverlappi
   for(const p of tiles)assert.ok(i.layout.stalls.every(s=>Math.hypot(p.x-s.x,p.z-s.z)>=3.5),i.name+' paving through a shop');
  }
 });
+
+test('Reedhaven home-island footprint includes the aquarium, warehouse, guild and approaches',()=>{
+ const s=islandSurfaces(ISLANDS[0]),home=s.find(r=>r.kind==='home-land');assert.deepEqual([home.minX,home.maxX,home.minZ,home.maxZ],[-50,50,13,106]);
+ for(const p of [{x:-24,z:62},{x:24,z:62},{x:0,z:84},{x:0,z:94}])assert.equal(s.some(r=>p.x>=r.minX&&p.x<=r.maxX&&p.z>=r.minZ&&p.z<=r.maxZ&&r.height===.95),true);
+ assert.equal(islandSurfaces(ISLANDS[1]).some(r=>r.kind==='home-land'),false);
+});

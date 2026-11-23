@@ -52,7 +52,7 @@ module.exports=async function testNavigation(browser,url,shots){
     for(const s of vendors){if(a.world.groundAt(s.x,s.z,i.id)!==null)failures.push('missing wall hitbox '+i.name+'/'+s.kind);a.G.px=s.approach.x;a.G.pz=s.approach.z;if(a.world.groundAt(a.G.px,a.G.pz,i.id)===null)failures.push('blocked counter '+i.name+'/'+s.kind);if(a.nearestVendor()?.kind!==s.kind)failures.push('wrong vendor '+i.name+'/'+s.kind);}
     const step=.8,key=(x,z)=>x+','+z,q=[[Math.round(i.layout.dockX/step),5]],seen=new Set([key(...q[0])]);
     for(let n=0;n<q.length;n++){const[x,z]=q[n];for(const[dx,dz]of[[1,0],[-1,0],[0,1],[0,-1]]){const xx=x+dx,zz=z+dz,k=key(xx,zz);if(xx<-40||xx>40||zz<-3||zz>70||seen.has(k))continue;const p=a.islandToWorld(i,xx*step,zz*step);if(a.world.groundAt(p.x,p.z,i.id)!==null){seen.add(k);q.push([xx,zz]);}}}
-    for(const s of i.layout.stalls)if(!q.some(([x,z])=>Math.hypot(x*step-s.x,z*step-(s.z-3.8))<1))failures.push('unreachable '+i.name+'/'+s.kind);
+    for(const s of vendors){const local=i.layout.stalls.find(p=>p.kind===s.kind);if(local&&!q.some(([x,z])=>Math.hypot(x*step-local.x,z*step-(local.z-3.8))<1))failures.push('unreachable '+i.name+'/'+s.kind);}
     for(const b of a.BOATS){const p=a.dockPose(i.id,b.size);if(!a.world.inWater(p)||a.nearbyDock(p.x,p.z)!==i.id)failures.push('berth '+i.name+'/'+b.name);}
     const group=a.world.islands[i.id];if(group.rotation.y!==i.layout.yaw)failures.push('render heading '+i.name);
     for(const c of a.world.cameraBlockers[i.id])if(!Number.isFinite(c.x+c.z+c.top+(c.rect?c.rect.minX+c.rect.maxX+c.rect.minZ+c.rect.maxZ:c.r)))failures.push('camera collider '+i.name);
@@ -60,7 +60,7 @@ module.exports=async function testNavigation(browser,url,shots){
    }
    return {failures,records};
   });assert.deepEqual(layout.failures,[]);fs.writeFileSync(`${shots}/layout-reachability.json`,JSON.stringify(layout.records,null,2));
-  console.log('PASS: all twenty rotated spawns, 100 correct physical counters, full walkable pier-to-counter flood searches, 160 clear berths and transformed camera blockers');
+  console.log('PASS: all twenty rotated spawns, sparse physical service counters, walkable routes to every built outpost, 160 clear berths and transformed camera blockers');
 
   // Inspect the actual eight meshes through the actual helm camera at both
   // aspect ratios. No shrunken proxy hull or test-only camera is used.
@@ -89,10 +89,10 @@ module.exports=async function testNavigation(browser,url,shots){
    a.G.state='menu';localStorage.setItem('reel-deal-save-v9',JSON.stringify(raw));return raw;
   });
   await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await startGame(page);
-  const migrated=await page.evaluate(async()=>{const a=__reelDeal,n=await import('./navigation.mjs?v=44');a.saveGame();return {zone:a.G.zone,aboard:a.G.onBoat,boat:a.G.boat,coins:a.G.coins,xp:a.G.xp,gear:a.G.gear,earned:a.G.completedIslands,weight:a.bag[0].weight,valid:n.validBoatPose(a.G.sailing,a.BOATS[a.G.boat],a.G),save:JSON.parse(localStorage.getItem('reel-deal-save-v9'))};});
+  const migrated=await page.evaluate(async()=>{const a=__reelDeal,n=await import('./navigation.mjs?v=44');a.saveGame();return {zone:a.G.zone,aboard:a.G.onBoat,boat:a.G.boat,coins:a.G.coins,xp:a.G.xp,gear:a.G.gear,earned:a.G.completedIslands,weight:a.bag[0].weight,valid:n.validBoatPose(a.G.sailing,a.BOATS[a.G.boat],a.G),save:JSON.parse(localStorage.getItem('reel-deal-save-v10'))};});
   assert.equal(migrated.zone,15);assert.equal(migrated.aboard,true);assert.equal(migrated.boat,6);assert.equal(migrated.coins,historic.coins);assert.equal(migrated.xp,historic.xp);assert.deepEqual(migrated.gear,historic.gear);assert.deepEqual(migrated.earned,historic.completedIslands);assert.equal(migrated.weight,historic.bag[0].w);assert.equal(migrated.valid,true);assert.equal(migrated.save.worldLayout,2);
   await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await startGame(page);
-  assert.deepEqual(await page.evaluate(()=>{__reelDeal.saveGame();return JSON.parse(localStorage.getItem('reel-deal-save-v9'));}),migrated.save);
+  assert.deepEqual(await page.evaluate(()=>{__reelDeal.saveGame();return JSON.parse(localStorage.getItem('reel-deal-save-v10'));}),migrated.save);
   console.log('PASS: real v41-grid save migration and idempotent reload, preserving boating state, coins, XP, ownership, exact tiny weight and permanent bonuses');
  }catch(e){if(!page.isClosed())await capture(page,'navigation-failure');throw e;}finally{await page.close();}
 

@@ -17,5 +17,5 @@ test('v7 and v6 retain old milestone licenses without changing their stored v7 X
 });
 test('migration is idempotent and fresh saves do not receive historic licenses',()=>{
  const old=normalizeSave({version:8,xp:3,licenses:[0,5]});assert.deepEqual(normalizeSave(old),old);
- const fresh=normalizeSave({version:9,xp:3,zone:19,licenses:[-1,99,'19'],boat:7,ownedBoats:[0,7]});assert.deepEqual(fresh.licenses,[0]);assert.equal(fresh.zone,0);
+ const fresh=normalizeSave({version:10,xp:3,zone:19,licenses:[-1,99,'19'],boat:7,ownedBoats:[0,7]});assert.deepEqual(fresh.licenses,[0]);assert.equal(fresh.zone,0);
 });

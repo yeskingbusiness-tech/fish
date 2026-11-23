@@ -13,7 +13,7 @@ const URL=process.env.TEST_URL||'http://127.0.0.1:3100',shots=process.env.SCREEN
  async function vendor(kind,zone=0){await page.evaluate(({kind,zone})=>{const a=__reelDeal;a.closeShop();a.closeMarket();a.closeChart();a.closeIndex();a.closeBag();a.spawnAtIsland(zone);const s=a.world.stalls.find(s=>s.zone===zone&&s.kind===kind);a.G.px=s.approach.x;a.G.pz=s.approach.z;a.G.state='aim';a.updateStats();},{kind,zone});await frame(page);}
  try{
   page=await browser.newPage({viewport:{width:1280,height:820}});await boot(page);
-  assert.deepEqual(await page.evaluate(()=>[__reelDeal.SPECIES.length,__reelDeal.ISLANDS.length,__reelDeal.RODS.length,__reelDeal.LINES.length,__reelDeal.BAITS.length,__reelDeal.BOATS.length]),[400,20,41,41,41,8]);
+  assert.deepEqual(await page.evaluate(()=>[__reelDeal.SPECIES.length,__reelDeal.ISLANDS.length,__reelDeal.RODS.length,__reelDeal.LINES.length,__reelDeal.BAITS.length,__reelDeal.BOATS.length]),[400,20,12,12,12,8]);
   await page.click('#indexBtn');assert.equal(await page.locator('.undiscovered').count(),400);
   assert.equal(await page.evaluate(()=>{const html=document.getElementById('fishGrid').innerHTML;return __reelDeal.SPECIES.some(s=>html.includes('<h3>'+s.name+'</h3>')||html.includes('data-fish-id="'+s.id+'"'));}),false);
   assert.equal(await page.locator('#fishGrid [data-anatomy]').count(),0);
@@ -24,15 +24,15 @@ const URL=process.env.TEST_URL||'http://127.0.0.1:3100',shots=process.env.SCREEN
    assert.deepEqual(await page.locator('.entry-top>span:first-child').allTextContents(),Array.from({length:20},(_,n)=>'#'+String(i*20+n+1).padStart(3,'0')));
   }
   await page.click('#indexClose');console.log('PASS 400 hidden entries, exact numbering, all twenty index filters and modal input isolation');
-  // Every physical shop displays exactly two items; purchases charge exactly the label.
-  for(let zone=0;zone<20;zone++)for(const kind of ['rod','line','bait']){
-   await vendor(kind,zone);await page.evaluate(kind=>{const a=__reelDeal;a.G.xp=a.xpForLevel(400);a.G.coins=2e9;a.openShop(kind);},kind);
-   assert.deepEqual(await page.locator('#shopBody .rod-card').evaluateAll(rows=>rows.map(r=>+r.dataset.tier)),zone===0?[0,1,40]:[zone*2,zone*2+1]);
-   const n=zone*2+1;const result=await page.evaluate(({kind,n})=>{const a=__reelDeal,list=kind==='rod'?a.RODS:kind==='line'?a.LINES:a.BAITS;a.G.owned[kind]=[0];a.G.coins=list[n].cost-1;a.buyGear(kind,n);const denied=!a.G.owned[kind].includes(n);a.G.coins=list[n].cost+123;a.renderShop();const label=document.querySelector(`#shopBody [data-buy="${n}"]`).textContent,before=a.G.coins;a.buyGear(kind,n);return {denied,label,charged:before-a.G.coins,cost:list[n].cost,remaining:a.G.coins};},{kind,n});
-   assert.equal(result.denied,true);assert.equal(result.charged,result.cost);assert.equal(result.remaining,123);assert.equal(Number(result.label.replace(/\D/g,'')),result.cost);
+  // Reedhaven stocks all unlocked curated kits; purchases charge the listed price.
+  await page.evaluate(()=>{const a=__reelDeal;a.G.xp=a.xpForLevel(400);a.G.licenses=a.ISLANDS.map(i=>i.id);a.G.coins=2e9;});
+  for(const kind of ['rod','line','bait']){
+   await vendor(kind,0);await page.evaluate(kind=>__reelDeal.openShop(kind),kind);
+   assert.deepEqual(await page.locator('#shopBody .rod-card').evaluateAll(rows=>rows.map(r=>+r.dataset.tier)),Array.from({length:12},(_,n)=>n));
+   const n=11,result=await page.evaluate(({kind,n})=>{const a=__reelDeal,list=kind==='rod'?a.RODS:kind==='line'?a.LINES:a.BAITS;a.G.owned[kind]=[0];a.G.coins=list[n].cost-1;a.buyGear(kind,n);const denied=!a.G.owned[kind].includes(n);a.G.coins=list[n].cost+123;a.renderShop();const label=document.querySelector(`#shopBody [data-buy="${n}"]`).textContent,before=a.G.coins;a.buyGear(kind,n);return {denied,charged:before-a.G.coins,cost:list[n].cost,remaining:a.G.coins,label};},{kind,n});
+   assert.equal(result.denied,true);assert.equal(result.charged,result.cost);assert.equal(result.remaining,123);assert.equal(Number(result.label.replace(/\D/g,'')),result.cost);await page.click('#shopClose');
   }
-  for(const kind of ['rod','line','bait']){await vendor(kind,0);const res=await page.evaluate(kind=>{const a=__reelDeal,list=kind==='rod'?a.RODS:kind==='line'?a.LINES:a.BAITS;a.G.coins=list[40].cost+5;a.G.owned[kind]=[0];a.openShop(kind);a.buyGear(kind,40);return {owned:a.G.owned[kind].includes(40),coins:a.G.coins,cost:list[40].cost};},kind);assert.equal(res.owned,true);assert.equal(res.coins,5);}
-  console.log('PASS all 60 physical shops / 120 standard items plus three extra starter upgrades, exact charges and insufficient-funds guards');
+  console.log('PASS 12 curated equipment tiers per category, central hub stock and exact purchase guards');
   await vendor('port');await page.evaluate(()=>{const a=__reelDeal;a.G.xp=0;a.G.licenses=[0];a.G.coins=2e9;a.G.ownedBoats=[0];a.G.boat=0;a.openChart(true);});
   assert.equal(await page.locator('.boat-card').count(),8);
   for(let id=1;id<8;id++){await page.locator(`[data-boat="${id}"]`).click();assert.equal(await page.evaluate(()=>__reelDeal.G.boat),id);}

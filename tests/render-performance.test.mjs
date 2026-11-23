@@ -78,14 +78,14 @@ test('last-value cache invalidates immediately on every changed UI dependency',(
   const bad=memoLast(()=>{throw new Error('failed calculation');});assert.throws(()=>bad(1));assert.throws(()=>bad(1));
 });
 
-test('cached label pools equal the real picker pools for all 800 island/bait combinations',()=>{
+test('cached label pools equal the real picker pools for all 240 island/curated-bait combinations',()=>{
   let calls=0;const lookup=createBaitPoolLookup((zone,bait)=>{calls++;return eligibleSpecies(zone,bait);});
   const before=JSON.stringify({SPECIES,BAITS});
-  for(let pass=0;pass<5;pass++)for(let zone=0;zone<20;zone++)for(let bait=0;bait<40;bait++){
+  for(let pass=0;pass<5;pass++)for(let zone=0;zone<20;zone++)for(let bait=0;bait<BAITS.length;bait++){
     const pool=lookup(zone,bait);assert.deepEqual(pool,eligibleSpecies(zone,bait));assert.equal(pool,lookup(zone,bait));
     assert.ok(Object.isFrozen(pool));assert.throws(()=>pool.pop(),TypeError);
   }
-  assert.equal(calls,800);assert.equal(lookup.size,800);
+  assert.equal(calls,20*BAITS.length);assert.equal(lookup.size,20*BAITS.length);
   assert.equal(JSON.stringify({SPECIES,BAITS}),before);
-  for(const bait of [2,3]){const pool=lookup(1,bait);assert.equal(pool.length,20);assert.ok(pool.some(s=>s.number===40));}
+  for(let bait=0;bait<BAITS.length;bait++)if(BAITS[bait].island===1)assert.equal(lookup(1,bait).length,20);
 });

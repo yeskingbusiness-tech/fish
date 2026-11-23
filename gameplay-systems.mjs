@@ -1,4 +1,4 @@
-// Deterministic, save-friendly systems for weather, expeditions and rotating challenges.
+// Deterministic weather, rare named bosses, and optional rotating challenges.
 export const WEATHER=Object.freeze([
  {id:'clear',name:'Clear Skies',icon:'☀',wait:1,rare:1,wind:0,description:'Calm water; an easy day to learn a new spot.'},
  {id:'rain',name:'Rain Squall',icon:'🌧',wait:.88,rare:1.12,wind:.2,description:'Rain stirs the shallows and brings fish to feed.'},
@@ -12,26 +12,12 @@ export function islandWeather(island,now=Date.now()){
  const epoch=Math.floor(now/180000),n=hash(`${island}:${epoch}`)%WEATHER.length,w=WEATHER[n];
  return {...w,epoch,changesIn:180000-(now%180000)};
 }
-const expeditionTypes=[
- {type:'storm',title:'Stormwatch Run',icon:'⛈',goal:2,objective:'Land 2 fish while Thunderstorm weather is active.',reward:1400,relics:1},
- {type:'treasure',title:'Lost Cache',icon:'🧭',goal:1,objective:'Search the island landmark for a hidden cache.',reward:1800,relics:2},
- {type:'legendary',title:'Apex Trail',icon:'✦',goal:1,objective:'Track the rarest native fish available in these waters.',reward:2600,relics:2},
- {type:'survey',title:'Living Field Notes',icon:'⌕',goal:3,objective:'Land 3 different species in this territory.',reward:1700,relics:1},
- {type:'shoal',title:'Shoal Patrol',icon:'≈',goal:4,objective:'Land 4 fish from this territory.',reward:1500,relics:1},
- {type:'boss',title:'Abyssal Signal',icon:'⚑',goal:1,objective:'Track and land the island’s roaming boss fish.',reward:4200,relics:4}
-];
-export function expeditionOffers(island,dayKey=''){
- const start=hash(`${island}|${dayKey}`)%expeditionTypes.length;
- const chosen=[expeditionTypes.find(t=>t.type==='boss'),expeditionTypes.find(t=>t.type==='storm')];
- for(let n=0;chosen.length<3&&n<expeditionTypes.length;n++){const t=expeditionTypes[(start+n)%expeditionTypes.length];if(!chosen.includes(t))chosen.push(t);}
- return chosen.map(t=>({...t,id:`${dayKey}-${island}-${t.type}`,island}));
-}
 export const BOSSES=Object.freeze([
- {name:'Tempest Crown',title:'Stormfront Sovereign',behavior:'surge',rarity:4},
- {name:'The Drowned Bell',title:'Wreck-Song Leviathan',behavior:'dive',rarity:3},
- {name:'Glassfin Oracle',title:'Mistwater Seer',behavior:'feint',rarity:2},
- {name:'Rootbreaker',title:'The Old-Growth Colossus',behavior:'surge',rarity:1},
- {name:'Star-Eater',title:'Abyssal Anomaly',behavior:'alternating',rarity:5}
+ {id:'ancient-sturgeon',name:'Ancient Sturgeon',title:'Old-Growth River Sovereign',island:1,behavior:'dive',rarity:4},
+ {id:'drowned-king',name:'Drowned King',title:'Wreck-Song Leviathan',island:13,behavior:'surge',rarity:4},
+ {id:'ashen-leviathan',name:'Ashen Leviathan',title:'Cinderwake Colossus',island:9,behavior:'alternating',rarity:5},
+ {id:'frostmaw',name:'Frostmaw',title:'Fjord-Breaking Ancient',island:11,behavior:'dive',rarity:5},
+ {id:'abyssal-horror',name:'Abyssal Horror',title:'The Trench Unbound',island:14,behavior:'feint',rarity:5}
 ]);
 const dailyTemplates=[
  {kind:'catch',title:'Lines in the Water',target:5,desc:'Land 5 fish anywhere.'},
@@ -57,7 +43,7 @@ function seededPick(pool,seed,count){const out=[],seen=new Set();let x=hash(seed
 function makeTasks(pool,key,count,scale){return seededPick(pool,key,count).map((x,i)=>({...x,id:`${key}-${i}-${x.kind}`,progress:0,complete:false,reward:Math.round((x.kind==='boss'?1800:500+100*x.target)*scale)}));}
 export function createActivityState(saved={},now=new Date()){
  const d=now instanceof Date?now:new Date(now),day=dayKey(d),week=weekKey(d);
- return {relics:Math.max(0,Number(saved.relics)||0),daily:saved.daily?.key===day?saved.daily:{key:day,tasks:makeTasks(dailyTemplates,day,3,1)},weekly:saved.weekly?.key===week?saved.weekly:{key:week,tasks:makeTasks(weeklyTemplates,week,4,4)},expedition:saved.expedition||null,bosses:Math.max(0,Number(saved.bosses)||0),lastWeather:{}};
+ return {daily:saved.daily?.key===day?saved.daily:{key:day,tasks:makeTasks(dailyTemplates,day,3,1)},weekly:saved.weekly?.key===week?saved.weekly:{key:week,tasks:makeTasks(weeklyTemplates,week,4,4)},bosses:Math.max(0,Number(saved.bosses)||0),lastWeather:{}};
 }
 export function progressChallenges(state,event){
  const completed=[];

@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { exposedCuboidFaces } from './voxel-geometry.mjs?v=44';
-import { ISLANDS, BOATS } from './archipelago.mjs?v=44';
+import { ISLANDS, BOATS } from './archipelago.mjs?v=46';
 import { dockLocation, SEA_BOUNDS, territoryCenter } from './navigation.mjs?v=44';
-import { islandToWorld, worldToIsland, islandSurfaces } from './island-layout.mjs?v=44';
+import { islandToWorld, worldToIsland, islandSurfaces } from './island-layout.mjs?v=45';
+import { islandServices } from './island-data.mjs?v=45';
 import { villagePathTiles } from './village-paths.mjs?v=44';
 
 const UNIT = new THREE.BoxGeometry(1, 1, 1);
@@ -111,7 +112,7 @@ function boatMesh(id){
 
 export function createWorld(scene){
   const root=new THREE.Group(); scene.add(root);
-  const colliders=[], islands=[], distantIslands=[], stalls=[];
+  const colliders=[], islands=[], distantIslands=[], stalls=[],questGivers=[],hubBuildings=[],aquariumTankSlots=[];
   const surfaces=ISLANDS.map(islandSurfaces);
   const waterUniforms={uTime:{value:0},uDeep:{value:new THREE.Color(0x16748b)},uLight:{value:new THREE.Color(0x58bdc4)},uFog:{value:new THREE.Color(0x9bd9ed)}};
   const waterMat=new THREE.ShaderMaterial({
@@ -146,7 +147,8 @@ export function createWorld(scene){
 
   for(const zone of ISLANDS){
     const layout=zone.layout,d=layout.dockX,side=layout.berthSide;
-    const stallLayout=layout.stalls.map(st=>({...STORE_DETAILS.find(meta=>meta.kind===st.kind),...st}));
+    const services=new Set(islandServices(zone.id));
+    const stallLayout=layout.stalls.filter(st=>services.has(st.kind)).map(st=>({...STORE_DETAILS.find(meta=>meta.kind===st.kind),...st}));
     const localColliders=[];
     const group=new THREE.Group();group.name='island-'+zone.id;group.position.set(zone.x,0,zone.z);group.rotation.y=layout.yaw;root.add(group);
     const S=[],glows=[];
@@ -155,9 +157,10 @@ export function createWorld(scene){
     const block=(x,z,r,top)=>localColliders.push({zone:zone.id,x,z,r,top});
     const blockRect=(x,z,w,d,top)=>localColliders.push({zone:zone.id,x,z,top,rect:{minX:x-w/2,maxX:x+w/2,minZ:z-d/2,maxZ:z+d/2}});
     // Stepped, genuinely walkable island footprint. No invisible terrain walls.
-    add(58,3.2,46,0,-1.2,34,zone.rock);
-    add(58,.5,46,0,.25,34,zone.sand);
-    add(54,.45,43,0,.725,34.5,zone.land);
+    const islandWidth=zone.id===0?104:58,islandDepth=zone.id===0?104:46,islandCenterZ=zone.id===0?54:34;
+    add(islandWidth,3.2,islandDepth,0,-1.2,islandCenterZ,zone.rock);
+    add(islandWidth,.5,islandDepth,0,.25,islandCenterZ,zone.sand);
+    add(islandWidth-4,.45,islandDepth-4,0,.725,islandCenterZ+.5,zone.land);
     for(const f of zone.landforms){
       // Build landforms as stacked, shrinking strata instead of a single
       // giant cuboid. Offset alternate tiers for a fractured voxel silhouette.
@@ -279,8 +282,12 @@ export function createWorld(scene){
     }else if(zone.theme==='river'){
       block(-22,6,4,14);
       for(let k=0;k<4;k++){add(10-k*1.8,3,9-k,-22,1.8+k*2.5,6,zone.rock);}
-      // Waterfall sheets separated from the rock face by a visible gap.
-      for(let k=0;k<3;k++){glow(1.2,7-k, .24,-24+k*2,6-k,1.05,0x84cdda);add(2.4,.18,1.2,-24+k*2,1.1,0,0xc2e4e4);}
+      // Twin falls part around a dark, framed cave mouth; the chamber recedes
+      // behind the curtain to a still pool with a few luminous mineral seams.
+      for(const [x,h] of [[-25.1,7],[-19.1,5]]){glow(1.5,h,.24,x,1+h/2,1.05,0x84cdda);add(2.4,.18,1.2,x,1.1,0,0xc2e4e4);}
+      add(3.05,2.5,.16,-22,2.45,10.68,0x14242b);add(.62,3.25,.65,-23.72,2.63,10.72,0x687b7b);add(.62,3.25,.65,-20.28,2.63,10.72,0x687b7b);add(4.05,.7,.72,-22,4.4,10.7,0x718486);
+      add(2.9,.18,5.6,-22,.83,7.7,0x384b50);add(3.1,.1,3.8,-22,.11,5.55,0x3b9eaf);
+      for(const [x,y,z,c] of [[-23,1.7,8.5,0x7bd3ca],[-21.1,1.3,7.3,0x79bfce],[-23.1,2.5,9.2,0x89cfc1]]){add(.34,y,.38,x,y/2,z,c);glow(.55,.5,.55,x,y+.35,z,c);}
       for(const z of [3,9]){add(1.4,12,1.4,-17,6.5,z,0x8b9183);block(-17,z,1,13);}
       add(1.8,1.4,9,-17,12.8,6,0xb9bda4);
     }else if(zone.theme==='swamp'){
@@ -462,6 +469,19 @@ export function createWorld(scene){
       mesa(0,65,46,34,3,0xcbd3c7);mesa(0,65,36,26,3,0xdce1d2);mesa(0,65,26,18,3,0xe9e4d1);mesa(0,65,14,9,2,0x9dc9c0);
       waterTile(0,65,8,5,0x76cfc2);for(let k=0;k<8;k++){const a=k*Math.PI/4,x=Math.cos(a)*25,z=65+Math.sin(a)*18;pillar(x,z,2.4,2.4,4+k%3*2,0x9eb6aa);}
     }
+    // Central home-base quest characters, built in the same blocky style as vendors.
+    const npcSpecs=zone.id===0?[
+      {id:'old-fisher',name:'Old Fisherman',x:-18,z:45,color:0x728e68},
+      {id:'marine-biologist',name:'Marine Biologist',x:-9,z:45,color:0x5b9bab},
+      {id:'boat-mechanic',name:'Boat Mechanic',x:0,z:45,color:0xc18455},
+      {id:'fish-collector',name:'Fish Collector',x:9,z:45,color:0x688b91}
+    ]:zone.id===2?[{id:'island-explorer',name:'Island Explorer',x:-12,z:20,color:0x9c7d54}]:zone.id===10?[{id:'mysterious-angler',name:'Mysterious Angler',x:10,z:22,color:0x716b91}]:[];
+    for(const npc of npcSpecs){
+      const {x,z}=npc;add(.78,1.2,.58,x,1.6,z,npc.color);add(.62,.62,.62,x,2.5,z,0xe3bb96);add(.72,.2,.7,x,2.83,z,0x514a45);
+      add(.09,.09,.06,x-.14,2.53,z+.31,0x243b42);add(.09,.09,.06,x+.14,2.53,z+.31,0x243b42);
+      group.add(label(npc.name.toUpperCase(),x,3.35,z,5.4,.56));
+      questGivers.push({...npc,zone:zone.id,...islandToWorld(zone,x,z)});
+    }
     // Stalls, merchandise and friendly cube vendors. Separate stock, no tabs of remote purchases.
     for(const st of stallLayout){
       const x=st.x,z=st.z,base=1;
@@ -516,6 +536,32 @@ export function createWorld(scene){
     add(.2,2,.2,d-4.1,2,11,0x62716a);
     group.add(label(zone.name.toUpperCase(),d-4.1,3.1,11,5,.65));
     if(zone.id===0){
+      // Reedhaven expands into a true central home island with connected civic buildings.
+      const civic=(id,name,x,z,color,kind)=>{
+        add(19,.48,17,x,1.18,z,0x89775d); // raised stone-and-timber foundation
+        add(.8,6,.8,x-9,4,z-8,color);add(.8,6,.8,x+9,4,z-8,color);add(.8,6,.8,x-9,4,z+8,color);add(.8,6,.8,x+9,4,z+8,color);
+        add(.65,5,16,x-9,4,z,color);add(.65,5,16,x+9,4,z,color);
+        add(7,5,.65,x-6,4,z-8,color);add(7,5,.65,x+6,4,z-8,color);add(19,5,.65,x,4,z+8,color);
+        add(5,.42,.75,x,6.3,z-8,color); // lintel above open entrance
+        add(20,.7,18,x,7.2,z,zone.rock);add(18,.4,16,x,7.72,z,zone.accent);
+        for(const dx of [-7,-4,4,7]){add(2.7,2.8,.18,x+dx,4.6,z-8.42,0x65aeb7);add(.15,3.1,.22,x+dx-1.45,4.6,z-8.48,0xd6c397);add(.15,3.1,.22,x+dx+1.45,4.6,z-8.48,0xd6c397);}
+        group.add(label(name.toUpperCase(),x,8.7,z-8,10,.7));
+        if(id==='aquarium'){
+          const glassMat=new THREE.MeshPhysicalMaterial({color:0x9de5e8,transparent:true,opacity:.22,roughness:.12,metalness:.08,depthWrite:false,side:THREE.DoubleSide});
+          for(const tx of [x-5,x+5]){
+            group.add(label(tx<x?'COASTAL HABITAT':'PELAGIC HABITAT',tx,5.55,z-2.7,4.2,.42));
+            add(5,.65,5,tx,1.75,z,0x775c45);add(4.4,.12,4.4,tx,2.14,z,0x3e9fad);add(5,.22,5,tx,4.98,z,0xd2c6a6);
+            for(const [w,h,d,px,py,pz]of [[4.65,2.8,.08,tx,3.45,z-2.34],[4.65,2.8,.08,tx,3.45,z+2.34],[.08,2.8,4.65,tx-2.34,3.45,z],[.08,2.8,4.65,tx+2.34,3.45,z]]){const pane=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),glassMat);pane.position.set(px,py,pz);group.add(pane);}
+            for(let row=0;row<2;row++)for(let depth=0;depth<2;depth++)for(let col=0;col<3;col++){const pos=islandToWorld(zone,tx-1.35+col*1.35,z-.95+depth*1.9);aquariumTankSlots.push({x:pos.x,y:2.95+row*1.25,z:pos.z});}
+          }
+        }
+        const entrance=islandToWorld(zone,x,z-10);hubBuildings.push({id,name,zone:0,x:entrance.x,z:entrance.z,center:islandToWorld(zone,x,z)});
+      };
+      // Continuous raised paths lead out from the old village and harbor.
+      for(const x of [-24,24,0])add(4,.16,22,x,1.02,54+(x===0?15:0),0xb3a17b);
+      civic('aquarium','Reedhaven Aquarium',-24,72,0x816f58,'aquarium');
+      civic('warehouse','Angler Warehouse',24,72,0x756f61,'warehouse');
+      civic('guild','Anglers Guild',0,94,0x86704f,'guild');
       // Reedhaven-only shoreline polish: warm reeds, small flowers and flat lily pads.
       for(const side of [-1,1])for(let patch=0;patch<6;patch++){
         const x=side*(23.7+(patch%2)*1.5),z=18+patch*5.7;
@@ -583,7 +629,12 @@ export function createWorld(scene){
     for(const b of colliders)if(b.zone===zone&&(b.rect?(x>=b.rect.minX-.28&&x<=b.rect.maxX+.28&&z>=b.rect.minZ-.28&&z<=b.rect.maxZ+.28):Math.hypot(x-b.x,z-b.z)<b.r))return null;
     return y;
   }
-  function inWater(p){ return p.x>SEA_BOUNDS.minX&&p.x<SEA_BOUNDS.maxX&&p.z>SEA_BOUNDS.minZ&&p.z<SEA_BOUNDS.maxZ&&surfaceAt(p.x,p.z)===null; }
+  function inWater(p){
+    if(p.x<=SEA_BOUNDS.minX||p.x>=SEA_BOUNDS.maxX||p.z<=SEA_BOUNDS.minZ||p.z>=SEA_BOUNDS.maxZ)return false;
+    const cave=worldToIsland(ISLANDS[2],p.x,p.z);
+    if(Math.abs(cave.x+22)<1.65&&cave.z>3.65&&cave.z<7.45)return true;
+    return surfaceAt(p.x,p.z)===null;
+  }
   const tempColor=new THREE.Color();
   function update(time,dt,zone,camera,aboard,boatPosition=null,weather='clear'){
     const i=ISLANDS[zone];
@@ -621,6 +672,6 @@ export function createWorld(scene){
     if(rain.visible){rain.material.opacity=weather==='storm'?.48:.34;for(let n=0;n<rain.count;n++){const a=n*12.9898,b=n*78.233,drop=30-((time*17+n*1.618)%30),drift=weather==='storm'?time*2.6:time*.55;scratch.position.set(camera.position.x+Math.sin(a)*22+drift,camera.position.y-1+drop,camera.position.z+Math.cos(b)*20+drift*.35);scratch.rotation.set(.015,0,weather==='storm'?.09:.035);scratch.scale.set(1,1,1);scratch.updateMatrix();rain.setMatrixAt(n,scratch.matrix);}rain.instanceMatrix.needsUpdate=true;}
     tempColor.setHex(i.theme==='lunar'?0xe6deff:0xffefd0);sun.material.color.lerp(tempColor,Math.min(1,dt*1.2));
   }
-  return { root,water,waterUniforms,stalls,islands,groundAt,surfaceAt,inWater,dockPoint,update,setBoat,setAuroraPaint,
-    cameraBlockers:ISLANDS.map(i=>colliders.filter(b=>b.zone===i.id)),get boat(){return boat;} };
+  return { root,water,waterUniforms,stalls,questGivers,hubBuildings,aquariumTankSlots,islands,groundAt,surfaceAt,inWater,dockPoint,update,setBoat,setAuroraPaint,
+    waterfallCave:islandToWorld(ISLANDS[2],-22,5.5),cameraBlockers:ISLANDS.map(i=>colliders.filter(b=>b.zone===i.id)),get boat(){return boat;} };
 }

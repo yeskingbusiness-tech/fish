@@ -15,13 +15,12 @@ export function expectedCatchIncome(island,baitIndex,samples=256,castPower=.5,sh
   }
   const result=chances?total/chances:0;cache.set(key,result);return result;
 }
-export function gearEconomyRows(){return RODS.slice(1,40).map((rod,n)=>{
-  const tier=n+1,island=gearIsland(tier),previous=Math.max(0,tier-1);
-  // Final island's new rarity needs its entry bait. Save for it before departure.
-  const income=expectedCatchIncome(island,previous)||expectedCatchIncome(Math.max(0,island-1),previous);
+export function gearEconomyRows(){return RODS.slice(1).map((rod,n)=>{
+  const tier=n+1,island=gearIsland(tier),baitIndex=tier;
+  const income=expectedCatchIncome(island,baitIndex)||expectedCatchIncome(Math.max(0,island-1),baitIndex)||expectedCatchIncome(island,0);
   return {tier:tier+1,island:ISLANDS[island].short,income,rod:rod.cost,line:LINES[tier].cost,bait:BAITS[tier].cost,rodCatches:rod.cost/income,lineCatches:LINES[tier].cost/income,baitCatches:BAITS[tier].cost/income};
 });}
-export function islandEntryRows(){return ISLANDS.slice(1).map(i=>({island:i.short,rod:RODS[i.id*2].cost,line:LINES[i.id*2].cost,bait:BAITS[i.id*2].cost}));}
+export function islandEntryRows(){return ISLANDS.slice(1).flatMap(i=>{const tier=RODS.findIndex(g=>g.island===i.id);return tier<0?[]:[{island:i.short,rod:RODS[tier].cost,line:LINES[tier].cost,bait:BAITS[tier].cost}];});}
 export function boatEconomyRows(){return BOATS.map(b=>({boat:b.name,cost:b.cost,speed:b.speed,size:b.size,access:'ALL level-unlocked territories'}));}
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   console.log('Offshore, neutral charge, no collection bonuses. Default sale reduction ×0.85 is included.');

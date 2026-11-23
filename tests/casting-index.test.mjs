@@ -1,5 +1,5 @@
 import test from'node:test';import assert from'node:assert/strict';import{readFileSync}from'node:fs';
-import{SPECIES,RARITY,formatWeight,formatCatchMass,sortFishIndex,castLuckModifier,pickSpecies,eligibleSpecies}from'../game-data.mjs';
+import{SPECIES,BAITS,RARITY,formatWeight,formatCatchMass,sortFishIndex,castLuckModifier,pickSpecies,eligibleSpecies}from'../game-data.mjs';
 test('catch mass uses ounces for tiny fish, pounds for normal fish and tons for whales',()=>{assert.equal(formatCatchMass(.03),'0.48 oz');assert.equal(formatCatchMass(2.4),'2.4 lb');assert.equal(formatCatchMass(100000),'50 tons');});
 test('index is exactly 001–400 island first/commonest first without modifying authored identities',()=>{
  const copy=JSON.stringify(SPECIES),sorted=sortFishIndex();assert.notEqual(sorted,SPECIES);assert.deepEqual(sorted.map(s=>s.number),Array.from({length:400},(_,i)=>i+1));
@@ -12,7 +12,7 @@ test('index sorting never depends on supplied number labels or filtered discover
 });
 test('cast modifiers clamp invalid and extreme inputs without touching eligibility',()=>{
  assert.equal(castLuckModifier(NaN),0);assert.equal(castLuckModifier(-100),-.1);assert.equal(castLuckModifier(100),.1);
- for(let i=0;i<20;i++)for(const power of [0,.5,1])assert.ok(eligibleSpecies(i,i*2).includes(pickSpecies(i,i*2,()=>.6,power)));
+ for(let i=0;i<20;i++)for(const power of [0,.5,1]){const b=eligibleSpecies(i,0).length?0:eligibleSpecies(i,BAITS.length-1).length?BAITS.length-1:BAITS.findIndex((_,n)=>eligibleSpecies(i,n).length);if(b>=0)assert.ok(eligibleSpecies(i,b).includes(pickSpecies(i,b,()=>.6,power)));}
 });
 test('fight progress remains independent of distance, charge and shoreline luck',()=>{
  const text=readFileSync(new URL('../main.js',import.meta.url),'utf8');const start=text.indexOf('// Green progress depends'),end=text.indexOf('G.progress = clamp',start),rule=text.slice(start,end);

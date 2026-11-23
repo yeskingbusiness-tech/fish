@@ -20,7 +20,7 @@ test('all nineteen level stretches have bounded repeat-catch budgets without dis
  assert.equal(islandProgressionRows().at(-1).xpNeeded,0);
 });
 test('higher bait/cast luck increases repeat XP offshore; shore is slower',()=>{
- for(let i=0;i<20;i++){const a=expectedCatchXP(i,i*2),b=expectedCatchXP(i,i*2+1);assert.ok(b>a);assert.ok(expectedCatchXP(i,i*2+1,{shorePenalty:-.95})<b);assert.ok(expectedCatchXP(i,i*2+1,{castPower:1})>expectedCatchXP(i,i*2+1,{castPower:0}));}
+ for(const row of islandProgressionRows()){const i=row.id,a=expectedCatchXP(i,row.arrival.baitIndex),b=expectedCatchXP(i,row.local.baitIndex);assert.ok(b>=a);assert.ok(expectedCatchXP(i,row.local.baitIndex,{shorePenalty:-.95})<=b);assert.ok(expectedCatchXP(i,row.local.baitIndex,{castPower:1})>expectedCatchXP(i,row.local.baitIndex,{castPower:0}));}
 });
 test('invalid rewards and audit inputs stay bounded',()=>{
  for(const s of SPECIES){assert.equal(catchXP(s,s.maxW*2),catchXP(s,s.maxW));for(const w of [-1,NaN,Infinity])assert.ok(catchXP(s,w)>0);}

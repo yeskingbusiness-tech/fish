@@ -36,7 +36,7 @@ module.exports=async function testPerformance(browser,url,shots){
     await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>window.__reelDeal);await startGame(page);
     assert.equal(await page.locator('#logList .log-item,#logList img,#logList path').count(),0,'closed history stays unbuilt at boot');
     assert.equal(await page.evaluate(()=>__reelDeal.performanceStats.icons.images),0);
-    await page.evaluate(()=>{__reelDeal.saveGame();window.perfSave=localStorage.getItem('reel-deal-save-v9');});
+    await page.evaluate(()=>{__reelDeal.saveGame();window.perfSave=localStorage.getItem('reel-deal-save-v10');});
 
     metrics.index=await page.evaluate(()=>{const start=performance.now();__reelDeal.openIndex();const e=document.getElementById('fishGrid');return {synchronousMs:performance.now()-start,elements:e.querySelectorAll('*').length,paths:e.querySelectorAll('path').length,markupBytes:e.innerHTML.length};});
     assert.equal(await page.locator('#fishGrid img.fish-thumbnail').count(),400);assert.equal(metrics.index.paths,0);assert.ok(metrics.index.elements<6500);
@@ -84,7 +84,7 @@ module.exports=async function testPerformance(browser,url,shots){
     await page.evaluate(()=>{const a=__reelDeal;for(let n=0;n<16;n++){a.openIndex();a.closeIndex();a.openFishBag();a.selectBagTab('rods');a.closeBag();}});
     await frame(page);
     assert.deepEqual(await page.evaluate(()=>__reelDeal.performanceStats.icons),{images:400,observers:0,pending:0},'cancelled lazy callbacks neither leak observers nor rebuild images');
-    assert.equal(await page.evaluate(()=>{__reelDeal.saveGame();return localStorage.getItem('reel-deal-save-v9')===window.perfSave;}),true);
+    assert.equal(await page.evaluate(()=>{__reelDeal.saveGame();return localStorage.getItem('reel-deal-save-v10')===window.perfSave;}),true);
 
     await page.click('#logBtn');await ready(page,'logList');
     assert.equal(await page.locator('#logList .log-item').count(),200);assert.equal(await page.locator('#logList path').count(),0);
@@ -131,7 +131,7 @@ module.exports=async function testPerformance(browser,url,shots){
     await page.evaluate(async()=>{const T=await import('three');window.originalDelta=T.Clock.prototype.getDelta;window.qualityDt=1/60;T.Clock.prototype.getDelta=function(){const real=window.originalDelta.call(this);return window.qualityDt??real;};});
     await startGame(page);await frame(page,180);
     assert.equal(await page.evaluate(()=>__reelDeal.renderer.getPixelRatio()),1.5);
-    await page.evaluate(()=>{__reelDeal.saveGame();window.qualitySave=localStorage.getItem('reel-deal-save-v9');window.qualityDt=1/25;});
+    await page.evaluate(()=>{__reelDeal.saveGame();window.qualitySave=localStorage.getItem('reel-deal-save-v10');window.qualityDt=1/25;});
     await page.waitForFunction(()=>__reelDeal.renderer.getPixelRatio()<1.5);
     const reduced=await page.evaluate(()=>__reelDeal.renderer.getPixelRatio());
     await page.setViewportSize({width:390,height:844});await page.waitForFunction(()=>Math.abs(__reelDeal.camera.aspect-innerWidth/innerHeight)<1e-9);
@@ -143,7 +143,7 @@ module.exports=async function testPerformance(browser,url,shots){
     const recovered=await page.evaluate(()=>__reelDeal.renderer.getPixelRatio());
     assert.ok(recovered>paused);
     await page.evaluate(()=>window.qualityDt=2);await frame(page,20);assert.equal(await page.evaluate(()=>__reelDeal.renderer.getPixelRatio()),recovered,'tab-resume/long-task-sized delta is ignored');
-    assert.equal(await page.evaluate(()=>{const a=__reelDeal;a.saveGame();const canvas=document.getElementById('scene'),q=a.renderer.getPixelRatio();return canvas.width===Math.floor(innerWidth*q)&&canvas.height===Math.floor(innerHeight*q)&&canvas.getBoundingClientRect().width===innerWidth&&localStorage.getItem('reel-deal-save-v9')===window.qualitySave;}),true,'only canvas resolution changes, not CSS/UI size or saves');
+    assert.equal(await page.evaluate(()=>{const a=__reelDeal;a.saveGame();const canvas=document.getElementById('scene'),q=a.renderer.getPixelRatio();return canvas.width===Math.floor(innerWidth*q)&&canvas.height===Math.floor(innerHeight*q)&&canvas.getBoundingClientRect().width===innerWidth&&localStorage.getItem('reel-deal-save-v10')===window.qualitySave;}),true,'only canvas resolution changes, not CSS/UI size or saves');
     await page.evaluate(async()=>{const T=await import('three');T.Clock.prototype.getDelta=window.originalDelta;});
     metrics.quality={reduced,recovered};assert.deepEqual(errors,[]);
     console.log('PASS: actual renderer continuously reduces/recovers resolution after startup, preserves reduction across orientation changes, ignores menu/long-pause frames and leaves sharp UI/save data alone');

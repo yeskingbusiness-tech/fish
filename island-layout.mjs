@@ -62,8 +62,10 @@ export function islandSurfaces(island){
     {minX:l-5,maxX:l+5,minZ:1,maxZ:17,height:.95,kind:'land'},
     {minX:l-5.5,maxX:l+5.5,minZ:-1,maxZ:17,height:.5,kind:'shore'},
     {minX:-27,maxX:27,minZ:13,maxZ:56,height:.95,kind:'land'},
+    ...(island.id===0?[{minX:-50,maxX:50,minZ:13,maxZ:106,height:.95,kind:'home-land'}]:[]),
     // 58 × 46 instead of 60 × 48: a slightly narrower physical sand shelf.
     {minX:-29,maxX:29,minZ:11,maxZ:57,height:.5,kind:'shore'},
+    ...(island.id===0?[{minX:-52,maxX:52,minZ:2,maxZ:107,height:.5,kind:'home-shore'}]:[]),
     ...[...island.landforms,...island.waterObstacles].map(f=>({minX:f.x-f.w/2,maxX:f.x+f.w/2,minZ:f.z-f.d/2,maxZ:f.z+f.d/2,height:f.h-.8,kind:'rock'})),
   ];
 }

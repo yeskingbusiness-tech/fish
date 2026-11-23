@@ -1,14 +1,14 @@
-import { SPECIES, RODS, LINES, BAITS, roundWeight } from './game-data.mjs?v=44';
-import { BOATS, ISLANDS, xpForLevel, levelForXp, legacyCatchXP, hasIslandLicense, completedCollections } from './archipelago.mjs?v=44';
+import { SPECIES, RODS, LINES, BAITS, GEAR_ISLAND_STEPS, GEAR_SOURCE_INDICES, roundWeight } from './game-data.mjs?v=45';
+import { BOATS, ISLANDS, xpForLevel, levelForXp, legacyCatchXP, hasIslandLicense, completedCollections } from './archipelago.mjs?v=46';
 import { LEGACY_V8_SPECIES } from './legacy-v8-data.mjs?v=44';
 import { ALL_CATCH_SPECIES, LEGACY_SPECIES, LEGACY_ISLAND_MAP, replacementFor } from './legacy-catalog.mjs?v=44';
 import { validBoatPose, returnBoatPose, territoryAt } from './navigation.mjs?v=44';
 import { WORLD_LAYOUT_VERSION } from './island-data.mjs?v=44';
 import { V41_ISLAND_ANCHORS, validV41BoatPose } from './legacy-v41-world.mjs?v=44';
-import { islandToWorld } from './island-layout.mjs?v=44';
-export const SAVE_VERSION=9;
-export const SAVE_KEY='reel-deal-save-v9';
-export const LEGACY_KEYS=['reel-deal-save-v8','reel-deal-save-v7','reel-deal-save-v6','reel-life-3d-save-v6'];
+import { islandToWorld } from './island-layout.mjs?v=45';
+export const SAVE_VERSION=10;
+export const SAVE_KEY='reel-deal-save-v10';
+export const LEGACY_KEYS=['reel-deal-save-v9','reel-deal-save-v8','reel-deal-save-v7','reel-deal-save-v6','reel-life-3d-save-v6'];
 const finite=(n,fallback=0)=>Number.isFinite(Number(n))?Math.max(0,Number(n)):fallback;
 const integer=n=>Math.min(Number.MAX_SAFE_INTEGER,Math.floor(finite(n)));
 const ids=(items,max)=>[...new Set([0,...(Array.isArray(items)?items:[]).filter(n=>Number.isInteger(n)&&n>=0&&n<max)])].sort((a,b)=>a-b);
@@ -52,7 +52,27 @@ export function migrateV8(d,legacyV6=false){
   return {...d,version:9,xp,zone,boat,ownedBoats:oldBoats,owned,gear,equipmentArchive,
     licenses:oldLicenses.map(i=>LEGACY_ISLAND_MAP[i]),visited:ids(d.visited,6).map(i=>LEGACY_ISLAND_MAP[i]),completedIslands:earned,discoveries,bag,log,best,sailing:null};
 }
-// v9 remains the collection schema; worldLayout versions position semantics.
+function migrateV9Equipment(d){
+  const toNew=old=>{
+    if(!Number.isInteger(old)||old<0)return 0;
+    if(old===40)return 1;
+    const island=Math.floor(old/2);
+    let best=0;for(let i=0;i<GEAR_ISLAND_STEPS.length;i++)if(GEAR_ISLAND_STEPS[i]<=island)best=i;
+    return best;
+  };
+  const owned={},gear={},equipmentArchive={...(d.equipmentArchive||{})};
+  for(const kind of ['rod','line','bait']){
+    const prior=Array.isArray(d.owned?.[kind])?d.owned[kind]:[];
+    owned[kind]=[...new Set(prior.filter(n=>Number.isInteger(n)&&n>=0&&n<=40).map(toNew))].sort((a,b)=>a-b);
+    const hasSavedGear=Number.isInteger(d.gear?.[kind]),equipped=hasSavedGear?toNew(d.gear[kind]):0;
+    if(hasSavedGear&&!owned[kind].includes(equipped))owned[kind].push(equipped);
+    owned[kind].sort((a,b)=>a-b);
+    equipmentArchive[kind]=[...new Set([...(equipmentArchive[kind]||[]),...prior])];
+    gear[kind]=equipped;
+  }
+  return {...d,version:10,owned,gear,equipmentArchive};
+}
+// v10 keeps the collection schema; worldLayout versions position semantics.
 // Old v41 sailing coordinates use the frozen 4×5 grid, never the new chart.
 function restoreWorldPose(p,layoutVersion,zone,boat,licenses){
   if(!p||!['x','z','yaw'].every(k=>Number.isFinite(p[k])))return null;
@@ -65,6 +85,7 @@ function restoreWorldPose(p,layoutVersion,zone,boat,licenses){
 export function normalizeSave(raw={},legacyV6=false){
   let d=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
   if(legacyV6||integer(d.version)<9)d=migrateV8(d,legacyV6);
+  if(integer(d.version)<10)d=migrateV9Equipment(d);
   const owned={},gear={};for(const [kind,list]of Object.entries({rod:RODS,line:LINES,bait:BAITS})){owned[kind]=ids(d.owned?.[kind],list.length);gear[kind]=owned[kind].includes(d.gear?.[kind])?d.gear[kind]:0;}
   const bag=decodeFish(d.bag),log=decodeFish(d.log),discoveries={};
   for(const sp of ALL_CATCH_SPECIES){const r=d.discoveries?.[sp.id];if(integer(r?.count)>0)discoveries[sp.id]={count:integer(r.count),best:finite(r.best),first:typeof r.first==='string'?r.first:''};}
@@ -85,8 +106,8 @@ export function normalizeSave(raw={},legacyV6=false){
   if(sailing)zone=territoryAt(sailing.x,sailing.z)??zone;
   const boatPosition=returnBoatPose(sailing||restoreWorldPose(d.boatPosition,d.worldLayout,zone,BOATS[boat],licenses),zone,BOATS[boat],access);
   const visited=ids(d.visited,ISLANDS.length).filter(i=>licenses.includes(i));if(!visited.includes(zone))visited.push(zone);
-  const equipmentArchive={};for(const kind of ['rod','line','bait'])equipmentArchive[kind]=Array.isArray(d.equipmentArchive?.[kind])?[...new Set(d.equipmentArchive[kind].filter(n=>Number.isInteger(n)&&n>=0&&n<24))].sort((a,b)=>a-b):[];
+  const equipmentArchive={};for(const kind of ['rod','line','bait'])equipmentArchive[kind]=Array.isArray(d.equipmentArchive?.[kind])?[...new Set(d.equipmentArchive[kind].filter(n=>Number.isInteger(n)&&n>=0&&n<41))].sort((a,b)=>a-b):[];
   const boatUpgrades={};for(const id of ownedBoats){const u=d.boatUpgrades?.[id];if(u&&['speed','stability'].includes(u.type)&&Number.isInteger(u.level)&&u.level>=1&&u.level<=3)boatUpgrades[id]={type:u.type,level:u.level};}
-  return {version:9,score:integer(d.score),caught:Math.max(integer(d.caught),log.length,bag.length),coins:integer(d.coins),xp,licenses,zone,visited,owned,gear,boat,ownedBoats,boatUpgrades,discoveries,completedIslands:completedCollections(discoveries,d.completedIslands),equipmentArchive,best,bag,log:log.slice(0,200),worldLayout:WORLD_LAYOUT_VERSION,boatPosition,sailing};
+  return {version:10,score:integer(d.score),caught:Math.max(integer(d.caught),log.length,bag.length),coins:integer(d.coins),xp,licenses,zone,visited,owned,gear,boat,ownedBoats,boatUpgrades,discoveries,completedIslands:completedCollections(discoveries,d.completedIslands),equipmentArchive,best,bag,log:log.slice(0,200),worldLayout:WORLD_LAYOUT_VERSION,boatPosition,sailing};
 }
 export { encode as encodeFish };

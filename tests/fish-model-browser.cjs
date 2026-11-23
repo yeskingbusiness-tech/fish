@@ -22,7 +22,7 @@ module.exports=async function testModels(browser,url,shots){
    }return {failures,records};
   });assert.deepEqual(models.failures,[]);assert.equal(models.records.length,520);
   fs.writeFileSync(`${shots}/model-budgets.json`,JSON.stringify(models.records));console.log('PASS all 400 current + 120 legacy GPU models, finite anatomy, rigging, private disposal and mobile draw/triangle budgets');
-  await page.evaluate(()=>{const a=__reelDeal;a.G.xp=a.xpForLevel(400);a.bag.splice(0,a.bag.length,...a.SPECIES.map(sp=>({sp,weight:sp.maxW})));a.G.discoveries=Object.fromEntries(a.SPECIES.map(sp=>[sp.id,{count:1,best:sp.maxW,first:''}]));a.updateStats();a.saveGame();window.modelSave=localStorage.getItem('reel-deal-save-v9');});
+  await page.evaluate(()=>{const a=__reelDeal;a.G.xp=a.xpForLevel(400);a.bag.splice(0,a.bag.length,...a.SPECIES.map(sp=>({sp,weight:sp.maxW})));a.G.discoveries=Object.fromEntries(a.SPECIES.map(sp=>[sp.id,{count:1,best:sp.maxW,first:''}]));a.updateStats();a.saveGame();window.modelSave=localStorage.getItem('reel-deal-save-v10');});
   // Full 400-record index still uses shared lazy images, not SVG geometry in DOM.
   await page.click('#indexBtn');assert.equal(await page.locator('.discovered').count(),400);assert.equal(await page.locator('#fishGrid img').count(),400);assert.equal(await page.locator('#fishGrid path').count(),0);await page.click('#indexClose');
   const sample=['clown-killifish','bluegill','flounder','vent-shrimp','giant-isopod','giant-sea-spider','the-last-starfish','molten-stingray','giant-oarfish','giant-squid','sperm-whale','primordial-colossus','origin'];
@@ -43,7 +43,7 @@ module.exports=async function testModels(browser,url,shots){
     await page.evaluate(()=>__reelDeal.stowFish());
    }
   }
-  assert.equal(await page.evaluate(()=>{__reelDeal.saveGame();return localStorage.getItem('reel-deal-save-v9')===window.modelSave;}),true);
+  assert.equal(await page.evaluate(()=>{__reelDeal.saveGame();return localStorage.getItem('reel-deal-save-v10')===window.modelSave;}),true);
   console.log('PASS species-specific tiny/giant sizing, actual vertex framing on desktop/portrait/landscape, both views, no first-person body, unchanged saves');
   // Every current species also passes the actual production holding and camera
   // paths, in both aspect classes, without rebuilding a 400-row bag each time.

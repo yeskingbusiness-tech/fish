@@ -37,8 +37,8 @@
     </div>
     <div class="hud-actions">
       <button id="boardBoatBtn" class="nav-btn board-boat hidden" title="Return to your parked boat from anywhere. Finish your cast first." aria-label="Board or return to your boat (R)"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 14h18l-3 6H6zM7 14V9h10v5M12 9V3m0 0 4 3m-4-3L8 6"/></svg></span><span id="boardBoatLabel">Board boat</span><kbd>R</kbd></button>
-      <button id="activitiesBtn" class="nav-btn activity-nav"><span class="nav-icon" aria-hidden="true">✦</span> Expeditions &amp; challenges <small id="activityAlert">NEW</small></button>
-      <button id="aquariumBtn" class="nav-btn"><span class="nav-icon">◉</span> Aquarium <small id="aquariumCount">0/12</small></button>
+      <button id="activitiesBtn" class="nav-btn activity-nav"><span class="nav-icon" aria-hidden="true">✦</span> Guild quests &amp; challenges <small id="activityAlert">NEW</small></button>
+      <div class="nav-btn" aria-label="Aquarium on Reedhaven"><span class="nav-icon">◉</span> Aquarium · Reedhaven <small id="aquariumCount">0/12</small></div>
       <button id="achievementsBtn" class="nav-btn"><span class="nav-icon">★</span> Achievements</button>
       <button id="merchantBtn" class="nav-btn hidden"><span class="nav-icon">⚓</span> Traveling merchant <small>IN RANGE</small></button>
       <button id="mapBtn" class="nav-btn"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5l6-2 6 2 6-2v16l-6 2-6-2-6 2zM9 3v16m6-14v16"/></svg></span> Sea chart <kbd>M</kbd></button>
@@ -59,6 +59,7 @@
     <button id="shopBtn" class="shop-btn hidden">Rod Works <b>E</b></button>
     <button id="marketBtn" class="shop-btn market hidden">Fish Market <b>E</b></button>
     <button id="portBtn" class="shop-btn port hidden">Boatyard &amp; Dock <b>E</b></button>
+    <button id="contextHint" class="interaction-hint hidden" aria-label="Interact with nearby character or building"></button>
     <div id="lockHint" class="lock-hint hidden">Click to look around</div>
     <div id="stick" class="stick hidden"><div class="stick-knob"></div></div>
     <div id="boatControls" class="boat-controls hidden"><button id="boatModeBtn">Stop &amp; fish · Q</button><button id="dockBoatBtn">Approach a dock</button></div>
@@ -102,7 +103,7 @@
     </div>
   </div>
   <div id="activitiesOverlay" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="activitiesTitle">
-    <section class="activities-card"><header class="shop-head"><div><span class="eyebrow">FIELD OPERATIONS</span><h2 id="activitiesTitle">Expeditions &amp; Challenges</h2></div><button id="activitiesClose" class="shop-close" aria-label="Close activities">✕</button></header>
+    <section class="activities-card"><header class="shop-head"><div><span class="eyebrow">FIELD OPERATIONS</span><h2 id="activitiesTitle">Guild Quests &amp; Challenges</h2></div><button id="activitiesClose" class="shop-close" aria-label="Close activities">✕</button></header>
       <div class="activity-weather-line" id="activityWeather"></div><div id="activityContent" class="activity-content"></div>
     </section>
   </div>
@@ -123,11 +124,11 @@
   <button id="restoreHudBtn" class="restore-hud hidden" aria-label="Show HUD. Tap or click anywhere, or press H or Escape."><span id="hudRestoreHint" class="hud-restore-hint"></span></button>
 
   <div id="chartOverlay" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="chartTitle">
-    <div class="expedition-card"><div class="shop-head"><div><span class="eyebrow">THE REEL DEAL ARCHIPELAGO</span><h2 id="chartTitle">Choose your next horizon.</h2></div><button id="chartClose" class="shop-close" aria-label="Close sea chart">✕</button></div>
-      <div class="expedition-tabs"><button id="destinationsTab" class="tab active">Sea chart</button><button id="boatsTab" class="tab">Boat shop <span id="boatCoins"></span></button></div>
+    <div class="chart-panel"><div class="shop-head"><div><span class="eyebrow">THE REEL DEAL ARCHIPELAGO</span><h2 id="chartTitle">Choose your next horizon.</h2></div><button id="chartClose" class="shop-close" aria-label="Close sea chart">✕</button></div>
+      <div class="chart-tabs"><button id="destinationsTab" class="tab active">Sea chart</button><button id="boatsTab" class="tab">Boat shop <span id="boatCoins"></span></button></div>
       <div id="chartView" class="chart-layout"><div class="sea-chart" id="seaChart" role="group" aria-label="North-up sea chart. Select a numbered island for its name, level and waypoint."></div><div id="destinationDetail" class="destination-detail"></div></div>
       <div id="fleetView" class="fleet-grid hidden"></div>
-      <div class="expedition-foot" id="chartFooter"></div>
+      <div class="chart-foot" id="chartFooter"></div>
     </div>
   </div>
   <div id="indexOverlay" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="indexTitle">
@@ -147,9 +148,9 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
   <aside id="logDrawer" class="drawer hidden" role="dialog" aria-modal="true" aria-label="Catch log"><div class="drawer-head"><h3>Catch Log</h3><div class="drawer-actions"><button id="resetBtn" class="ghost-btn">Reset</button><button id="closeLog" aria-label="Close catch log">✕</button></div></div><dl class="log-records"><div><dt>TOTAL CATCHES</dt><dd id="caughtCount">0</dd></div><div><dt>BEST FISH</dt><dd id="bestNum">—</dd><dd id="bestFishName" class="best-fish-name">No catches yet</dd></div></dl><div id="logList"><p class="empty">No fish yet. Cast your line!</p></div><div class="drawer-foot" id="logSummary"></div></aside>
   <div id="startOverlay" class="start-overlay">
-    <div class="start-card"><span class="update-badge">THE OPEN WATER UPDATE</span><div class="start-art" id="startArt"></div><h2>REEL DEAL <span>3D</span></h2><p class="start-lead">A little boat. A bigger world.</p><p>Twenty distinct islands. Four hundred secrets beneath the surface. Take the helm and find your own fishing spot.</p><div class="start-features"><span>20 <small>ISLANDS</small></span><span>400 <small>FISH</small></span><span>8 <small>BOATS</small></span></div><ul><li><b>WASD</b> to walk or steer · <b>Q</b> stop &amp; fish</li><li><b>Hold &amp; release</b> to cast · Space to hook</li><li><b>Green</b> reels in · avoid red tension</li><li><b>Catch</b> to level up · sell to buy gear &amp; boats</li><li><b>E</b> at stalls / dock · <b>M</b> chart · <b>F</b> index · <b>B</b> bag</li><li><b>V</b> front view · <b>X</b> put fish away · <b>?</b> Help</li></ul><button id="startBtn" class="primary-btn big">Let’s go fishing →</button><p class="tiny">Progress saves automatically on this device.</p></div>
+    <div class="start-card"><span class="update-badge">THE OPEN WATER UPDATE</span><div class="start-art" id="startArt"></div><h2>REEL DEAL <span>3D</span></h2><p class="start-lead">A little boat. A bigger world.</p><p>Twenty distinct islands. Four hundred secrets beneath the surface. Take the helm and find your own fishing spot.</p><div class="start-features"><span>20 <small>ISLANDS</small></span><span>400 <small>FISH</small></span><span>8 <small>BOATS</small></span></div><ul><li><b>WASD</b> to walk or steer · <b>Q</b> stop &amp; fish</li><li><b>Hold &amp; release</b> to cast · Space to hook</li><li><b>Green</b> reels in · avoid red tension</li><li><b>Catch</b> to level up · sell to buy gear &amp; boats</li><li><b>E</b> at stalls, dock, town buildings or NPCs · <b>M</b> chart · <b>F</b> index · <b>B</b> bag</li><li><b>V</b> front view · <b>X</b> put fish away · <b>?</b> Help</li></ul><button id="startBtn" class="primary-btn big">Let’s go fishing →</button><p class="tiny">Progress saves automatically on this device.</p></div>
   </div>
 </div>
-<script type="module" src="main.js?v=44"></script>
+<script type="module" src="main.js?v=48"></script>
 </body>
 </html>

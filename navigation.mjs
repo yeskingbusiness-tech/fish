@@ -1,7 +1,7 @@
 // Pure boating geometry. The level barriers are invisible vertical cylinders;
 // swept movement prevents fast boats/large frames from tunnelling through them.
-import { ISLANDS, hasIslandLicense } from './archipelago.mjs?v=44';
-import { islandToWorld, islandRectToWorld, islandSurfaces } from './island-layout.mjs?v=44';
+import { ISLANDS, hasIslandLicense } from './archipelago.mjs?v=46';
+import { islandToWorld, islandRectToWorld, islandSurfaces } from './island-layout.mjs?v=45';
 export const TERRITORY_RADIUS=300; // 7.44× the old 110m territory area.
 export const SHORE_FULL_PENALTY_DISTANCE=6;
 export const SHORE_CLEAR_DISTANCE=48;

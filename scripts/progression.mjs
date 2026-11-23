@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
-import { BAITS,eligibleSpecies,speciesChance,rollWeight,roundWeight } from '../game-data.mjs';
+import { BAITS,GEAR_ISLAND_STEPS,eligibleSpecies,speciesChance,rollWeight,roundWeight } from '../game-data.mjs';
 import { ISLANDS,MAX_LEVEL,xpForLevel,catchXP } from '../archipelago.mjs';
 const cache=new Map();
 export function expectedCatchXP(island,baitIndex,{samples=256,castPower=.5,shorePenalty=0}={}){
@@ -16,8 +16,10 @@ export function expectedCatchXP(island,baitIndex,{samples=256,castPower=.5,shore
 }
 export function islandProgressionRows(options={}){return ISLANDS.map(i=>{
   const fromLevel=i.level,toLevel=ISLANDS[i.id+1]?.level??MAX_LEVEL,xpNeeded=xpForLevel(toLevel)-xpForLevel(fromLevel);
-  const setup=baitIndex=>{const xp=expectedCatchXP(i.id,baitIndex,options);return {baitIndex,bait:BAITS[baitIndex].name,xp,catches:xp?xpNeeded/xp:null};};
-  return {id:i.id,island:i.short,fromLevel,toLevel,xpNeeded,arrival:setup(Math.max(0,i.id*2-1)),local:setup(i.id*2+1)};
+  const available=BAITS.map((_,n)=>n).filter(n=>GEAR_ISLAND_STEPS[n]<=i.id&&eligibleSpecies(i.id,n).length);
+  const setup=baitIndex=>{const xp=expectedCatchXP(i.id,baitIndex,options);return {baitIndex,bait:BAITS[baitIndex]?.name||'No local bait yet',xp,catches:xp?xpNeeded/xp:null};};
+  const local=available.at(-1)??0,arrival=available.at(-2)??local;
+  return {id:i.id,island:i.short,fromLevel,toLevel,xpNeeded,arrival:setup(arrival),local:setup(local)};
 });}
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   console.log('Future catches: ×0.90 base XP ×1.20 leveling boost. Neutral offshore repeats only; no discoveries, no boat travel time.');

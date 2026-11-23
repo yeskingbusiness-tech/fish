@@ -21,25 +21,35 @@ export const SPECIES=Object.freeze(COLLECTION_ROSTER.map(row=>{
 const order=new Map(SPECIES.map((sp,i)=>[sp.id,i]));
 export function sortFishIndex(items=SPECIES){return [...items].sort((a,b)=>a.island-b.island||RARITY[a.rarity].tier-RARITY[b.rarity].tier||order.get(a.id)-order.get(b.id));}
 
-// Two meaningful tiers per island. Local upgrades are 18% stronger; crossing
-// to the next kit is another 31%, instead of dozens of near-identical items.
+// Historical 40-tier definitions are retained as a migration/catalog source;
+// the live shops expose only the curated twelve-tier progression below.
 const entry=[0,500,1300,3200,7500,17000,38000,83000,180000,390000,830000,1750000,3650000,7600000,15800000,32800000,68000000,141000000,292000000,605000000];
 export const GEAR_ENTRY_PRICES=Object.freeze(entry);
 const round=n=>Math.round(n/10)*10;
 const price=(island,rung,kind)=>island===0?(rung?round([100,80,140][kind]*1.45):0):round((rung?entry[island]*[1.6,1.45,1.8][kind]:entry[island])*1.28);
-export const RODS=Object.freeze([...ISLANDS.flatMap(i=>[0,1].map(r=>Object.freeze({id:'rod'+(i.id*2+r),island:i.id,
+export const LEGACY_RODS=Object.freeze([...ISLANDS.flatMap(i=>[0,1].map(r=>Object.freeze({id:'rod'+(i.id*2+r),island:i.id,
   name:i.id===0?['Bamboo Pole','Willow Rod'][r]:`${i.stock} ${r?'Master Rod':'Rod'}`,color:i.accent,cost:price(i.id,r,0),
   cast:12+i.id*5+r*2,power:1.55**i.id*1.18**r,tension:1.55/Math.sqrt(1.55**i.id*1.18**r),reel:+(.75+i.id*.09+r*.035).toFixed(3)}))),Object.freeze({id:'rod-reedhaven-elite',island:0,name:'Reedhaven River Rod',color:ISLANDS[0].accent,cost:320,cast:19,power:1.55**.0*1.18**2.2,tension:1.55/Math.sqrt(1.18**2.2),reel:.87})]);
-export const LINES=Object.freeze([...ISLANDS.flatMap(i=>[0,1].map(r=>Object.freeze({id:'line'+(i.id*2+r),island:i.id,
+export const LEGACY_LINES=Object.freeze([...ISLANDS.flatMap(i=>[0,1].map(r=>Object.freeze({id:'line'+(i.id*2+r),island:i.id,
   name:i.id===0?['Cotton Twine','Reinforced Mono'][r]:`${i.stock} ${r?'Braided':'Woven'} Line`,color:i.accent,cost:price(i.id,r,1),
   rating:Math.round(3*2.18**i.id*1.8**r),control:1.55**i.id*1.18**r,strain:1.6/Math.sqrt(1.55**i.id*1.18**r)}))),Object.freeze({id:'line-reedhaven-elite',island:0,name:'Reedhaven Braided Line',color:ISLANDS[0].accent,cost:290,rating:18,control:1.55**2.2,strain:1.6/Math.sqrt(1.55**2.2)})]);
-export const BAITS=Object.freeze([...ISLANDS.flatMap(i=>[0,1].map(r=>{
+export const LEGACY_BAITS=Object.freeze([...ISLANDS.flatMap(i=>[0,1].map(r=>{
   const [lo,hi]=ISLAND_RARITIES[i.id];
   // Both local baits cover every local rarity; premium bait improves luck
   // and weight without losing any eligible small species.
   return Object.freeze({id:'bait'+(i.id*2+r),island:i.id,name:i.id===0?['Garden Worm','Golden Corn'][r]:`${i.stock} ${r?'Lure':'Bait'}`,
     color:i.accent,cost:price(i.id,r,2),lo,hi,luck:+(i.id*.22+r*.08).toFixed(2),weightBonus:+((i.id*2+r)*.005).toFixed(3)});
 })),Object.freeze({id:'bait-reedhaven-elite',island:0,name:'Reedhaven Minnow Lure',color:ISLANDS[0].accent,cost:380,lo:ISLAND_RARITIES[0][0],hi:ISLAND_RARITIES[0][1],luck:.16,weightBonus:.2})]);
+
+// Curated, memorable kit milestones replace the former 40-step ladders. Each
+// category uses the same twelve island gates so saves, vendors, and progression
+// stay aligned while every displayed upgrade makes a substantial jump.
+export const GEAR_SOURCE_INDICES=Object.freeze([0,40,7,11,15,19,21,25,29,33,35,39]);
+export const GEAR_ISLAND_STEPS=Object.freeze([0,0,3,5,7,9,10,12,14,16,17,19]);
+const curate=list=>Object.freeze(GEAR_SOURCE_INDICES.map((source,index)=>Object.freeze({...list[source],tier:index,cost:source===0?0:source===40?Math.round(list[source].cost*.45/10)*10:Math.round(list[source].cost*.5/10)*10})));
+export const RODS=curate(LEGACY_RODS);
+export const LINES=curate(LEGACY_LINES);
+export const BAITS=Object.freeze(GEAR_SOURCE_INDICES.map((source,tier)=>Object.freeze({...LEGACY_BAITS[source],tier,cost:source===0?0:Math.round(LEGACY_BAITS[source].cost*(source===40?.5:.5)/10)*10,weightBonus:+(tier*.012).toFixed(3)})));
 
 // Rare tiny animals are still valuable. This is an economy scale, not a mass
 // scale. The explicit 15% reduction applies once before collection rewards.

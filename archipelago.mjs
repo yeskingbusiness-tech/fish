@@ -1,4 +1,4 @@
-import { SPECIES, RODS, LINES, BAITS, RARITY, RARITY_ORDER, ISLAND_RARITIES, fishValue } from './game-data.mjs?v=44';
+import { SPECIES, RODS, LINES, BAITS, RARITY, RARITY_ORDER, ISLAND_RARITIES, GEAR_ISLAND_STEPS, fishValue } from './game-data.mjs?v=45';
 import { ISLANDS, MAX_LEVEL, GEAR_PER_ISLAND } from './island-data.mjs?v=44';
 export { ISLANDS, MAX_LEVEL, GEAR_PER_ISLAND };
 const ISLAND_SPECIES=ISLANDS.map(i=>SPECIES.filter(s=>s.island===i.id));
@@ -11,8 +11,8 @@ export function completedCollections(discoveries={},earned=[]){
 }
 export function collectionCoinBonus(discoveries={},earned=[]){return completedCollections(discoveries,earned).length*ISLAND_COLLECTION_BONUS;}
 export function fishSaleValue(sp,weight,discoveries={},earned=[]){return Math.round(fishValue(sp,weight)*(100+collectionCoinBonus(discoveries,earned))/100);}
-export const gearIsland=tier=>tier===40?0:Math.floor(tier/GEAR_PER_ISLAND);
-export function localGearPriceCeiling(island){return !Number.isInteger(island)||!ISLANDS[island]?0:Math.max(...[RODS,LINES,BAITS].flatMap(list=>list.filter(g=>g.island===island).map(g=>g.cost)));}
+export const gearIsland=tier=>GEAR_ISLAND_STEPS[tier]??0;
+export function localGearPriceCeiling(island){if(!Number.isInteger(island)||!ISLANDS[island])return 0;const prices=[RODS,LINES,BAITS].flatMap(list=>list.filter(g=>g.island===island).map(g=>g.cost));return prices.length?Math.max(...prices):0;}
 
 // Optional vessels: no boat has a territory range or license requirement.
 // All eight can reach all twenty territories. Only speed and physical size vary.

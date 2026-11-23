@@ -1,10 +1,10 @@
 # Reel Deal 3D · Open Water
 
-**20 unique cube-built islands · 400 collection entries · 12 rarities · 8 manually driven boats.**
+**20 unique cube-built islands · 400 collection entries · 12 rarities · 8 manually driven boats · 12 curated rods, lines and baits.**
 
 The environment, shops, boats and basic angler are cuboid-built. **The fish are not cubes:** anatomical sculpts, fins, jaws, tails, shells, legs and tentacles also generate their matching illustrated thumbnails.
 
-Version **2.3.0**, browser cache **v44**, save schema **v9**, world layout **2**. Static browser game; no build, account, backend or runtime dependency installation required.
+Version **2.3.0**, browser cache **v48**, save schema **v10**, world layout **2**. Static browser game; no build, account, backend or runtime dependency installation required.
 
 ## Run
 
@@ -40,7 +40,7 @@ Luck is sampled at the **angler's position on cast release**, not the bobber's l
 
 ## The twenty territories
 
-Each has **20 numbered entries, two rods, two lines and two baits**. That's **40 of each equipment category**, with meaningful control and luck jumps rather than four small local steps. Premium local bait keeps the entire local rarity range; no hidden weight gate excludes small species.
+Each island has **20 numbered fish entries**. Equipment uses **12 curated tiers per category**—12 rods, 12 lines and 12 baits—across milestone territories, with larger performance steps rather than dozens of incremental purchases. Every fish remains catchable with at least one bait, and bait eligibility remains rarity-based, never size-gated.
 
 | # | Island | Level | Environment / landmark |
 | --- | --- | --- | --- |
@@ -67,7 +67,7 @@ Each has **20 numbered entries, two rods, two lines and two baits**. That's **40
 
 Each island now has its own stepped voxel landform profile as well as its landmark: Reedhaven reedbanks; Pinewater split stream-knolls; Ironwood tiered falls; Brackwater mangrove pools; Sunscar a ringed lagoon; Coralreach branching reef towers; Breaker broken sea cliffs; Stormbreak basalt blades; Thornwild braided delta; Emberforge a caldera; Frostfall fractured ice shelves; Skyglass twin fjord walls; Shattered a canyon cleft; Leviathan's fossil ribs; Ashen chimney fields; Moontide temple terraces; Starfall a meteor crater; Null a split rift; Eternity pinched strata; and Origin concentric spring terraces. Big landforms are built from shrinking, offset cuboid layers—not smooth meshes or giant plain boxes. Water channels sit flush with the terrain, and all island scenery is merged into existing batched meshes.
 
-**Every island has a distinct authored shop arrangement** too: docking orientation/berth side, pier offsets, paths, trees, lamps and landmark placement vary. Rendering, walking/boat collision, counter approaches, spawn points and map footprints use the same orthogonal transforms. Paths connect each counter to the pier without running through another stall. Roofs use local craft: timber, vines, coral, snow/icicles, forge chimneys or stone temple details.
+**Reedhaven is the central service harbor.** Fish can be sold at only five markets: Reedhaven and four outposts. A few islands have specialist supply stalls; many have no shops. Island docking orientation, paths, trees, lamps and landmarks remain individually authored, and service counters use the same world transforms as rendering and navigation.
 
 ## Collection and fishing
 
@@ -104,15 +104,17 @@ Hold click / Space and release to cast; click / Space on a bite to hook. During 
 - The original cumulative XP curve is extended to **level 400**. Existing coins and XP are never reduced. Audits budget actual repeat-catch pools and weight quantiles, not guaranteed discoveries or destination-only bait.
 - Offshore audits exclude sailing time, missed catches and collection bonuses. Returning to the market and choosing an offshore spot add play time; the scripts do not claim fixed minutes per level.
 
-## Storage, aquariums, merchants, mutations, secrets and achievements
+## Reedhaven hub and NPC questlines
+
+Reedhaven’s expanded home island is the central harbor and service town. The harbor remains the boat spawn and departure point; the walkable village has a physical aquarium, Angler Warehouse, Anglers Guild, stalls, market and named quest givers. Walk up to a building or character and press **E** (or tap the on-screen prompt) to interact. The warehouse opens fish storage, the guild opens quest and challenge tracking, and the aquarium opens your collection. NPC quests are optional and award coins/XP for fishing, exploration, species discovery, and boat progression.\n\n## Storage, aquariums, merchants, mutations, secrets and achievements
 
 Fish storage is limited: the angler starts with **20 personal slots**, and every boat has its own hold (from 8 slots on the starter hull up to 60 on the largest boat). The Bag shows both capacities. Transfer catches while aboard or at a boatyard; expand personal or current-boat storage with coins. If both available spaces are full, casting is blocked until you make room. Markets can buy directly from your personal bag and current boat hold. Rare catches have a small chance to be **Shiny**; unusually heavy rolls can become **Huge**. Mutations are labeled in caught-fish displays and the guide, Shiny fish gleam in hand and in the aquarium, Huge fish display at larger scale, and both sell for a bonus.
 
-Use **Display** on a catch in the Bag to put it into your **Personal Aquarium** (12 spaces to start). The Aquarium presents the actual fish models swimming in a 3D tank; its visiting-merchant permit expands display capacity. Fish can be returned to your personal bag if there is room, and displayed catches are protected from selling.
+At the physical Reedhaven Aquarium, interact with its building and use **Display** on a catch in the Bag to place it into one of the walk-in tanks (12 spaces to start). Actual 3D fish models swim in the tanks and are also shown in the aquarium collection panel. The traveling merchant sells capacity permits. Displayed fish can be retrieved to your bag when there is room and are protected from sale.
 
-A **Traveling Merchant** sails between islands and moves on every 15 minutes. Watch for its distinctive dark-hulled boat and the HUD visitor alert when you draw near. Stock rotates with the visit and is limited: look for aquarium permits, recovered relics and exclusive hull cosmetics.
+A **Traveling Merchant** sails between islands and moves on every 15 minutes. Watch for its distinctive dark-hulled boat and the HUD visitor alert when you draw near. Stock rotates with the visit and is limited: look for aquarium capacity permits and exclusive hull cosmetics.
 
-Each island hides a landmark cache. Explore on foot around the local landmark to uncover its secret; each cache pays coins, XP and a relic once. The dedicated **Achievements** menu tracks milestones across catches, island indexes, weight, mutations, bosses, expeditions, secrets, exploration, fleet ownership and levels. Rewards are paid automatically when milestones are earned.
+Secrets are tied to fishing, not treasure: find the Ironwood Falls cave pool on foot, or discover the Sunscar shoal and Frostfall blue hole while sailing. Each location raises the chance of its rare signature fish, grants a one-time coin/XP reward, and is marked on your sea chart after discovery. The dedicated **Achievements** menu tracks catches, island indexes, weight, mutations, bosses, quests, exploration, aquarium displays, fleet ownership and levels. Rewards are paid automatically when milestones are earned.
 
 ## Field clues, fishing records and boat tuning
 
@@ -120,17 +122,15 @@ Expand any discovered fish in the **F** field guide to see angler clues for cond
 
 At a boat shop, equip a boat to tune its hull. Pick one specialization per boat: **Speed Rig** adds 12% speed per tier, while **Storm Stabilizer** reduces speed by 8% per tier but softens storm-driven fishing difficulty. Each has three tiers, starts at 1,200 coins and increases by 1,200 coins per tier. Specializations are permanent and hull-specific; different boats can be tuned differently. Unupgraded boats retain their original performance.
 
-## Expeditions, boss fish, weather and challenges
+## Guild quests, boss fish, weather and challenges
 
-Open **Expeditions & Challenges** from the HUD or press **J**. Activities are additions to the regular fishing loop: shops, boats, islands, collection progress, and ordinary catches remain available as before.
+Visit the physical NPCs around Reedhaven and in the archipelago, then press **E** or tap the interaction hint to open the guild request board. Accept objectives tied to catches, unique species, island visits, rarity, mutations, boat purchases and upgrades. Progress is saved and rewards grant coins and XP. The optional challenge panel remains available from the HUD or **J**.
 
-**Every unlocked island offers three expedition cards per day:** a Stormwatch Run, an Abyssal Signal boss hunt, and a rotating local objective. The rotating objective can be an Apex Trail, a Lost Cache, a three-species Field Notes survey, or a four-fish Shoal Patrol. Stormwatch asks for two catches during a real thunderstorm. Apex Trails target the island’s highest available rarity (up to Legendary), so the task is possible even on starter islands. Lost Caches point to that island’s landmark; travel there on foot and search the site. Completing a mission automatically pays its listed coins and relics. Only one expedition can be active; abandon it from the panel if you want to switch.
-
-**Boss fish** are signal-tracked encounters rather than extra entries that overwrite the 400-species index. Accept an Abyssal Signal expedition to make the next hooked fish a boss, or very rarely meet one during a storm. Bosses use a local fish’s real model and roster identity but appear at **2.2× encounter scale**, start near the upper end of its weight range, have **1.85× strength**, a narrower safe reel band and more frequent, stronger tugs. Boss profiles telegraph different surge, dive, or feint patterns. Defeating one pays an island-scaled coin bounty, **2 relics**, and boss/challenge progress; an active boss hunt grants its own additional mission reward. Five rotating identities include Tempest Crown, The Drowned Bell, Glassfin Oracle, Rootbreaker and Star-Eater. Spend **3 relics** in the exchange to prepare a Boss-Signal Lure that forces your next hooked fish into a boss encounter.
+**Boss fish** are rare location-specific encounters rather than extra entries that overwrite the 400-species index. Five authored bosses are tied to particular territories and can appear as an uncommon hooked fish. They use the normal cast, hook, reel and tension mechanics, with stronger pull, a narrower safe reel band and distinct surge, dive or feint behavior. Defeating one pays an island-scaled coin bounty and adds boss/challenge progress.
 
 Each island’s weather changes on its own deterministic **3-minute** cycle, so neighboring islands can show different conditions. Clear Skies are the baseline; Rain Squalls shorten bite waits and favor common fish, Thunderstorms shorten waits, make stronger rarities more likely and can surface surprise bosses, Sea Fog favors elusive rarities, Crosswinds lengthen waits and make the fight more demanding, and Heat Haze favors warm-water fish while reducing the chance of the highest rarities. Weather biases eligible fish—it never removes a species from its island or overrides bait eligibility. The weather badge names local conditions and shows the time until the next shift. Rain, storm, fog, wind and heat receive distinct screen atmosphere; water, sky tint and fog lighting change with the weather as well.
 
-**Three daily and four weekly challenges** are generated deterministically from the UTC calendar and saved on this device. Their objectives draw from catching, selling, rare catches, using different bait tiers, fishing in multiple islands or weather conditions, and defeating bosses. Progress is shown in the same activities panel with progress bars; completing a challenge grants coins, and weekly completions also grant a relic. Daily tasks refresh at the UTC date change; weekly tasks refresh on Monday UTC. Expedition, challenge, boss-count, and relic progress are saved alongside the existing game save.
+**Three daily and four weekly challenges** are generated deterministically from the UTC calendar and saved on this device. Their objectives draw from catching, selling, rare catches, using different bait tiers, fishing in multiple islands or weather conditions, and defeating bosses. Progress is shown in the same activities panel with progress bars; completing a challenge grants coins, Daily tasks refresh at the UTC date change; weekly tasks refresh on Monday UTC. Challenge and boss-count progress are saved alongside the existing game save.
 
 ## Bag, camera and controls
 
