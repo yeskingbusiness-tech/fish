@@ -17,7 +17,7 @@ import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindo
   eligibleSpecies, speciesChance, roundWeight, formatWeight, formatCatchMass, GEAR_PER_ISLAND, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=44';
 import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, capCatchXP, gearIsland, hasIslandLicense, travelRequirement,
   MAX_LEVEL, ISLAND_COLLECTION_BONUS, islandCollectionProgress, completedCollections, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=44';
-import { createWorld } from './world.mjs?v=48';
+import { createWorld } from './world.mjs?v=49';
 import { fishSVG, fishGeometryCacheStats } from './fish-geometry.mjs?v=44';
 import { createFishIcons } from './fish-icons.mjs?v=44';
 import { createAdaptiveQuality, memoLast, createBaitPoolLookup } from './render-performance.mjs?v=44';
