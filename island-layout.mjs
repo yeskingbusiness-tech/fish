@@ -40,12 +40,13 @@ export const ISLAND_LAYOUTS=Object.freeze(plans.map(([quarter,berthSide,offset,s
     bench:Object.freeze({x:(id%3-1)*5,z:35+(id%4)*2})});
 }));
 // Orthogonal transforms match THREE's rotation about +Y exactly.
+export const CENTRAL_ISLAND_SCALE=.5;
 export function islandToWorld(island,x,z){
-  const [c,s]=[[1,0],[0,1],[-1,0],[0,-1]][island.layout.quarter];
-  return {x:island.x+x*c+z*s,z:island.z-x*s+z*c};
+  const [c,s]=[[1,0],[0,1],[-1,0],[0,-1]][island.layout.quarter],k=island.id===0?CENTRAL_ISLAND_SCALE:1;
+  return {x:island.x+(x*c+z*s)*k,z:island.z+(-x*s+z*c)*k};
 }
 export function worldToIsland(island,x,z){
-  const [c,s]=[[1,0],[0,1],[-1,0],[0,-1]][island.layout.quarter],dx=x-island.x,dz=z-island.z;
+  const [c,s]=[[1,0],[0,1],[-1,0],[0,-1]][island.layout.quarter],k=island.id===0?CENTRAL_ISLAND_SCALE:1,dx=(x-island.x)/k,dz=(z-island.z)/k;
   return {x:dx*c-dz*s,z:dx*s+dz*c};
 }
 export function islandRectToWorld(island,rect){
@@ -53,7 +54,7 @@ export function islandRectToWorld(island,rect){
   return {...rect,island:island.id,minX:Math.min(a.x,b.x),maxX:Math.max(a.x,b.x),minZ:Math.min(a.z,b.z),maxZ:Math.max(a.z,b.z)};
 }
 export function islandSpawn(island){return {...islandToWorld(island,island.layout.dockX,4),yaw:island.layout.yaw+.35};}
-const islandRadii=island=>island.id===0?{x:132,z:108}:{x:34+(island.id%4)*4,z:30+(island.id%3)*4};
+const islandRadii=island=>island.id===0?{x:132,z:108}:{x:42+(island.id%4)*5,z:37+(island.id%3)*5};
 export function islandSurfaces(island){
   const {x:rx,z:rz}=islandRadii(island),out=[];
   // Overlapping row-bands approximate the new scalloped coast for collision,

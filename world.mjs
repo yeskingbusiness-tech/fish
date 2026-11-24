@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { ISLANDS, BOATS } from './archipelago.mjs?v=47';
-import { SEA_BOUNDS, dockLocation, territoryCenter } from './navigation.mjs?v=48';
-import { islandToWorld, worldToIsland, islandSurfaces, islandSpawn } from './island-layout.mjs?v=47';
-import { islandServices } from './island-data.mjs?v=46';
+import { ISLANDS, BOATS } from './archipelago.mjs?v=48';
+import { SEA_BOUNDS, dockLocation, territoryCenter } from './navigation.mjs?v=49';
+import { islandToWorld, worldToIsland, islandSurfaces, islandSpawn } from './island-layout.mjs?v=48';
+import { islandServices } from './island-data.mjs?v=47';
 
 // NEW VISUAL DIRECTION: storybook archipelago — luminous water, sculpted
 // crescent islands, soft silhouettes, rich colors and rounded silhouettes.
@@ -43,7 +43,7 @@ function roundedIslandShape(rx,rz,seed=1,scale=1){
   }
   shape.closePath();return shape;
 }
-function islandRadii(id){return id===0?{x:132,z:108}:{x:34+(id%4)*4,z:30+(id%3)*4};}
+function islandRadii(id){return id===0?{x:132,z:108}:{x:42+(id%4)*5,z:37+(id%3)*5};}
 function shapeMesh(shape,material,y,depth=0){
   let g;if(depth){g=new THREE.ExtrudeGeometry(shape,{depth,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.8,bevelThickness:.8,curveSegments:12});g.rotateX(-Math.PI/2);}
   else{g=new THREE.ShapeGeometry(shape,12);g.rotateX(-Math.PI/2);}
@@ -63,14 +63,14 @@ function makeBoat(id){
 }
 function makeKiosk(kind){
   const [name,accent]=storeInfo[kind],g=new THREE.Group();g.name=name;
-  const timber=mat(kind==='bait'?0x9b633a:0x865438,.88),plaster=mat(kind==='market'?0xf0dbb6:0xe7d3ad,.92),roofMat=mat(kind==='port'?0x426c7c:0x36566b,.8),trim=mat(0xf3e5c7,.86),glass=mat(0x8ed8d5,.22,{emissive:0x235c62,emissiveIntensity:.13});
+  const timber=mat(kind==='bait'?0x9b633a:0x865438,.88),plaster=mat(kind==='market'?0xb9824f:0x9e6845,.9),roofMat=mat(kind==='port'?0x445b68:0x514a41,.82),trim=mat(0xf3e5c7,.86),glass=mat(0x8ed8d5,.22,{emissive:0x235c62,emissiveIntensity:.13});
   const box=(w,h,d,m,x,y,z)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);g.add(o);return o;};
   box(9.5,.6,8.5,mat(0x77746a),0,.3,0);box(8.4,5.1,7.2,plaster,0,3.05,0);
   // Timber corner posts, lintels and a chunky pitched roof.
   for(const x of [-4.15,4.15])for(const z of [-3.5,3.5])box(.42,5.3,.42,timber,x,3.05,z);
   box(9,.35,.42,timber,0,5.35,-3.7);
-  const left=box(5.5,.72,9.2,roofMat,-2.15,6.0,0);left.rotation.z=-.48;
-  const right=box(5.5,.72,9.2,roofMat,2.15,6.0,0);right.rotation.z=.48;
+  const left=box(5.5,.72,9.2,roofMat,-2.15,6.0,0);left.rotation.z=.48;
+  const right=box(5.5,.72,9.2,roofMat,2.15,6.0,0);right.rotation.z=-.48;
   // Front door, glowing windows and striped awning face the village path (-Z).
   box(1.45,2.8,.22,mat(0x65432f),0,1.75,-3.72);box(.18,2.65,.12,mat(0xd3a56d),-.72,1.75,-3.86);box(.18,2.65,.12,mat(0xd3a56d),.72,1.75,-3.86);
   for(const x of [-2.65,2.65]){box(1.65,1.55,.2,timber,x,3.45,-3.72);box(1.35,1.25,.1,glass,x,3.45,-3.84);box(.12,1.4,.1,trim,x,3.45,-3.91);box(1.45,.12,.1,trim,x,3.45,-3.91);}
@@ -97,7 +97,7 @@ function makeCivic(id){
   const box=(w,h,d,m,x,y,z)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);g.add(o);return o;};
   box(19,.65,15,mat(0x77736b),0,.32,0);box(17,6.8,13,wall,0,4,0);
   for(const x of [-8.2,8.2])for(const z of [-6.2,6.2])box(.55,7,.55,wood,x,4,z);
-  const a=box(10,.9,16,roofMat,-4.1,8.15,0);a.rotation.z=-.5;const b=box(10,.9,16,roofMat,4.1,8.15,0);b.rotation.z=.5;
+  const a=box(10,.9,16,roofMat,-4.1,8.15,0);a.rotation.z=.5;const b=box(10,.9,16,roofMat,4.1,8.15,0);b.rotation.z=-.5;
   box(2,3.5,.3,wood,0,1.8,-6.72);box(1.4,2.9,.1,mat(0x5b3b2d),0,1.75,-6.9);
   for(const x of [-5.8,5.8]){box(2.2,2.1,.25,wood,x,4.4,-6.72);const pane=new THREE.Mesh(new THREE.BoxGeometry(1.8,1.7,.08),id==='aquarium'?glass:mat(0x9bd9d7,.22,{emissive:0x377781,emissiveIntensity:.18}));pane.position.set(x,4.4,-6.9);g.add(pane);box(.14,1.85,.12,mat(0xf1d9ad),x,4.4,-6.99);box(1.9,.14,.12,mat(0xf1d9ad),x,4.4,-6.99);}
   box(6,1.3,.28,wood,0,7.4,-6.8);const sign=new THREE.Mesh(new THREE.BoxGeometry(5.5,.95,.1),new THREE.MeshBasicMaterial({color:id==='guild'?0xe3b766:0x5fb8bb}));sign.position.set(0,7.4,-6.98);g.add(sign);
@@ -112,13 +112,13 @@ function makeCivic(id){
 export function createWorld(scene){
   const root=new THREE.Group();root.name='New Storybook Archipelago';scene.add(root);
   const colliders=[],islands=[],distantIslands=[],stalls=[],questGivers=[],hubBuildings=[],aquariumTankSlots=[];
-  const waterUniforms={uTime:{value:0},uDeep:{value:new THREE.Color(0x083b62)},uLight:{value:new THREE.Color(0x238da0)},uFog:{value:new THREE.Color(0xa8b8cd)}};
+  const waterUniforms={uTime:{value:0},uDeep:{value:new THREE.Color(0x073b78)},uLight:{value:new THREE.Color(0x258caa)},uFog:{value:new THREE.Color(0xe0b18e)}};
   const waterMat=new THREE.ShaderMaterial({uniforms:waterUniforms,transparent:true,vertexShader:`uniform float uTime; varying vec2 vUv; varying float vWave; void main(){vec3 p=position;float w=sin(p.x*.018+uTime*.48)*1.1+cos(p.z*.021+uTime*.38)*.8;p.y+=w;vWave=w;vUv=p.xz*.012;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);}`,fragmentShader:`uniform vec3 uDeep;uniform vec3 uLight;uniform vec3 uFog;uniform float uTime;varying vec2 vUv;varying float vWave;void main(){float tide=.5+.5*sin(vUv.x*7.+vUv.y*5.+uTime*.6+vWave*.18);float glint=smoothstep(.93,.995,sin(vUv.x*47.+vUv.y*29.+uTime*.4));vec3 c=mix(uDeep,uLight,.25+tide*.48)+glint*.16;c=mix(c,uFog,.08+smoothstep(1000.,4000.,length(vUv)*30.)*.2);gl_FragColor=vec4(c,.98);}`});
   const width=SEA_BOUNDS.maxX-SEA_BOUNDS.minX+500,depth=SEA_BOUNDS.maxZ-SEA_BOUNDS.minZ+500,cx=(SEA_BOUNDS.minX+SEA_BOUNDS.maxX)/2,cz=(SEA_BOUNDS.minZ+SEA_BOUNDS.maxZ)/2;
   const water=new THREE.Mesh(new THREE.PlaneGeometry(width,depth,80,80),waterMat);water.rotation.x=-Math.PI/2;water.position.set(cx,-.25,cz);root.add(water);
   const seabed=new THREE.Mesh(new THREE.PlaneGeometry(width,depth),mat(0x123d52));seabed.rotation.x=-Math.PI/2;seabed.position.set(cx,-8,cz);root.add(seabed);
-  scene.background=new THREE.Color(0x97a9c8);scene.fog=new THREE.Fog(0x97a9c8,220,2600);
-  scene.add(new THREE.HemisphereLight(0xd9fff7,0x41645f,1.65));
+  scene.background=new THREE.Color(0xe8aa82);scene.fog=new THREE.Fog(0xe5b58d,300,2800);
+  scene.add(new THREE.HemisphereLight(0xffe5c9,0x3f5230,1.35));
   const sun=new THREE.DirectionalLight(0xffd1a0,2.6);sun.position.set(-180,260,120);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-230;sun.shadow.camera.right=230;sun.shadow.camera.top=230;sun.shadow.camera.bottom=-230;sun.shadow.bias=-.00025;sun.shadow.radius=4;root.add(sun);
   const sunDisc=new THREE.Mesh(new THREE.SphereGeometry(22,24,16),new THREE.MeshBasicMaterial({color:0xffe9a8,fog:false}));root.add(sunDisc);
   const clouds=[];for(let i=0;i<24;i++){const c=new THREE.Group(),cloudMat=mat(i%4===0?0xf7fff4:0xe5f6f0,.95);for(let j=0;j<4;j++){const puff=new THREE.Mesh(new THREE.SphereGeometry(1,12,8),cloudMat);puff.scale.set(6-j*.7,2.3,3.2);puff.position.set((j-1.5)*3,Math.sin(j)*.8,Math.cos(j*2)*1.7);c.add(puff);}root.add(c);clouds.push(c);}
@@ -127,7 +127,7 @@ export function createWorld(scene){
   const islandGroups=[];let centralWaterfall=null;
   const nearest=(zone,x,z)=>{const p=worldToIsland(zone,x,z);return {x:p.x,z:p.z};};
   for(const zone of ISLANDS){
-    const palette=palettes[zone.theme]||palettes.coast,r=radii[zone.id],group=new THREE.Group();group.name=`${zone.id===0?'Central Isle':zone.name} · rebuilt`;group.position.set(zone.x,0,zone.z);group.rotation.y=zone.layout.yaw;root.add(group);islandGroups.push(group);
+    const basePalette=palettes[zone.theme]||palettes.coast,palette=zone.id===0?{...basePalette,grass:0x568d43,sand:0xd8bd89,cliff:0x66625b,accent:0xe0a64f,leaf:0x2f6d38}:basePalette,r=radii[zone.id],group=new THREE.Group();group.name=`${zone.id===0?'Central Isle':zone.name} · rebuilt`;group.position.set(zone.x,0,zone.z);group.rotation.y=zone.layout.yaw;group.scale.setScalar(zone.id===0 ? 0.5 : 1);root.add(group);islandGroups.push(group);
     const outer=roundedIslandShape(r.x+7,r.z+7,zone.id+3,1),rock=roundedIslandShape(r.x,r.z,zone.id+3,1),sand=roundedIslandShape(r.x*.985,r.z*.985,zone.id+3,1),grass=roundedIslandShape(r.x*.91,r.z*.91,zone.id+3,1),inner=roundedIslandShape(r.x*.72,r.z*.72,zone.id+3,1);
     group.add(shapeMesh(outer,mat(0xe8f2d8,.9),-.15));group.add(shapeMesh(rock,mat(palette.cliff,.9),-7,7.4));group.add(shapeMesh(sand,mat(palette.sand,.92),.36));group.add(shapeMesh(grass,mat(palette.grass,.93),.67));group.add(shapeMesh(inner,mat(palette.grass,.93),.72));
     const beachRing=new THREE.Mesh(new THREE.TorusGeometry(1,.34,8,64),mat(0xf8eccb,.8));beachRing.scale.set(r.x*.985,1,r.z*.985);beachRing.rotation.x=Math.PI/2;beachRing.position.y=.2;group.add(beachRing);
@@ -145,12 +145,17 @@ export function createWorld(scene){
       [[-26,69,9,1.1],[25,70,9,1.0],[-20,91,17,.9],[19,91,17,.95],[-11,75,25,.72],[12,78,25,.75],[-35,53,1,.9],[35,55,1,.9]].forEach(p=>addFir(...p));
       // Cascading turquoise fall and a small pool make the summit read as a
       // real landscape feature at game scale.
-      const falls=new THREE.Mesh(new THREE.BoxGeometry(4.8,29,.55),new THREE.MeshStandardMaterial({color:0x5dcde0,roughness:.22,metalness:.08,emissive:0x147487,emissiveIntensity:.18,transparent:true,opacity:.88}));falls.position.set(-10,15.2,49);group.add(falls);centralWaterfall=falls;
-      for(const dx of [-1.35,1.35]){const shine=new THREE.Mesh(new THREE.BoxGeometry(.28,25,.62),new THREE.MeshBasicMaterial({color:0xc4f6f4,transparent:true,opacity:.68}));shine.position.set(-10+dx,15.2,48.9);group.add(shine);}
+      const cascadeRows=[[31,72,3.5],[28,67,3.8],[22,63,4],[20,59,4.2],[13,56,4.5],[11,53,4.3],[4,51,4.8],[1.1,48,5.2]],cascadePositions=[],cascadeUvs=[],cascadeIndices=[];
+      cascadeRows.forEach(([y,z,w],row)=>{cascadePositions.push(-10-w/2,y,z,-10+w/2,y,z);cascadeUvs.push(0,row*.7,1,row*.7);if(row<cascadeRows.length-1){const a=row*2,b=a+1,c=a+2,d=a+3;cascadeIndices.push(a,c,b,b,c,d);}});
+      const cascadeGeometry=new THREE.BufferGeometry();cascadeGeometry.setAttribute('position',new THREE.Float32BufferAttribute(cascadePositions,3));cascadeGeometry.setAttribute('uv',new THREE.Float32BufferAttribute(cascadeUvs,2));cascadeGeometry.setIndex(cascadeIndices);cascadeGeometry.computeVertexNormals();
+      const falls=new THREE.Mesh(cascadeGeometry,new THREE.MeshStandardMaterial({color:0x39a9ca,roughness:.2,metalness:.04,emissive:0x0b3440,emissiveIntensity:.18,transparent:true,opacity:.88,depthWrite:false,side:THREE.DoubleSide}));falls.userData.basePositions=Float32Array.from(cascadePositions);group.add(falls);centralWaterfall=falls;
+      for(const [y,z,w] of cascadeRows.slice(2,7)){const foam=new THREE.Mesh(new THREE.BoxGeometry(w,.28,.18),new THREE.MeshBasicMaterial({color:0xe2f0d9}));foam.position.set(-10,y,z-.12);group.add(foam);}
       const pool=new THREE.Mesh(new THREE.CylinderGeometry(9,10,.22,32),new THREE.MeshStandardMaterial({color:0x38bcca,roughness:.24,metalness:.08,emissive:0x124f65,emissiveIntensity:.18}));pool.position.set(-10,.85,48);group.add(pool);
       // Red-and-ivory lighthouse, placed on the upper terrace.
       const tower=new THREE.Mesh(new THREE.CylinderGeometry(1.7,2.6,12,12),mat(0xf0e3c6,.72));tower.position.set(0,38.2,82);group.add(tower);
       for(let n=0;n<4;n++){const band=new THREE.Mesh(new THREE.CylinderGeometry(2.05-n*.11,2.35-n*.11,1.35,12),mat(n%2?0xf5ebd6:0xb64c42,.68));band.position.set(0,34+n*2.45,82);group.add(band);}
+      const balcony=new THREE.Mesh(new THREE.TorusGeometry(2.65,.18,6,16),mat(0x55483b,.78));balcony.rotation.x=Math.PI/2;balcony.position.set(0,44.25,82);group.add(balcony);
+      for(let n=0;n<12;n++){const a=n*Math.PI/6,rail=new THREE.Mesh(new THREE.CylinderGeometry(.055,.065,.55,5),mat(0x5b4d3f,.8));rail.position.set(Math.cos(a)*2.65,44.55,82+Math.sin(a)*2.65);group.add(rail);}
       const lantern=new THREE.Mesh(new THREE.CylinderGeometry(2.25,2.05,2.7,12),mat(0xf9bf66,.28,{emissive:0xffaa42,emissiveIntensity:.75}));lantern.position.set(0,45.3,82);group.add(lantern);
       const roof=new THREE.Mesh(new THREE.ConeGeometry(2.9,2.8,12),mat(0x7a4039,.72));roof.position.set(0,48,82);group.add(roof);
       const beacon=new THREE.PointLight(0xffc86b,24,115,2);beacon.position.set(0,45.3,82);group.add(beacon);
@@ -173,6 +178,11 @@ export function createWorld(scene){
         const spire=new THREE.Mesh(new THREE.ConeGeometry(.8+random(),2.5+random()*2,8),mat(zone.theme==='volcanic'||zone.theme==='vents'?palette.cliff:palette.accent));spire.position.y=1.4;plant.add(spire);
       }
       plant.position.set(x,.72,z);plant.rotation.y=random()*Math.PI*2;group.add(plant);
+    }
+    if(zone.id===0){
+      for(const [x,z,s] of [[-47,35,1],[48,34,.9],[-54,61,.8],[54,63,1],[-64,89,.8],[63,96,.9],[-42,109,.7],[42,112,.7]]){const bush=new THREE.Mesh(new THREE.DodecahedronGeometry(1,1),mat(0x477b3d,.95));bush.scale.set(2.3*s,1.35*s,1.8*s);bush.position.set(x,.72,z);group.add(bush);}
+      for(let n=0;n<16;n++){const a=n*Math.PI/8,x=Math.cos(a)*(r.x+2),z=25+Math.sin(a)*(r.z+1.5),stone=new THREE.Mesh(new THREE.DodecahedronGeometry(1,0),mat(n%3?0x68665f:0x79736a,.98));stone.scale.set(2.1+(n%3)*.45,1.1+(n%2)*.4,1.6+(n%4)*.25);stone.position.set(x,.05,z);group.add(stone);}
+      const flowerColors=[0xe9d16e,0xe28d69,0xece7d2];for(const [x,z] of [[-34,39],[-38,47],[38,44],[43,49],[-47,71],[47,74]]){const stem=new THREE.Mesh(new THREE.CylinderGeometry(.05,.08,.55,5),mat(0x377244));stem.position.set(x,.95,z);group.add(stem);const bloom=new THREE.Mesh(new THREE.SphereGeometry(.19,6,5),mat(flowerColors[Math.abs(Math.floor(x+z))%3]));bloom.position.set(x,1.25,z);group.add(bloom);}
     }
     // Lagoon pools and small stylized accents vary by biome, not by the old landmarks.
     if(zone.id!==0){
@@ -211,7 +221,7 @@ export function createWorld(scene){
     const serviceList=islandServices(zone.id),locations=zone.id===0?[
       {kind:'rod',x:-22,z:26},{kind:'line',x:0,z:20},{kind:'bait',x:22,z:26},{kind:'market',x:-22,z:38},{kind:'port',x:22,z:38},
     ]:zone.layout.stalls.filter(s=>serviceList.includes(s.kind)).map(s=>({kind:s.kind,x:s.x*.8,z:25+(s.z-25)*.8}));
-    for(const st of locations){const pos=islandToWorld(zone,st.x,st.z),kiosk=makeKiosk(st.kind);kiosk.position.set(st.x,.72,st.z);group.add(kiosk);stalls.push({kind:st.kind,name:storeInfo[st.kind][0],zone:zone.id,x:pos.x,z:pos.z});colliders.push({zone:zone.id,x:pos.x,z:pos.z,r:2.6,top:4.6});}
+    for(const st of locations){const pos=islandToWorld(zone,st.x,st.z),kiosk=makeKiosk(st.kind);kiosk.position.set(st.x,.72,st.z);group.add(kiosk);stalls.push({kind:st.kind,name:storeInfo[st.kind][0],zone:zone.id,x:pos.x,z:pos.z});colliders.push({zone:zone.id,x:pos.x,z:pos.z,r:zone.id===0?2.4:2.6,top:zone.id===0?2.3:4.6});}
     if(zone.id===0){
       // Compact village square: stone paving, central fountain, benches and
       // a clear stepped route from the plaza to the lighthouse terrace.
@@ -227,8 +237,8 @@ export function createWorld(scene){
       const stairMat=mat(0x747873,.94);for(let n=0;n<11;n++){const step=new THREE.Mesh(new THREE.BoxGeometry(4.6,.75,2.6),stairMat);step.position.set(31,1.35+n*1.35,55+n*2);group.add(step);}
       for(let n=0;n<8;n++){const step=new THREE.Mesh(new THREE.BoxGeometry(4.4,.75,2.5),stairMat);step.position.set(31-n*2.75,16.2+n*1.95,77+n*.65);group.add(step);}
       const homes=[{id:'aquarium',name:'Central Isle Aquarium',x:-52,z:78},{id:'warehouse',name:'Angler Warehouse',x:52,z:78},{id:'guild',name:'Anglers Guild',x:0,z:119}];
-      for(const h of homes){const building=makeCivic(h.id);building.position.set(h.x,.72,h.z);group.add(building);const entry=islandToWorld(zone,h.x,h.z-13);hubBuildings.push({id:h.id,name:h.name,zone:0,x:entry.x,z:entry.z,center:islandToWorld(zone,h.x,h.z)});colliders.push({zone:0,...islandToWorld(zone,h.x,h.z),r:9.2,top:8.5});}
-      for(const tx of [-60,-44,44,60])for(let row=0;row<2;row++)for(let depth=0;depth<2;depth++)for(let col=0;col<3;col++){const pos=islandToWorld(zone,tx+(col-1)*2.15,78+(depth-.5)*4.2);aquariumTankSlots.push({x:pos.x,y:3.5+row*2.1,z:pos.z});}
+      for(const h of homes){const building=makeCivic(h.id);building.position.set(h.x,.72,h.z);group.add(building);const entry=islandToWorld(zone,h.x,h.z-13);hubBuildings.push({id:h.id,name:h.name,zone:0,x:entry.x,z:entry.z,center:islandToWorld(zone,h.x,h.z)});colliders.push({zone:0,...islandToWorld(zone,h.x,h.z),r:4.6,top:4.25});}
+      for(const tx of [-60,-44,44,60])for(let row=0;row<2;row++)for(let depth=0;depth<2;depth++)for(let col=0;col<3;col++){const pos=islandToWorld(zone,tx+(col-1)*2.15,78+(depth-.5)*4.2);aquariumTankSlots.push({x:pos.x,y:(3.5+row*2.1)*.5,z:pos.z});}
       const npcList=[
         {id:'old-fisher',name:'Old Fisherman',x:-14,z:43,c:0x71906d},{id:'marine-biologist',name:'Marine Biologist',x:-5,z:43,c:0x62a9b2},{id:'boat-mechanic',name:'Boat Mechanic',x:5,z:43,c:0xc58a5e},{id:'fish-collector',name:'Fish Collector',x:14,z:43,c:0x788baa},
       ];
@@ -244,20 +254,20 @@ export function createWorld(scene){
   function setAuroraPaint(on){if(boat.userData.trim){boat.remove(boat.userData.trim);boat.userData.trim.traverse(o=>{if(o.isMesh){o.geometry.dispose();o.material.dispose();}});}if(on){const glow=new THREE.Mesh(new THREE.TorusGeometry(1.1,.13,8,32),mat(0x9ffff1,.28,{emissive:0x51e8dc,emissiveIntensity:.85}));glow.rotation.x=Math.PI/2;glow.position.y=.7;boat.add(glow);boat.userData.trim=glow;}}
   function dockPoint(zone){const p=dockLocation(zone,BOATS[boatId].size);return new THREE.Vector3(p.x,.2,p.z);}
   function insideIsland(zone,x,z){const p=worldToIsland(zone,x,z),r=radii[zone.id],dz=p.z-25;return (p.x/r.x)**2+(dz/r.z)**2<=1;}
-  function surfaceAt(x,z,onlyZone=null){for(const i of ISLANDS){if(onlyZone!==null&&onlyZone!==i.id)continue;if(!insideIsland(i,x,z))continue;if(i.id===0){const p=worldToIsland(i,x,z),q=(p.x/40)**2+((p.z-82)/28)**2;if(q<=.12)return 32;if(q<=.34)return 24.2;if(q<=.63)return 16.4;if(q<=1)return 8.9;}return .95;}return null;}
+  function surfaceAt(x,z,onlyZone=null){for(const i of ISLANDS){if(onlyZone!==null&&onlyZone!==i.id)continue;if(!insideIsland(i,x,z))continue;if(i.id===0){const p=worldToIsland(i,x,z);for(let n=0;n<11;n++)if(Math.abs(p.x-31)<3.2&&Math.abs(p.z-(55+n*2))<1.35)return (1.725+n*1.35)*.5;for(let n=0;n<8;n++)if(Math.hypot(p.x-(31-n*2.75),p.z-(77+n*.65))<2.5)return (16.575+n*1.95)*.5;const q=(p.x/40)**2+((p.z-82)/28)**2;if(q<=.12)return 16;if(q<=.34)return 12.1;if(q<=.63)return 8.2;if(q<=1)return 4.45;return .475;}return .95;}return null;}
   const startSpawn=islandSpawn(ISLANDS[0]);
-  function groundAt(x,z,zone){if(surfaceAt(x,z,zone)===null)return null;for(const b of colliders)if(b.zone===zone&&Math.hypot(x-b.x,z-b.z)<b.r)return null;if(zone===0&&Math.hypot(x-startSpawn.x,z-startSpawn.z)<24)return 16;return .95;}
+  function groundAt(x,z,zone){if(zone===0){const p=worldToIsland(ISLANDS[0],x,z);if(Math.abs(p.x)<4&&p.z>=-111&&p.z<=-79||Math.abs(p.x)<8&&p.z>=-115&&p.z<=-97)return .16;}if(surfaceAt(x,z,zone)===null)return null;for(const b of colliders)if(b.zone===zone&&Math.hypot(x-b.x,z-b.z)<b.r)return null;if(zone===0&&Math.hypot(x-startSpawn.x,z-startSpawn.z)<24)return 8;return zone===0 ? .475 : .95;}
   function inWater(p){return p.x>SEA_BOUNDS.minX&&p.x<SEA_BOUNDS.maxX&&p.z>SEA_BOUNDS.minZ&&p.z<SEA_BOUNDS.maxZ&&surfaceAt(p.x,p.z)===null;}
   const temp=new THREE.Color(),scratch=new THREE.Object3D();
   function update(time,dt,zone,camera,aboard,boatPosition=null,weather='clear'){
     waterUniforms.uTime.value=time;sunDisc.position.set(camera.position.x+120,135,camera.position.z-280);
     for(let i=0;i<clouds.length;i++){const c=clouds[i],a=time*.012+i*2.42;c.position.set(camera.position.x+Math.cos(a)*210,65+(i%5)*13,camera.position.z+Math.sin(a)*175);c.rotation.y=-a*.2;}
-    const island=ISLANDS[zone],pal=palettes[island.theme]||palettes.coast,wx={storm:0x648e9b,rain:0x6ba3ae,fog:0xa0bbb8,wind:0x69a5ad,heat:0x5fc6b6}[weather]||0x66d3ca;temp.setHex(wx);waterUniforms.uLight.value.lerp(temp,dt*1.2);temp.setHex(island.sky);waterUniforms.uFog.value.lerp(temp,dt*.8);if(centralWaterfall)centralWaterfall.position.y=15.2+Math.sin(time*2.8)*.16;
+    const island=ISLANDS[zone],pal=palettes[island.theme]||palettes.coast,wx={storm:0x648e9b,rain:0x6ba3ae,fog:0xa0bbb8,wind:0x69a5ad,heat:0x5fc6b6}[weather]||0x66d3ca;temp.setHex(wx);waterUniforms.uLight.value.lerp(temp,dt*1.2);temp.setHex(island.sky);waterUniforms.uFog.value.lerp(temp,dt*.8);if(centralWaterfall){const attr=centralWaterfall.geometry.attributes.position,base=centralWaterfall.userData.basePositions;for(let row=0;row<8;row++){const sway=Math.sin(time*4.2-row*1.3)*.12;attr.setX(row*2,base[row*6]+sway);attr.setX(row*2+1,base[row*6+3]+sway);}attr.needsUpdate=true;centralWaterfall.geometry.computeVertexNormals();centralWaterfall.material.opacity=.84+Math.sin(time*4.2)*.04;}
     islandGroups.forEach((g,n)=>{const c=territoryCenter(ISLANDS[n]),dist=Math.hypot(camera.position.x-c.x,camera.position.z-c.z);g.visible=dist<540;distantIslands[n].visible=!g.visible&&dist<1700;});
     const wind=weather==='storm'?1.6:weather==='wind'?.9:.35;glints.visible=weather!=='fog';for(let i=0;i<glints.count;i++){const a=i*2.399+time*.025,r=55+(i*37%230);scratch.position.set(camera.position.x+Math.cos(a)*r,.2+Math.sin(time*1.5+i)*.18,camera.position.z+Math.sin(a)*r);scratch.scale.setScalar(.6+Math.sin(time+i)*.25);scratch.updateMatrix();glints.setMatrixAt(i,scratch.matrix);}glints.instanceMatrix.needsUpdate=true;
     rain.visible=weather==='rain'||weather==='storm';if(rain.visible)for(let i=0;i<rain.count;i++){scratch.position.set(camera.position.x+Math.sin(i*14)*28+time*wind,camera.position.y+10-(time*8+i*.73)%24,camera.position.z+Math.cos(i*31)*25);scratch.scale.setScalar(1);scratch.updateMatrix();rain.setMatrixAt(i,scratch.matrix);}if(rain.visible)rain.instanceMatrix.needsUpdate=true;
     if(!aboard){const p=boatPosition||dockPoint(zone);boat.position.set(p.x,.2+Math.sin(time*1.3)*.09,p.z);boat.rotation.set(0,p.yaw??ISLANDS[zone].layout.yaw,Math.sin(time)*.025);}
   }
-  for(const i of ISLANDS){const g=new THREE.Mesh(new THREE.SphereGeometry(1,12,8),mat(palettes[i.theme]?.grass||0x74b59f));const r=radii[i.id];g.scale.set(r.x*.86,5,r.z*.86);g.position.set(i.x,.2,i.z+25);root.add(g);distantIslands.push(g);}
+  for(const i of ISLANDS){const g=new THREE.Mesh(new THREE.SphereGeometry(1,12,8),mat(i.id===0?0x568d43:palettes[i.theme]?.grass||0x74b59f));const r=radii[i.id],k=i.id===0 ? 0.5 : 1,c=islandToWorld(i,0,25);g.scale.set(r.x*.86*k,5*k,r.z*.86*k);g.position.set(c.x,.2,c.z);root.add(g);distantIslands.push(g);}
   return {root,water,waterUniforms,stalls,questGivers,hubBuildings,aquariumTankSlots,islands:islandGroups,groundAt,surfaceAt,inWater,dockPoint,update,setBoat,setAuroraPaint,cameraBlockers:ISLANDS.map(i=>colliders.filter(b=>b.zone===i.id)),get boat(){return boat;}};
 }

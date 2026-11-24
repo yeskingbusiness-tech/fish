@@ -55,7 +55,7 @@ function waterObstacles(theme){
 }
 // Irregular, fixed positions selected with generous open-water corridors.
 // Stable per world version: reloads never reshuffle the archipelago.
-export const WORLD_LAYOUT_VERSION=3;
+export const WORLD_LAYOUT_VERSION=4;
 const centers=Array.from({length:20},(_,id)=>{if(id===0)return [0,0];const r=id<=6?1400:4500,a=-Math.PI/2+(id-1)*2.399963229728653;return [Math.round(Math.cos(a)*r),Math.round(Math.sin(a)*r)];});
 export const ISLANDS=Object.freeze(rows.map((r,id)=>{
   const [name,short,level,environment,theme,landmark,stock,boatName,land,sand,rock,water,sky,accent,description]=r;

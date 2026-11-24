@@ -11,7 +11,7 @@ test('all twenty islands have distinct authored terrain profiles as well as dist
  assert.equal(new Set(ISLANDS.map(i=>JSON.stringify(i.landforms))).size,20);
 });
 test('all twenty authored village plans differ in placement, not just palette or rotation',()=>{
- assert.equal(WORLD_LAYOUT_VERSION,3);assert.equal(ISLAND_LAYOUTS.length,20);
+ assert.equal(WORLD_LAYOUT_VERSION,4);assert.equal(ISLAND_LAYOUTS.length,20);
  assert.equal(new Set(ISLAND_LAYOUTS.map(l=>JSON.stringify(l.stalls))).size,20);
  assert.ok(new Set(ISLAND_LAYOUTS.map(l=>l.quarter)).size>=3);
  assert.equal(new Set(ISLAND_LAYOUTS.map(l=>l.berthSide)).size,2);

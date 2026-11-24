@@ -1,11 +1,11 @@
 import { SPECIES, RODS, LINES, BAITS, GEAR_ISLAND_STEPS, GEAR_SOURCE_INDICES, roundWeight } from './game-data.mjs?v=45';
-import { BOATS, ISLANDS, xpForLevel, levelForXp, legacyCatchXP, hasIslandLicense, completedCollections } from './archipelago.mjs?v=46';
+import { BOATS, ISLANDS, xpForLevel, levelForXp, legacyCatchXP, hasIslandLicense, completedCollections } from './archipelago.mjs?v=48';
 import { LEGACY_V8_SPECIES } from './legacy-v8-data.mjs?v=44';
 import { ALL_CATCH_SPECIES, LEGACY_SPECIES, LEGACY_ISLAND_MAP, replacementFor } from './legacy-catalog.mjs?v=44';
-import { validBoatPose, returnBoatPose, territoryAt } from './navigation.mjs?v=44';
-import { WORLD_LAYOUT_VERSION } from './island-data.mjs?v=44';
+import { validBoatPose, returnBoatPose, territoryAt } from './navigation.mjs?v=49';
+import { WORLD_LAYOUT_VERSION } from './island-data.mjs?v=45';
 import { V41_ISLAND_ANCHORS, validV41BoatPose } from './legacy-v41-world.mjs?v=44';
-import { islandToWorld } from './island-layout.mjs?v=45';
+import { islandToWorld } from './island-layout.mjs?v=47';
 export const SAVE_VERSION=10;
 export const SAVE_KEY='reel-deal-save-v10';
 export const LEGACY_KEYS=['reel-deal-save-v9','reel-deal-save-v8','reel-deal-save-v7','reel-deal-save-v6','reel-life-3d-save-v6'];

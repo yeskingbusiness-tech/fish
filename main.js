@@ -16,23 +16,23 @@ import { advanceReelPhase, REEL_PHASES, phasePull, fishTugImpulse, alternateTugD
 import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindow, sortFishIndex, castLuckModifier, effectiveLuck,
   eligibleSpecies, speciesChance, roundWeight, formatWeight, formatCatchMass, GEAR_PER_ISLAND, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=44';
 import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, capCatchXP, gearIsland, hasIslandLicense, travelRequirement,
-  MAX_LEVEL, ISLAND_COLLECTION_BONUS, islandCollectionProgress, completedCollections, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=44';
-import { createWorld } from './world.mjs?v=56';
+  MAX_LEVEL, ISLAND_COLLECTION_BONUS, islandCollectionProgress, completedCollections, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=48';
+import { createWorld } from './world.mjs?v=60';
 import { fishSVG, fishGeometryCacheStats } from './fish-geometry.mjs?v=44';
 import { createFishIcons } from './fish-icons.mjs?v=44';
 import { createAdaptiveQuality, memoLast, createBaitPoolLookup } from './render-performance.mjs?v=44';
 import { createFishModel, animateFishModel, disposeFishModel } from './fish-model.mjs?v=44';
 import { boatViewPose, createPlayerModel, heldFishSpan, heldFishLayout, firstPersonFishPose, frontViewPose } from './player-view.mjs?v=44';
-import { normalizeSave, decodeFish, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=44';
+import { normalizeSave, decodeFish, SAVE_VERSION, SAVE_KEY, LEGACY_KEYS } from './save-state.mjs?v=46';
 import { BAG_TABS, bagGearKind, nextBagTab, contextualHint, HELP_CONTROLS } from './ui-state.mjs?v=45';
 import { WEATHER, islandWeather, BOSSES, createActivityState, progressChallenges } from './gameplay-systems.mjs?v=2';
 import { PERSONAL_CAPACITY, BOAT_CAPACITY, STORAGE_UPGRADE_COST, MUTATIONS, rollMutation, capacities, merchantVisit, SECRET_FISHING_SITES, ACHIEVEMENTS, createCollectionState, achievementProgress } from './collection-systems.mjs?v=3';
 
 import { ALL_CATCH_SPECIES, LEGACY_SPECIES } from './legacy-catalog.mjs?v=44';
-import { territoryAt, territoryCenter, TERRITORY_RADIUS, shoreLuckPenalty, distanceToShore, stepBoat, nearbyDock, dockPose, dockLocation, returnBoatPose, clampBoatDeckPosition, mapPoint, SEA_BOUNDS } from './navigation.mjs?v=47';
-import { WORLD_LAYOUT_VERSION } from './island-data.mjs?v=44';
+import { territoryAt, territoryCenter, TERRITORY_RADIUS, shoreLuckPenalty, distanceToShore, stepBoat, nearbyDock, dockPose, dockLocation, returnBoatPose, clampBoatDeckPosition, mapPoint, SEA_BOUNDS } from './navigation.mjs?v=49';
+import { WORLD_LAYOUT_VERSION } from './island-data.mjs?v=45';
 import { QUESTS, createQuestState, acceptQuest, applyQuestEvent } from './quest-system.mjs?v=2';
-import { islandToWorld, islandSpawn } from './island-layout.mjs?v=46';
+import { islandToWorld, islandSpawn } from './island-layout.mjs?v=47';
 
 import { drawMinimap } from './minimap.mjs?v=44';
 const fishIcons = createFishIcons(ALL_CATCH_SPECIES);
@@ -147,11 +147,11 @@ const frontCamera = new THREE.PerspectiveCamera(PORTRAIT() ? 60 : 52, innerWidth
 frontCamera.layers.enable(1); // Full-size carried fish have their own presentation layer.
 
 // Lights (no shadows)
-scene.add(new THREE.HemisphereLight(0xd8f4ff, 0x4a8a6a, 1.15));
+scene.add(new THREE.HemisphereLight(0xffead0, 0x40552f, 0.9));
 const sun = new THREE.DirectionalLight(0xfff3d0, 1.9);
 sun.position.set(18, 30, 10);
 scene.add(sun);
-const fill = new THREE.DirectionalLight(0x9ad6ff, 0.45);
+const fill = new THREE.DirectionalLight(0xffc995, 0.28);
 fill.position.set(-16, 12, -14);
 scene.add(fill);
 for(const light of scene.children.filter(o=>o.isLight))light.layers.enable(1);
@@ -1426,7 +1426,7 @@ function buyBoat(id){
 }
 function spawnAtIsland(id){
   const p=islandSpawn(ISLANDS[id]),previous=G.zone;G.zone=id;if(previous!==id)recordActivity({kind:'island',island:id});G.px=p.x;G.pz=p.z;
-  G.onBoat=false;G.sailing=null;G.boatMode='drive';G.yaw=p.yaw;G.pitch=id===0?-.3:-.1;G.camY=(id===0?4.5:1.15)+EYE;
+  G.onBoat=false;G.sailing=null;G.boatMode='drive';G.yaw=p.yaw;G.pitch=id===0?-.3:-.1;G.camY=(id===0?8:1.15)+EYE;
   if(!G.boatPosition)G.boatPosition=dockPose(id,BOATS[G.boat].size);
   camera.position.set(G.px,G.camY,G.pz);camera.rotation.set(G.pitch,G.yaw,0,'YXZ');
   nearbyStall=null;G.nearShop=G.nearMarket=G.nearPort=false;
@@ -2130,9 +2130,9 @@ function tick(){
 
 // ---------- boot ----------
 loadGame();drawAquarium();
-// Re-enter the restored island world at its home island, not stale open-water coordinates.
-G.zone=0;G.sailing=null;G.onBoat=false;spawnAtIsland(0);
+const savedSailing=G.sailing;spawnAtIsland(G.zone);
 world.setBoat(G.boat);world.setAuroraPaint(G.collections.cosmetics?.includes('aurora-trim'));
+if(savedSailing){G.sailing={...savedSailing,speed:0};G.onBoat=true;G.px=savedSailing.x;G.pz=savedSailing.z;lastTerritory=territoryAt(G.px,G.pz);}
 G.waypoint=ISLANDS.find(i=>!hasLicense(i.id))?.id??19;
 applyGear();
 updateStats();
