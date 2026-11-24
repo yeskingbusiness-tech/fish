@@ -116,6 +116,29 @@ export function createWorld(scene){
     const outer=roundedIslandShape(r.x+7,r.z+7,zone.id+3,1),rock=roundedIslandShape(r.x,r.z,zone.id+3,1),sand=roundedIslandShape(r.x*.985,r.z*.985,zone.id+3,1),grass=roundedIslandShape(r.x*.91,r.z*.91,zone.id+3,1),inner=roundedIslandShape(r.x*.72,r.z*.72,zone.id+3,1);
     group.add(shapeMesh(outer,mat(0xe8f2d8,.9),-.15));group.add(shapeMesh(rock,mat(palette.cliff,.9),-7,7.4));group.add(shapeMesh(sand,mat(palette.sand,.92),.36));group.add(shapeMesh(grass,mat(palette.grass,.93),.67));group.add(shapeMesh(inner,mat(palette.grass,.93),.72));
     const beachRing=new THREE.Mesh(new THREE.TorusGeometry(1,.34,8,64),mat(0xf8eccb,.8));beachRing.scale.set(r.x*.985,1,r.z*.985);beachRing.rotation.x=Math.PI/2;beachRing.position.y=.2;group.add(beachRing);
+    if(zone.id===0){
+      // Central Isle becomes a compact, terraced volcanic/coastal hill rather
+      // than a broad flat disc, following the supplied lighthouse-village ref.
+      const hill=new THREE.Group();hill.position.set(0,0,57);group.add(hill);
+      const tiers=[[40,28,.72,8.2],[32,23,8.45,8],[24,18,16.25,8],[16,13,24.05,8]];
+      for(const [rx,rz,y,h] of tiers){
+        const rockShape=roundedIslandShape(rx,rz,zone.id+17+y*.1),grassShape=roundedIslandShape(rx*.92,rz*.91,zone.id+27+y*.1);
+        hill.add(shapeMesh(rockShape,mat(palette.cliff,.98),y,h));hill.add(shapeMesh(grassShape,mat(palette.grass,.95),y+h-.08));
+      }
+      const addFir=(x,z,y,s)=>{const tree=new THREE.Group(),trunk=new THREE.Mesh(new THREE.CylinderGeometry(.35*s,.55*s,2.1*s,6),mat(0x74513c,.95));trunk.position.y=1*s;tree.add(trunk);for(let k=0;k<3;k++){const cone=new THREE.Mesh(new THREE.ConeGeometry((2.1-k*.38)*s,(3.2-k*.3)*s,7),mat(k===1?0x286b49:0x357b50,.92));cone.position.y=(2.2+k*1.45)*s;tree.add(cone);}tree.position.set(x,y,z);group.add(tree);};
+      [[-26,69,9,1.1],[25,70,9,1.0],[-20,91,17,.9],[19,91,17,.95],[-11,75,25,.72],[12,78,25,.75],[-35,53,1,.9],[35,55,1,.9]].forEach(p=>addFir(...p));
+      // Cascading turquoise fall and a small pool make the summit read as a
+      // real landscape feature at game scale.
+      const falls=new THREE.Mesh(new THREE.BoxGeometry(4.8,29,.55),new THREE.MeshStandardMaterial({color:0x5dcde0,roughness:.22,metalness:.08,emissive:0x147487,emissiveIntensity:.18,transparent:true,opacity:.88}));falls.position.set(0,15.2,49);group.add(falls);
+      for(const dx of [-1.35,1.35]){const shine=new THREE.Mesh(new THREE.BoxGeometry(.28,25,.62),new THREE.MeshBasicMaterial({color:0xc4f6f4,transparent:true,opacity:.68}));shine.position.set(dx,15.2,48.9);group.add(shine);}
+      const pool=new THREE.Mesh(new THREE.CylinderGeometry(9,10,.22,32),new THREE.MeshStandardMaterial({color:0x38bcca,roughness:.24,metalness:.08,emissive:0x124f65,emissiveIntensity:.18}));pool.position.set(0,.85,48);group.add(pool);
+      // Red-and-ivory lighthouse, placed on the upper terrace.
+      const tower=new THREE.Mesh(new THREE.CylinderGeometry(1.7,2.6,12,12),mat(0xf0e3c6,.72));tower.position.set(0,38.2,82);group.add(tower);
+      for(let n=0;n<4;n++){const band=new THREE.Mesh(new THREE.CylinderGeometry(2.05-n*.11,2.35-n*.11,1.35,12),mat(n%2?0xf5ebd6:0xb64c42,.68));band.position.set(0,34+n*2.45,82);group.add(band);}
+      const lantern=new THREE.Mesh(new THREE.CylinderGeometry(2.25,2.05,2.7,12),mat(0xf9bf66,.28,{emissive:0xffaa42,emissiveIntensity:.75}));lantern.position.set(0,45.3,82);group.add(lantern);
+      const roof=new THREE.Mesh(new THREE.ConeGeometry(2.9,2.8,12),mat(0x7a4039,.72));roof.position.set(0,48,82);group.add(roof);
+      const beacon=new THREE.PointLight(0xffc86b,24,115,2);beacon.position.set(0,45.3,82);group.add(beacon);
+    }
     // New organic, theme-specific silhouettes instead of landmark cubes.
     const seed=zone.id*9187+73,random=()=>{let x=Math.sin(seed+random.n++*78.233)*43758.5453;return x-Math.floor(x);};random.n=0;
     const flora=zone.id===0?12:Math.max(5,Math.floor(r.x/5));
@@ -159,7 +182,7 @@ export function createWorld(scene){
     const dockGlow=new THREE.Mesh(new THREE.TorusGeometry(zone.id===0?5.8:3.1,.16,8,32),mat(palette.accent,.34,{emissive:palette.accent,emissiveIntensity:.25}));dockGlow.rotation.x=Math.PI/2;dockGlow.position.set(localDock.x,.58,localDock.z);group.add(dockGlow);
     // Build only services assigned to this territory. Every location uses the new rounded kiosk art.
     const serviceList=islandServices(zone.id),locations=zone.id===0?[
-      {kind:'rod',x:-22,z:26},{kind:'line',x:0,z:20},{kind:'bait',x:22,z:26},{kind:'market',x:-22,z:51},{kind:'port',x:22,z:51},
+      {kind:'rod',x:-22,z:26},{kind:'line',x:0,z:20},{kind:'bait',x:22,z:26},{kind:'market',x:-22,z:38},{kind:'port',x:22,z:38},
     ]:zone.layout.stalls.filter(s=>serviceList.includes(s.kind)).map(s=>({kind:s.kind,x:s.x*.8,z:25+(s.z-25)*.8}));
     for(const st of locations){const pos=islandToWorld(zone,st.x,st.z),kiosk=makeKiosk(st.kind);kiosk.position.set(st.x,.72,st.z);group.add(kiosk);stalls.push({kind:st.kind,name:storeInfo[st.kind][0],zone:zone.id,x:pos.x,z:pos.z});colliders.push({zone:zone.id,x:pos.x,z:pos.z,r:2.6,top:4.6});}
     if(zone.id===0){
@@ -180,7 +203,7 @@ export function createWorld(scene){
   function setAuroraPaint(on){if(boat.userData.trim){boat.remove(boat.userData.trim);boat.userData.trim.traverse(o=>{if(o.isMesh){o.geometry.dispose();o.material.dispose();}});}if(on){const glow=new THREE.Mesh(new THREE.TorusGeometry(1.1,.13,8,32),mat(0x9ffff1,.28,{emissive:0x51e8dc,emissiveIntensity:.85}));glow.rotation.x=Math.PI/2;glow.position.y=.7;boat.add(glow);boat.userData.trim=glow;}}
   function dockPoint(zone){const p=dockLocation(zone,BOATS[boatId].size);return new THREE.Vector3(p.x,.2,p.z);}
   function insideIsland(zone,x,z){const p=worldToIsland(zone,x,z),r=radii[zone.id],dz=p.z-25;return (p.x/r.x)**2+(dz/r.z)**2<=1;}
-  function surfaceAt(x,z,onlyZone=null){for(const i of ISLANDS){if(onlyZone!==null&&onlyZone!==i.id)continue;if(insideIsland(i,x,z))return .95;}return null;}
+  function surfaceAt(x,z,onlyZone=null){for(const i of ISLANDS){if(onlyZone!==null&&onlyZone!==i.id)continue;if(!insideIsland(i,x,z))continue;if(i.id===0){const p=worldToIsland(i,x,z),q=(p.x/40)**2+((p.z-82)/28)**2;if(q<=.12)return 32;if(q<=.34)return 24.2;if(q<=.63)return 16.4;if(q<=1)return 8.9;}return .95;}return null;}
   const startSpawn=islandSpawn(ISLANDS[0]);
   function groundAt(x,z,zone){if(surfaceAt(x,z,zone)===null)return null;for(const b of colliders)if(b.zone===zone&&Math.hypot(x-b.x,z-b.z)<b.r)return null;if(zone===0&&Math.hypot(x-startSpawn.x,z-startSpawn.z)<24)return 16;return .95;}
   function inWater(p){return p.x>SEA_BOUNDS.minX&&p.x<SEA_BOUNDS.maxX&&p.z>SEA_BOUNDS.minZ&&p.z<SEA_BOUNDS.maxZ&&surfaceAt(p.x,p.z)===null;}
