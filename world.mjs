@@ -184,7 +184,7 @@ export function createWorld(scene){
   const startSpawn=islandSpawn(ISLANDS[0]);
   function groundAt(x,z,zone){if(surfaceAt(x,z,zone)===null)return null;for(const b of colliders)if(b.zone===zone&&Math.hypot(x-b.x,z-b.z)<b.r)return null;if(zone===0&&Math.hypot(x-startSpawn.x,z-startSpawn.z)<24)return 16;return .95;}
   function inWater(p){return p.x>SEA_BOUNDS.minX&&p.x<SEA_BOUNDS.maxX&&p.z>SEA_BOUNDS.minZ&&p.z<SEA_BOUNDS.maxZ&&surfaceAt(p.x,p.z)===null;}
-  const temp=new THREE.Color();
+  const temp=new THREE.Color(),scratch=new THREE.Object3D();
   function update(time,dt,zone,camera,aboard,boatPosition=null,weather='clear'){
     waterUniforms.uTime.value=time;sunDisc.position.set(camera.position.x+120,135,camera.position.z-280);
     for(let i=0;i<clouds.length;i++){const c=clouds[i],a=time*.012+i*2.42;c.position.set(camera.position.x+Math.cos(a)*210,65+(i%5)*13,camera.position.z+Math.sin(a)*175);c.rotation.y=-a*.2;}
