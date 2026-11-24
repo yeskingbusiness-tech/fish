@@ -2129,9 +2129,11 @@ function tick(){
 
 // ---------- boot ----------
 loadGame();drawAquarium();
-const savedSailing=G.sailing;spawnAtIsland(G.zone);
+// This build has one visible spawn rock and no island terrain. Old saved sailing
+// coordinates would place returning players in empty open water, so start them
+// on the rock while keeping their catches, gear, currency and progression.
+G.zone=0;G.sailing=null;G.onBoat=false;G.boatPosition=null;spawnAtIsland(0);
 world.setBoat(G.boat);world.setAuroraPaint(G.collections.cosmetics?.includes('aurora-trim'));
-if(savedSailing){G.sailing={...savedSailing,speed:0};G.onBoat=true;G.px=savedSailing.x;G.pz=savedSailing.z;lastTerritory=territoryAt(G.px,G.pz);}
 G.waypoint=ISLANDS.find(i=>!hasLicense(i.id))?.id??19;
 applyGear();
 updateStats();
