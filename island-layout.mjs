@@ -53,7 +53,7 @@ export function islandRectToWorld(island,rect){
   return {...rect,island:island.id,minX:Math.min(a.x,b.x),maxX:Math.max(a.x,b.x),minZ:Math.min(a.z,b.z),maxZ:Math.max(a.z,b.z)};
 }
 export function islandSpawn(island){return {...islandToWorld(island,island.layout.dockX,4),yaw:island.layout.yaw+.35};}
-const islandRadii=island=>island.id===0?{x:178,z:146}:{x:42+(island.id%4)*5,z:37+(island.id%3)*5};
+const islandRadii=island=>island.id===0?{x:132,z:108}:{x:34+(island.id%4)*4,z:30+(island.id%3)*4};
 export function islandSurfaces(island){
   const {x:rx,z:rz}=islandRadii(island),out=[];
   // Overlapping row-bands approximate the new scalloped coast for collision,

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ISLANDS, BOATS } from './archipelago.mjs?v=47';
-import { SEA_BOUNDS, dockLocation, territoryCenter } from './navigation.mjs?v=45';
-import { islandToWorld, worldToIsland, islandSurfaces, islandSpawn } from './island-layout.mjs?v=46';
+import { SEA_BOUNDS, dockLocation, territoryCenter } from './navigation.mjs?v=46';
+import { islandToWorld, worldToIsland, islandSurfaces, islandSpawn } from './island-layout.mjs?v=47';
 import { islandServices } from './island-data.mjs?v=46';
 
 // NEW VISUAL DIRECTION: storybook archipelago — luminous water, sculpted
@@ -43,7 +43,7 @@ function roundedIslandShape(rx,rz,seed=1,scale=1){
   }
   shape.closePath();return shape;
 }
-function islandRadii(id){return id===0?{x:178,z:146}:{x:42+(id%4)*5,z:37+(id%3)*5};}
+function islandRadii(id){return id===0?{x:132,z:108}:{x:34+(id%4)*4,z:30+(id%3)*4};}
 function shapeMesh(shape,material,y,depth=0){
   let g;if(depth){g=new THREE.ExtrudeGeometry(shape,{depth,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.8,bevelThickness:.8,curveSegments:12});g.rotateX(-Math.PI/2);}
   else{g=new THREE.ShapeGeometry(shape,12);g.rotateX(-Math.PI/2);}
@@ -118,7 +118,7 @@ export function createWorld(scene){
     const beachRing=new THREE.Mesh(new THREE.TorusGeometry(1,.34,8,64),mat(0xf8eccb,.8));beachRing.scale.set(r.x*.985,1,r.z*.985);beachRing.rotation.x=Math.PI/2;beachRing.position.y=.2;group.add(beachRing);
     // New organic, theme-specific silhouettes instead of landmark cubes.
     const seed=zone.id*9187+73,random=()=>{let x=Math.sin(seed+random.n++*78.233)*43758.5453;return x-Math.floor(x);};random.n=0;
-    const flora=zone.id===0?30:Math.max(8,Math.floor(r.x/3));
+    const flora=zone.id===0?12:Math.max(5,Math.floor(r.x/5));
     for(let n=0;n<flora;n++){
       const a=random()*Math.PI*2,rad=.55+random()*.31,x=Math.cos(a)*r.x*rad,z=25+Math.sin(a)*r.z*rad;
       if(zone.id===0&&Math.hypot(x,z-50)<34)continue;
