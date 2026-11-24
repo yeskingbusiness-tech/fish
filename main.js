@@ -17,7 +17,7 @@ import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindo
   eligibleSpecies, speciesChance, roundWeight, formatWeight, formatCatchMass, GEAR_PER_ISLAND, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=44';
 import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, capCatchXP, gearIsland, hasIslandLicense, travelRequirement,
   MAX_LEVEL, ISLAND_COLLECTION_BONUS, islandCollectionProgress, completedCollections, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=44';
-import { createWorld } from './world.mjs?v=46';
+import { createWorld } from './world.mjs?v=47';
 import { fishSVG, fishGeometryCacheStats } from './fish-geometry.mjs?v=44';
 import { createFishIcons } from './fish-icons.mjs?v=44';
 import { createAdaptiveQuality, memoLast, createBaitPoolLookup } from './render-performance.mjs?v=44';
@@ -2129,9 +2129,9 @@ function tick(){
 
 // ---------- boot ----------
 loadGame();drawAquarium();
-const savedSailing=G.sailing;spawnAtIsland(G.zone);
+// Re-enter the restored island world at its home island, not stale open-water coordinates.
+G.zone=0;G.sailing=null;G.onBoat=false;spawnAtIsland(0);
 world.setBoat(G.boat);world.setAuroraPaint(G.collections.cosmetics?.includes('aurora-trim'));
-if(savedSailing){G.sailing={...savedSailing,speed:0};G.onBoat=true;G.px=savedSailing.x;G.pz=savedSailing.z;lastTerritory=territoryAt(G.px,G.pz);}
 G.waypoint=ISLANDS.find(i=>!hasLicense(i.id))?.id??19;
 applyGear();
 updateStats();
