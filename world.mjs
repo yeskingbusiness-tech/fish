@@ -114,7 +114,7 @@ export function createWorld(scene){
   // Keep the original game systems, but replace the archipelago with one small
   // isolated rock where the player begins.
   const spawn=islandToWorld(ISLANDS[0],ISLANDS[0].layout.dockX,4),rock=new THREE.Group();rock.name='Solitary spawn rock';rock.position.set(spawn.x,0,spawn.z);
-  const rockMesh=new THREE.Mesh(new THREE.DodecahedronGeometry(1,2),mat(0x899493,.96,{side:THREE.DoubleSide}));rockMesh.scale.set(26,4.3,21);rockMesh.position.y=0;rockMesh.castShadow=true;rockMesh.receiveShadow=true;rock.add(rockMesh);root.add(rock);
+  const rockMesh=new THREE.Mesh(new THREE.DodecahedronGeometry(1,2),mat(0x899493,.96,{side:THREE.DoubleSide}));rockMesh.scale.set(26,4.3,21);rockMesh.position.y=0;rockMesh.castShadow=true;rockMesh.receiveShadow=true;rock.add(rockMesh);const outcrop=new THREE.Mesh(new THREE.DodecahedronGeometry(1,1),mat(0x9ca6a4,.98,{side:THREE.DoubleSide}));outcrop.scale.set(8,18,8);outcrop.position.set(5,14,-12);outcrop.castShadow=true;outcrop.receiveShadow=true;rock.add(outcrop);root.add(rock);
   for(const zone of []){
     const palette=palettes[zone.theme]||palettes.coast,r=radii[zone.id],group=new THREE.Group();group.name=`${zone.id===0?'Central Isle':zone.name} · rebuilt`;group.position.set(zone.x,0,zone.z);group.rotation.y=zone.layout.yaw;root.add(group);islandGroups.push(group);
     const outer=roundedIslandShape(r.x+7,r.z+7,zone.id+3,1),rock=roundedIslandShape(r.x,r.z,zone.id+3,1),sand=roundedIslandShape(r.x*.985,r.z*.985,zone.id+3,1),grass=roundedIslandShape(r.x*.91,r.z*.91,zone.id+3,1),inner=roundedIslandShape(r.x*.72,r.z*.72,zone.id+3,1);
