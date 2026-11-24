@@ -17,7 +17,7 @@ import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindo
   eligibleSpecies, speciesChance, roundWeight, formatWeight, formatCatchMass, GEAR_PER_ISLAND, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=44';
 import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, capCatchXP, gearIsland, hasIslandLicense, travelRequirement,
   MAX_LEVEL, ISLAND_COLLECTION_BONUS, islandCollectionProgress, completedCollections, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=44';
-import { createWorld } from './world.mjs?v=49';
+import { createWorld } from './world.mjs?v=50';
 import { fishSVG, fishGeometryCacheStats } from './fish-geometry.mjs?v=44';
 import { createFishIcons } from './fish-icons.mjs?v=44';
 import { createAdaptiveQuality, memoLast, createBaitPoolLookup } from './render-performance.mjs?v=44';
@@ -682,7 +682,7 @@ function updateCarryUI(){
 function updatePlayerView(moving=false){
   if(isDriving()&&G.state!=='menu'){
     const b=BOATS[G.boat],v=G.sailing,ground=b.size*.9;
-    playerModel.root.visible=false;rodRig.visible=false;heldFishRig.visible=false;
+    playerModel.root.visible=true;rodRig.visible=false;heldFishRig.visible=false;
     playerModel.pose({x:G.px,z:G.pz,ground,yaw:v.yaw,pitch:0,time:G.time,stride:0,moving:false,holding:false,rodRotation:rodRig.quaternion,bend:0});
     playerModel.rod.visible=false;
     const p=boatViewPose({x:G.px,z:G.pz,yaw:v.yaw,size:b.size,aspect:frontCamera.aspect});
@@ -690,7 +690,7 @@ function updatePlayerView(moving=false){
   }
   const third=activeCamera()===frontCamera, ground=G.camY-EYE;
   const carry=heldCatch?heldFishLayout(carriedSize):null;
-  playerModel.root.visible=false;
+  playerModel.root.visible=third;
   rodRig.visible=!third&&!heldCatch&&!isDriving();
   heldFishRig.visible=!!heldCatch&&!isDriving()&&G.state!=='menu';
   if(third)playerModel.pose({x:G.px,z:G.pz,ground,yaw:G.yaw,pitch:G.pitch,time:G.time,stride:G.bob,moving,
