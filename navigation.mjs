@@ -44,7 +44,7 @@ export function stepBoat(state,input,boat,dt,access={}){
   const block=boatMoveBlock(state,next,{...access,radius:boat.size*4});
   return block?{...state,yaw,speed:0,block}:{...next,block:null};
 }
-export function dockLocation(island,size=1){const i=ISLANDS[island],l=i.layout;return island===0?islandToWorld(i,0,-158-size*2):islandToWorld(i,l.dockX+l.berthSide*(14+size*4),-30-size*2);}
+export function dockLocation(island,size=1){const i=ISLANDS[island],l=i.layout;return island===0?islandToWorld(i,0,-104-size*2):islandToWorld(i,l.dockX+l.berthSide*(14+size*4),-30-size*2);}
 export function dockPose(island,size=1){return {...dockLocation(island,size),yaw:ISLANDS[island].layout.yaw};}
 export function nearbyDock(x,z){return ISLANDS.find(i=>{const p=dockLocation(i.id,1);return Math.hypot(x-p.x,z-p.z)<24;})?.id??null;}
 export function mapPoint(x,z){return {x:(x-SEA_BOUNDS.minX)/(SEA_BOUNDS.maxX-SEA_BOUNDS.minX)*100,y:(z-SEA_BOUNDS.minZ)/(SEA_BOUNDS.maxZ-SEA_BOUNDS.minZ)*100};}

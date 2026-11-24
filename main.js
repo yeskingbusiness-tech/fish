@@ -17,7 +17,7 @@ import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindo
   eligibleSpecies, speciesChance, roundWeight, formatWeight, formatCatchMass, GEAR_PER_ISLAND, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=44';
 import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, capCatchXP, gearIsland, hasIslandLicense, travelRequirement,
   MAX_LEVEL, ISLAND_COLLECTION_BONUS, islandCollectionProgress, completedCollections, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=44';
-import { createWorld } from './world.mjs?v=54';
+import { createWorld } from './world.mjs?v=56';
 import { fishSVG, fishGeometryCacheStats } from './fish-geometry.mjs?v=44';
 import { createFishIcons } from './fish-icons.mjs?v=44';
 import { createAdaptiveQuality, memoLast, createBaitPoolLookup } from './render-performance.mjs?v=44';
@@ -29,10 +29,10 @@ import { WEATHER, islandWeather, BOSSES, createActivityState, progressChallenges
 import { PERSONAL_CAPACITY, BOAT_CAPACITY, STORAGE_UPGRADE_COST, MUTATIONS, rollMutation, capacities, merchantVisit, SECRET_FISHING_SITES, ACHIEVEMENTS, createCollectionState, achievementProgress } from './collection-systems.mjs?v=3';
 
 import { ALL_CATCH_SPECIES, LEGACY_SPECIES } from './legacy-catalog.mjs?v=44';
-import { territoryAt, territoryCenter, TERRITORY_RADIUS, shoreLuckPenalty, distanceToShore, stepBoat, nearbyDock, dockPose, dockLocation, returnBoatPose, clampBoatDeckPosition, mapPoint, SEA_BOUNDS } from './navigation.mjs?v=45';
+import { territoryAt, territoryCenter, TERRITORY_RADIUS, shoreLuckPenalty, distanceToShore, stepBoat, nearbyDock, dockPose, dockLocation, returnBoatPose, clampBoatDeckPosition, mapPoint, SEA_BOUNDS } from './navigation.mjs?v=47';
 import { WORLD_LAYOUT_VERSION } from './island-data.mjs?v=44';
 import { QUESTS, createQuestState, acceptQuest, applyQuestEvent } from './quest-system.mjs?v=2';
-import { islandToWorld, islandSpawn } from './island-layout.mjs?v=45';
+import { islandToWorld, islandSpawn } from './island-layout.mjs?v=46';
 
 import { drawMinimap } from './minimap.mjs?v=44';
 const fishIcons = createFishIcons(ALL_CATCH_SPECIES);
@@ -131,7 +131,8 @@ const adaptiveQuality = createAdaptiveQuality(devicePixelRatio);
 renderer.setPixelRatio(adaptiveQuality.pixelRatio);
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.shadowMap.enabled = false; // flat blocky lighting — and much faster
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x8fd8f2);
@@ -1425,7 +1426,7 @@ function buyBoat(id){
 }
 function spawnAtIsland(id){
   const p=islandSpawn(ISLANDS[id]),previous=G.zone;G.zone=id;if(previous!==id)recordActivity({kind:'island',island:id});G.px=p.x;G.pz=p.z;
-  G.onBoat=false;G.sailing=null;G.boatMode='drive';G.yaw=p.yaw;G.pitch=id===0?-.52:-.1;G.camY=(id===0?16:1.15)+EYE;
+  G.onBoat=false;G.sailing=null;G.boatMode='drive';G.yaw=p.yaw;G.pitch=id===0?-.3:-.1;G.camY=(id===0?4.5:1.15)+EYE;
   if(!G.boatPosition)G.boatPosition=dockPose(id,BOATS[G.boat].size);
   camera.position.set(G.px,G.camY,G.pz);camera.rotation.set(G.pitch,G.yaw,0,'YXZ');
   nearbyStall=null;G.nearShop=G.nearMarket=G.nearPort=false;
