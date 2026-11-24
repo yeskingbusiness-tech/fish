@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ISLANDS, BOATS } from './archipelago.mjs?v=47';
 import { SEA_BOUNDS, dockLocation, territoryCenter } from './navigation.mjs?v=45';
-import { islandToWorld, worldToIsland, islandSurfaces } from './island-layout.mjs?v=46';
+import { islandToWorld, worldToIsland, islandSurfaces, islandSpawn } from './island-layout.mjs?v=46';
 import { islandServices } from './island-data.mjs?v=46';
 
 // NEW VISUAL DIRECTION: storybook archipelago — luminous water, sculpted
@@ -181,7 +181,8 @@ export function createWorld(scene){
   function dockPoint(zone){const p=dockLocation(zone,BOATS[boatId].size);return new THREE.Vector3(p.x,.2,p.z);}
   function insideIsland(zone,x,z){const p=worldToIsland(zone,x,z),r=radii[zone.id],dz=p.z-25;return (p.x/r.x)**2+(dz/r.z)**2<=1;}
   function surfaceAt(x,z,onlyZone=null){for(const i of ISLANDS){if(onlyZone!==null&&onlyZone!==i.id)continue;if(insideIsland(i,x,z))return .95;}return null;}
-  function groundAt(x,z,zone){if(surfaceAt(x,z,zone)===null)return null;for(const b of colliders)if(b.zone===zone&&Math.hypot(x-b.x,z-b.z)<b.r)return null;return .95;}
+  const startSpawn=islandSpawn(ISLANDS[0]);
+  function groundAt(x,z,zone){if(surfaceAt(x,z,zone)===null)return null;for(const b of colliders)if(b.zone===zone&&Math.hypot(x-b.x,z-b.z)<b.r)return null;if(zone===0&&Math.hypot(x-startSpawn.x,z-startSpawn.z)<24)return 16;return .95;}
   function inWater(p){return p.x>SEA_BOUNDS.minX&&p.x<SEA_BOUNDS.maxX&&p.z>SEA_BOUNDS.minZ&&p.z<SEA_BOUNDS.maxZ&&surfaceAt(p.x,p.z)===null;}
   const temp=new THREE.Color();
   function update(time,dt,zone,camera,aboard,boatPosition=null,weather='clear'){

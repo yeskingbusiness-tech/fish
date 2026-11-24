@@ -17,7 +17,7 @@ import { SPECIES, RARITY, RARITY_ORDER, RODS, LINES, BAITS, fishValue, baitWindo
   eligibleSpecies, speciesChance, roundWeight, formatWeight, formatCatchMass, GEAR_PER_ISLAND, pickSpecies as drawSpecies, rollWeight as drawWeight } from './game-data.mjs?v=44';
 import { ISLANDS, BOATS, xpForLevel, levelForXp, levelProgress, catchXP, capCatchXP, gearIsland, hasIslandLicense, travelRequirement,
   MAX_LEVEL, ISLAND_COLLECTION_BONUS, islandCollectionProgress, completedCollections, collectionCoinBonus, fishSaleValue } from './archipelago.mjs?v=44';
-import { createWorld } from './world.mjs?v=50';
+import { createWorld } from './world.mjs?v=51';
 import { fishSVG, fishGeometryCacheStats } from './fish-geometry.mjs?v=44';
 import { createFishIcons } from './fish-icons.mjs?v=44';
 import { createAdaptiveQuality, memoLast, createBaitPoolLookup } from './render-performance.mjs?v=44';
@@ -1425,7 +1425,7 @@ function buyBoat(id){
 }
 function spawnAtIsland(id){
   const p=islandSpawn(ISLANDS[id]),previous=G.zone;G.zone=id;if(previous!==id)recordActivity({kind:'island',island:id});G.px=p.x;G.pz=p.z;
-  G.onBoat=false;G.sailing=null;G.boatMode='drive';G.yaw=p.yaw;G.pitch=-.1;G.camY=1.15+EYE;
+  G.onBoat=false;G.sailing=null;G.boatMode='drive';G.yaw=p.yaw;G.pitch=-.1;G.camY=(id===0?16:1.15)+EYE;
   if(!G.boatPosition)G.boatPosition=dockPose(id,BOATS[G.boat].size);
   camera.position.set(G.px,G.camY,G.pz);camera.rotation.set(G.pitch,G.yaw,0,'YXZ');
   nearbyStall=null;G.nearShop=G.nearMarket=G.nearPort=false;
